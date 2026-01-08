@@ -511,65 +511,80 @@ verifyCompletion: async ({ result }) => {
 ### File Operations
 
 ```typescript
-import { tool } from "ai";
 import { z } from "zod";
 
 const tools = {
-  readFile: tool({
+  readFile: {
     description: "Read a file from the project",
-    parameters: z.object({
+    inputSchema: z.object({
       path: z.string(),
       lineStart: z.number().optional(),
       lineEnd: z.number().optional(),
     }),
-    execute: async ({ path, lineStart, lineEnd }) => {
+    execute: async ({
+      path,
+      lineStart,
+      lineEnd,
+    }: {
+      path: string;
+      lineStart?: number;
+      lineEnd?: number;
+    }) => {
       // Implementation
     },
-  }),
+  },
 
-  writeFile: tool({
+  writeFile: {
     description: "Write content to a file",
-    parameters: z.object({
+    inputSchema: z.object({
       path: z.string(),
       content: z.string(),
     }),
-    execute: async ({ path, content }) => {
+    execute: async ({ path, content }: { path: string; content: string }) => {
       // Implementation
     },
-  }),
+  },
 
-  editFile: tool({
+  editFile: {
     description:
       "Search and replace in a file (more efficient than full rewrite)",
-    parameters: z.object({
+    inputSchema: z.object({
       path: z.string(),
       searchText: z.string(),
       replaceText: z.string(),
     }),
-    execute: async ({ path, searchText, replaceText }) => {
+    execute: async ({
+      path,
+      searchText,
+      replaceText,
+    }: {
+      path: string;
+      searchText: string;
+      replaceText: string;
+    }) => {
       // Implementation
     },
-  }),
+  },
 
-  deleteFile: tool({
+  deleteFile: {
     description: "Delete a file",
-    parameters: z.object({
+    inputSchema: z.object({
       path: z.string(),
     }),
-    execute: async ({ path }) => {
+    execute: async ({ path }: { path: string }) => {
       // Implementation
     },
-  }),
+  },
 
-  listFiles: tool({
+  listFiles: {
     description: "List files matching a glob pattern",
-    parameters: z.object({
+    inputSchema: z.object({
       pattern: z.string(),
     }),
-    execute: async ({ pattern }) => {
+    execute: async ({ pattern }: { pattern: string }) => {
       // Implementation
     },
-  }),
+  },
 };
 ```
 
@@ -577,27 +592,35 @@ const tools = {
 
 ```typescript
 const commandTools = {
-  runCommand: tool({
+  runCommand: {
     description: "Run a shell command",
-    parameters: z.object({
+    inputSchema: z.object({
       command: z.string(),
       cwd: z.string().optional(),
       background: z.boolean().optional(),
     }),
-    execute: async ({ command, cwd, background }) => {
+    execute: async ({
+      command,
+      cwd,
+      background,
+    }: {
+      command: string;
+      cwd?: string;
+      background?: boolean;
+    }) => {
       // Implementation - returns { stdout, stderr, exitCode }
     },
-  }),
+  },
 
-  startDevServer: tool({
+  startDevServer: {
     description: "Start a development server in the background",
-    parameters: z.object({
+    inputSchema: z.object({
       command: z.string(),
     }),
-    execute: async ({ command }) => {
+    execute: async ({ command }: { command: string }) => {
       // Implementation - starts server, returns URL
     },
-  }),
+  },
 };
 ```
 
@@ -622,18 +645,24 @@ const playwrightTools = {
 
 ```typescript
 const completionTools = {
-  markComplete: tool({
+  markComplete: {
     description: "Mark the current task as complete",
-    parameters: z.object({
+    inputSchema: z.object({
       summary: z.string().describe("Summary of what was accomplished"),
       filesModified: z
         .array(z.string())
         .describe("List of files created/modified"),
     }),
-    execute: async ({ summary, filesModified }) => {
+    execute: async ({
+      summary,
+      filesModified,
+    }: {
+      summary: string;
+      filesModified: string[];
+    }) => {
       return { complete: true, summary, filesModified };
     },
-  }),
+  },
 };
 ```
 
