@@ -15,6 +15,26 @@ const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 
 // ============================================================================
+// LOGGING UTILITIES
+// ============================================================================
+
+function logTool(toolName: string, params: any) {
+  const timestamp = new Date().toLocaleTimeString();
+  console.log(`  🔧 [${timestamp}] ${toolName}`);
+  
+  // Log key parameters
+  if (params.path) console.log(`     → ${params.path}`);
+  if (params.command) console.log(`     → ${params.command}`);
+  if (params.summary) console.log(`     → ${params.summary}`);
+}
+
+function logToolResult(toolName: string, result: string, isError = false) {
+  const icon = isError ? '❌' : '✓';
+  const preview = result.length > 100 ? result.substring(0, 100) + '...' : result;
+  console.log(`     ${icon} ${preview.split('\n')[0]}`);
+}
+
+// ============================================================================
 // TOOLS - File Operations
 // ============================================================================
 
@@ -27,6 +47,7 @@ const fileTools = {
       lineEnd: z.number().optional(),
     }),
     execute: async ({ path: filePath, lineStart, lineEnd }: { path: string; lineStart?: number; lineEnd?: number }) => {
+      logTool('readFile', { path: filePath });
       try {
         const fullPath = path.resolve(PROJECT_ROOT, filePath);
         const content = await fs.readFile(fullPath, 'utf-8');
@@ -35,12 +56,17 @@ const fileTools = {
           const lines = content.split('\n');
           const start = (lineStart || 1) - 1;
           const end = lineEnd || lines.length;
-          return lines.slice(start, end).join('\n');
+          const result = lines.slice(start, end).join('\n');
+          logToolResult('readFile', `Read ${end - start} lines`);
+          return result;
         }
         
+        logToolResult('readFile', `Read ${content.length} bytes`);
         return content;
       } catch (error: any) {
-        return `Error reading file: ${error.message}`;
+        const errorMsg = `Error reading file: ${error.message}`;
+        logToolResult('readFile', errorMsg, true);
+        return errorMsg;
       }
     },
   },
@@ -52,13 +78,18 @@ const fileTools = {
       content: z.string().describe('File content'),
     }),
     execute: async ({ path: filePath, content }: { path: string; content: string }) => {
+      logTool('writeFile', { path: filePath });
       try {
         const fullPath = path.resolve(PROJECT_ROOT, filePath);
         await fs.mkdir(path.dirname(fullPath), { recursive: true });
         await fs.writeFile(fullPath, content, 'utf-8');
-        return `✓ Written ${filePath}`;
+        const result = `✓ Written ${filePath} (${content.length} bytes)`;
+        logToolResult('writeFile', result);
+        return result;
       } catch (error: any) {
-        return `Error writing file: ${error.message}`;
+        const errorMsg = `Error writing file: ${error.message}`;
+        logToolResult('writeFile', errorMsg, true);
+        return errorMsg;
       }
     },
   },
@@ -71,19 +102,26 @@ const fileTools = {
       replaceText: z.string().describe('Text to replace with'),
     }),
     execute: async ({ path: filePath, searchText, replaceText }: { path: string; searchText: string; replaceText: string }) => {
+      logTool('editFile', { path: filePath });
       try {
         const fullPath = path.resolve(PROJECT_ROOT, filePath);
         const content = await fs.readFile(fullPath, 'utf-8');
         
         if (!content.includes(searchText)) {
-          return `Error: searchText not found in ${filePath}`;
+          const errorMsg = `Error: searchText not found in ${filePath}`;
+          logToolResult('editFile', errorMsg, true);
+          return errorMsg;
         }
         
         const newContent = content.replace(searchText, replaceText);
         await fs.writeFile(fullPath, newContent, 'utf-8');
-        return `✓ Edited ${filePath}`;
+        const result = `✓ Edited ${filePath}`;
+        logToolResult('editFile', result);
+        return result;
       } catch (error: any) {
-        return `Error editing file: ${error.message}`;
+        const errorMsg = `Error editing file: ${error.message}`;
+        logToolResult('editFile', errorMsg, true);
+        return errorMsg;
       }
     },
   },
@@ -94,12 +132,17 @@ const fileTools = {
       path: z.string().describe('Path relative to project root'),
     }),
     execute: async ({ path: filePath }: { path: string }) => {
+      logTool('deleteFile', { path: filePath });
       try {
         const fullPath = path.resolve(PROJECT_ROOT, filePath);
         await fs.unlink(fullPath);
-        return `✓ Deleted ${filePath}`;
+        const result = `✓ Deleted ${filePath}`;
+        logToolResult('deleteFile', result);
+        return result;
       } catch (error: any) {
-        return `Error deleting file: ${error.message}`;
+        const errorMsg = `Error deleting file: ${error.message}`;
+        logToolResult('deleteFile', errorMsg, true);
+        return errorMsg;
       }
     },
   },
@@ -111,6 +154,7 @@ const fileTools = {
       recursive: z.boolean().optional().describe('List files recursively'),
     }),
     execute: async ({ path: dirPath, recursive }: { path: string; recursive?: boolean }) => {
+      logTool('listFiles', { path: dirPath });
       try {
         const fullPath = path.resolve(PROJECT_ROOT, dirPath);
         
@@ -139,9 +183,12 @@ const fileTools = {
         };
         
         const files = await listDir(fullPath);
+        logToolResult('listFiles', `Found ${files.length} items`);
         return files.join('\n');
       } catch (error: any) {
-        return `Error listing files: ${error.message}`;
+        const errorMsg = `Error listing files: ${error.message}`;
+        logToolResult('listFiles', errorMsg, true);
+        return errorMsg;
       }
     },
   },
@@ -152,11 +199,14 @@ const fileTools = {
       path: z.string().describe('Path relative to project root'),
     }),
     execute: async ({ path: filePath }: { path: string }) => {
+      logTool('fileExists', { path: filePath });
       try {
         const fullPath = path.resolve(PROJECT_ROOT, filePath);
         await fs.access(fullPath);
+        logToolResult('fileExists', 'true');
         return 'true';
       } catch {
+        logToolResult('fileExists', 'false');
         return 'false';
       }
     },
@@ -175,11 +225,17 @@ const commandTools = {
       cwd: z.string().optional().describe('Working directory (relative to project root)'),
     }),
     execute: async ({ command, cwd }: { command: string; cwd?: string }) => {
+      logTool('runCommand', { command });
+      const startTime = Date.now();
       try {
         const workingDir = cwd ? path.resolve(PROJECT_ROOT, cwd) : PROJECT_ROOT;
-        const { stdout, stderr } = await execAsync(command, { cwd: workingDir });
+        const { stdout, stderr } = await execAsync(command, { cwd: workingDir, maxBuffer: 10 * 1024 * 1024 });
+        const duration = Date.now() - startTime;
+        logToolResult('runCommand', `✓ Completed in ${(duration / 1000).toFixed(2)}s`);
         return JSON.stringify({ stdout, stderr, exitCode: 0 }, null, 2);
       } catch (error: any) {
+        const duration = Date.now() - startTime;
+        logToolResult('runCommand', `Failed after ${(duration / 1000).toFixed(2)}s (exit code ${error.code || 1})`, true);
         return JSON.stringify({
           stdout: error.stdout || '',
           stderr: error.stderr || error.message,
@@ -202,6 +258,10 @@ const completionTools = {
       filesModified: z.array(z.string()).describe('List of files created/modified'),
     }),
     execute: async ({ summary, filesModified }: { summary: string; filesModified: string[] }) => {
+      logTool('markComplete', { summary });
+      console.log(`     📝 Summary: ${summary}`);
+      console.log(`     📁 Files modified: ${filesModified.length}`);
+      filesModified.forEach(f => console.log(`        - ${f}`));
       return JSON.stringify({ 
         complete: true, 
         summary, 
