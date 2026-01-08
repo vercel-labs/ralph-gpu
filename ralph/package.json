@@ -1,0 +1,28 @@
+{
+  "name": "ralph-gpu-builder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "agent": "tsx ralph-agent.ts",
+    "phase1": "tsx ralph-agent.ts --phase=monorepo-setup",
+    "phase2": "tsx ralph-agent.ts --phase=core-implementation",
+    "phase3": "tsx ralph-agent.ts --phase=examples-app"
+  },
+  "dependencies": {
+    "ai": "^4.0.0",
+    "ralph-loop-agent": "latest",
+    "zod": "^3.22.4",
+    "dotenv": "^16.4.5",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1",
+    "prompts": "^2.4.2",
+    "globby": "^14.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/prompts": "^2.4.9",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
