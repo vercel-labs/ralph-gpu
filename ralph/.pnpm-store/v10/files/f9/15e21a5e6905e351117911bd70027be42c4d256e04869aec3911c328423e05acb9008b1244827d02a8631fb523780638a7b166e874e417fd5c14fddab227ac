@@ -1,0 +1,192 @@
+import type { ModelMessage } from '@ai-sdk/provider-utils';
+import type { LanguageModel, GenerateTextResult, ToolSet } from 'ai';
+/**
+ * Configuration for context management.
+ */
+export interface RalphContextConfig {
+    /**
+     * Maximum tokens to use for context (default: 150,000 - leaves room for output).
+     * Set to match your model's context window minus output buffer.
+     */
+    maxContextTokens?: number;
+    /**
+     * Token budget reserved for the change log (default: 5,000).
+     */
+    changeLogBudget?: number;
+    /**
+     * Token budget reserved for file context (default: 50,000).
+     */
+    fileContextBudget?: number;
+    /**
+     * Maximum characters for a single file read before truncation (default: 30,000).
+     * Files larger than this will be chunked with line numbers.
+     */
+    maxFileChars?: number;
+    /**
+     * Whether to enable auto-summarization of older messages.
+     */
+    enableSummarization?: boolean;
+    /**
+     * Number of recent iterations to keep in full detail (default: 2).
+     */
+    recentIterationsToKeep?: number;
+    /**
+     * Model to use for summarization (optional, uses main model if not provided).
+     */
+    summarizationModel?: LanguageModel;
+}
+/**
+ * A tracked file in context.
+ */
+export interface TrackedFile {
+    path: string;
+    content: string;
+    estimatedTokens: number;
+    lastAccessed: number;
+    /** If the file was chunked, this is the line range */
+    lineRange?: {
+        start: number;
+        end: number;
+    };
+}
+/**
+ * A change log entry.
+ */
+export interface ChangeLogEntry {
+    timestamp: number;
+    iteration: number;
+    type: 'decision' | 'action' | 'error' | 'observation';
+    summary: string;
+    /** Optional details (will be truncated if too long) */
+    details?: string;
+}
+/**
+ * Summary of a previous iteration.
+ */
+export interface IterationSummary {
+    iteration: number;
+    summary: string;
+    toolsUsed: string[];
+    filesModified: string[];
+    estimatedTokens: number;
+}
+/**
+ * Rough token estimation (4 chars ≈ 1 token for English text).
+ * This is intentionally conservative.
+ */
+export declare function estimateTokens(text: string): number;
+/**
+ * Estimate tokens for a ModelMessage.
+ */
+export declare function estimateMessageTokens(message: ModelMessage): number;
+/**
+ * Manages context for long-running agent loops.
+ *
+ * Tracks:
+ * - File context (recently accessed files)
+ * - Change log (decisions and actions)
+ * - Message history (with optional summarization)
+ */
+export declare class RalphContextManager {
+    private config;
+    private trackedFiles;
+    private changeLog;
+    private iterationSummaries;
+    private currentIteration;
+    constructor(config?: RalphContextConfig);
+    /**
+     * Get the current token budget status.
+     */
+    getTokenBudget(): {
+        total: number;
+        used: {
+            files: number;
+            changeLog: number;
+            summaries: number;
+        };
+        available: number;
+    };
+    /**
+     * Set the current iteration number.
+     */
+    setIteration(iteration: number): void;
+    /**
+     * Track a file being read. Returns the content (potentially truncated).
+     */
+    trackFileRead(path: string, content: string, options?: {
+        /** Specific line range to read */
+        lineRange?: {
+            start: number;
+            end: number;
+        };
+        /** Force refresh even if cached */
+        refresh?: boolean;
+    }): {
+        content: string;
+        truncated: boolean;
+        totalLines?: number;
+        lineRange?: {
+            start: number;
+            end: number;
+        };
+    };
+    /**
+     * Track a file being written/modified.
+     */
+    trackFileWrite(path: string, content: string): void;
+    /**
+     * Track a file edit (search/replace style).
+     */
+    trackFileEdit(path: string, oldString: string, newString: string): void;
+    /**
+     * Add an entry to the change log.
+     */
+    addChangeLogEntry(entry: Omit<ChangeLogEntry, 'timestamp' | 'iteration'>): void;
+    /**
+     * Get the change log as a formatted string for context.
+     */
+    getChangeLogContext(): string;
+    /**
+     * Get tracked files context.
+     */
+    getFileContext(): string;
+    /**
+     * Summarize an iteration's messages for future context.
+     */
+    summarizeIteration(iteration: number, messages: ModelMessage[], model: LanguageModel): Promise<IterationSummary>;
+    /**
+     * Get summaries of previous iterations.
+     */
+    getIterationSummariesContext(): string;
+    /**
+     * Build context to inject into messages.
+     * Call this before each iteration to get current context state.
+     */
+    buildContextInjection(): string;
+    /**
+     * Prepare messages for a new iteration.
+     * Compresses old iterations and manages context budget.
+     */
+    prepareMessagesForIteration<TOOLS extends ToolSet>(currentMessages: ModelMessage[], iteration: number, model: LanguageModel, previousResult?: GenerateTextResult<TOOLS, never>): Promise<{
+        messages: ModelMessage[];
+        summarized: boolean;
+    }>;
+    /**
+     * Evict least-recently-used files to stay within budget.
+     */
+    private evictFilesIfNeeded;
+    /**
+     * Trim change log to stay within budget.
+     */
+    private trimChangeLog;
+    /**
+     * Clear all tracked state.
+     */
+    clear(): void;
+}
+/**
+ * Create context-aware tool wrappers.
+ * These wrap existing tools to track file operations.
+ */
+export declare function createContextAwareTools<TOOLS extends ToolSet>(tools: TOOLS, contextManager: RalphContextManager): TOOLS;
+//# sourceMappingURL=ralph-context-manager.d.ts.map

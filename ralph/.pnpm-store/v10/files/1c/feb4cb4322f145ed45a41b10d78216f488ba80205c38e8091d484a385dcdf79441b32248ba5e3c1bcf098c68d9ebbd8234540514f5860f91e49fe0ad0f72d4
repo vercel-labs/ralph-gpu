@@ -1,0 +1,504 @@
+import { generateText, streamText, stepCountIs, } from 'ai';
+import { iterationCountIs, isRalphStopConditionMet, addLanguageModelUsage, aggregateStepUsage, } from './ralph-stop-condition';
+import { RalphContextManager, estimateMessageTokens, } from './ralph-context-manager';
+// Re-export stop condition helpers
+export { iterationCountIs } from './ralph-stop-condition';
+/**
+ * A Ralph Loop Agent implements the "Ralph Wiggum" technique - an iterative
+ * approach that continuously runs until a task is completed.
+ *
+ * The agent has two nested loops:
+ * 1. **Outer loop (Ralph loop)**: Runs iterations until verifyCompletion returns true
+ * 2. **Inner loop (Tool loop)**: Executes tools and LLM calls within each iteration
+ *
+ * @example
+ * ```typescript
+ * const agent = new RalphLoopAgent({
+ *   model: 'anthropic/claude-opus-4.5',
+ *   instructions: 'You are a helpful assistant.',
+ *   tools: { readFile, writeFile },
+ *   stopWhen: iterationCountIs(10),
+ *   verifyCompletion: async ({ result }) => ({
+ *     complete: result.text.includes('DONE'),
+ *     reason: 'Task completed',
+ *   }),
+ * });
+ *
+ * const result = await agent.loop({ prompt: 'Do the task' });
+ * ```
+ */
+export class RalphLoopAgent {
+    version = 'ralph-agent-v1';
+    settings;
+    contextManager;
+    constructor(settings) {
+        this.settings = settings;
+        // Initialize context manager if configured
+        this.contextManager = settings.contextManagement
+            ? new RalphContextManager(settings.contextManagement)
+            : null;
+    }
+    /**
+     * Get the context manager (if enabled).
+     */
+    getContextManager() {
+        return this.contextManager;
+    }
+    /**
+     * The id of the agent.
+     */
+    get id() {
+        return this.settings.id;
+    }
+    /**
+     * The tools that the agent can use.
+     */
+    get tools() {
+        return this.settings.tools;
+    }
+    /**
+     * Get the model identifier string.
+     */
+    getModelId() {
+        const model = this.settings.model;
+        // Handle both string models (gateway format) and LanguageModel objects
+        if (typeof model === 'string') {
+            return model;
+        }
+        return model.modelId ?? 'unknown';
+    }
+    /**
+     * Check if the current model is an Anthropic model (for prompt caching).
+     */
+    isAnthropicModel() {
+        const model = this.settings.model;
+        if (typeof model === 'string') {
+            return model.includes('anthropic') || model.includes('claude');
+        }
+        return (model.provider === 'anthropic' ||
+            model.provider?.includes('anthropic') ||
+            model.modelId?.includes('anthropic') ||
+            model.modelId?.includes('claude'));
+    }
+    /**
+     * Get the stop conditions as an array.
+     */
+    getStopConditions() {
+        const stopWhen = this.settings.stopWhen;
+        if (!stopWhen) {
+            return [iterationCountIs(10)]; // default
+        }
+        return Array.isArray(stopWhen) ? stopWhen : [stopWhen];
+    }
+    /**
+     * Create an empty usage object.
+     */
+    createEmptyUsage() {
+        return {
+            inputTokens: 0,
+            inputTokenDetails: {
+                noCacheTokens: undefined,
+                cacheReadTokens: undefined,
+                cacheWriteTokens: undefined,
+            },
+            outputTokens: 0,
+            outputTokenDetails: {
+                textTokens: undefined,
+                reasoningTokens: undefined,
+            },
+            totalTokens: 0,
+        };
+    }
+    /**
+     * Runs the agent loop until completion or stop condition is met.
+     */
+    async loop({ prompt, abortSignal, preserveContext = false, startIteration = 0, }) {
+        const allResults = [];
+        let currentMessages = [];
+        let iteration = startIteration;
+        let totalUsage = this.createEmptyUsage();
+        let completionReason = 'max-iterations';
+        let reason;
+        const stopConditions = this.getStopConditions();
+        const modelId = this.getModelId();
+        const model = this.settings.model;
+        // Reset context manager for new loop (unless preserving context for resume)
+        if (!preserveContext) {
+            this.contextManager?.clear();
+        }
+        // Build the initial user message
+        const initialUserMessage = {
+            role: 'user',
+            content: [{ type: 'text', text: prompt }],
+        };
+        // Add instructions as system message if provided
+        const systemMessages = this.buildSystemMessages();
+        // Loop until stop condition is met
+        while (true) {
+            // Check for abort
+            if (abortSignal?.aborted) {
+                completionReason = 'aborted';
+                break;
+            }
+            iteration++;
+            const startTime = Date.now();
+            // Call onIterationStart
+            await this.settings.onIterationStart?.({ iteration });
+            // Prepare messages with context management
+            let messagesToSend;
+            let summarized = false;
+            if (this.contextManager) {
+                // Use context manager to prepare messages
+                const prepared = await this.contextManager.prepareMessagesForIteration(currentMessages, iteration, model, allResults[allResults.length - 1]);
+                messagesToSend = [
+                    ...systemMessages,
+                    initialUserMessage,
+                    ...prepared.messages,
+                ];
+                summarized = prepared.summarized;
+                // If we summarized, notify
+                if (summarized && this.settings.onContextSummarized) {
+                    const budget = this.contextManager.getTokenBudget();
+                    await this.settings.onContextSummarized({
+                        iteration,
+                        summarizedIterations: iteration - (this.settings.contextManagement?.recentIterationsToKeep ?? 2),
+                        tokensSaved: budget.available,
+                    });
+                }
+                // Add context injection (summaries, change log)
+                const contextInjection = this.contextManager.buildContextInjection();
+                if (contextInjection) {
+                    // Append to last system message or create new one
+                    if (systemMessages.length > 0) {
+                        const lastSystem = messagesToSend.find(m => m.role === 'system');
+                        if (lastSystem && typeof lastSystem.content === 'string') {
+                            lastSystem.content += contextInjection;
+                        }
+                    }
+                    else {
+                        messagesToSend.unshift({
+                            role: 'system',
+                            content: contextInjection,
+                        });
+                    }
+                }
+            }
+            else {
+                // No context management - use messages as-is
+                messagesToSend = [
+                    ...systemMessages,
+                    initialUserMessage,
+                    ...currentMessages,
+                ];
+            }
+            // If not the first iteration, add continuation prompt
+            if (iteration > 1) {
+                messagesToSend.push({
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'text',
+                            text: 'Continue working on the task. The previous attempt was not complete.',
+                        },
+                    ],
+                });
+            }
+            // Estimate tokens before sending (for debugging/monitoring)
+            if (this.contextManager) {
+                const estimatedTokens = messagesToSend.reduce((sum, m) => sum + estimateMessageTokens(m), 0);
+                const budget = this.contextManager.getTokenBudget();
+                // Log warning if approaching limit
+                if (estimatedTokens > budget.total * 0.9) {
+                    console.warn(`[RalphLoopAgent] Warning: Estimated ${estimatedTokens} tokens, approaching limit of ${budget.total}`);
+                }
+            }
+            // Create prepareStep that adds cache control for Anthropic models
+            const isAnthropic = this.isAnthropicModel();
+            const userPrepareStep = this.settings.prepareStep;
+            // Helper to add cache control to last message
+            const addCacheControlToMessages = (messages) => {
+                if (messages.length === 0)
+                    return messages;
+                return messages.map((message, index) => {
+                    if (index === messages.length - 1) {
+                        return {
+                            ...message,
+                            providerOptions: {
+                                ...message.providerOptions,
+                                anthropic: {
+                                    ...(message.providerOptions?.anthropic ?? {}),
+                                    cacheControl: { type: 'ephemeral' },
+                                },
+                            },
+                        };
+                    }
+                    return message;
+                });
+            };
+            const prepareStepWithCaching = isAnthropic
+                ? async (stepInfo) => {
+                    // First apply user's prepareStep if provided
+                    const userResult = userPrepareStep ? await userPrepareStep(stepInfo) : {};
+                    const messages = userResult?.messages ?? stepInfo.messages;
+                    // Add cache control to the last message for Anthropic
+                    const cacheControlMessages = addCacheControlToMessages(messages);
+                    return { ...userResult, messages: cacheControlMessages };
+                }
+                : userPrepareStep;
+            // Run the inner tool loop
+            const result = (await generateText({
+                model: this.settings.model,
+                messages: messagesToSend,
+                tools: this.settings.tools,
+                toolChoice: this.settings.toolChoice,
+                stopWhen: this.settings.toolStopWhen ?? stepCountIs(20),
+                maxOutputTokens: this.settings.maxOutputTokens,
+                temperature: this.settings.temperature,
+                topP: this.settings.topP,
+                topK: this.settings.topK,
+                presencePenalty: this.settings.presencePenalty,
+                frequencyPenalty: this.settings.frequencyPenalty,
+                stopSequences: this.settings.stopSequences,
+                seed: this.settings.seed,
+                experimental_telemetry: this.settings.experimental_telemetry,
+                activeTools: this.settings.activeTools,
+                prepareStep: prepareStepWithCaching,
+                experimental_repairToolCall: this.settings.experimental_repairToolCall,
+                providerOptions: this.settings.providerOptions,
+                experimental_context: this.settings.experimental_context,
+                abortSignal,
+            }));
+            allResults.push(result);
+            // Update total usage - aggregate from steps for more accurate counts
+            const iterationUsage = aggregateStepUsage(result);
+            totalUsage = addLanguageModelUsage(totalUsage, iterationUsage);
+            // Add the response messages to conversation history
+            currentMessages = [...currentMessages, ...result.response.messages];
+            const duration = Date.now() - startTime;
+            // Call onIterationEnd
+            await this.settings.onIterationEnd?.({
+                iteration,
+                duration,
+                result,
+            });
+            // Check stop conditions AFTER running iteration
+            const stopContext = {
+                iteration,
+                allResults,
+                totalUsage,
+                model: modelId,
+            };
+            if (await isRalphStopConditionMet({ stopConditions, context: stopContext })) {
+                completionReason = 'max-iterations';
+                break;
+            }
+            // Verify completion
+            if (this.settings.verifyCompletion) {
+                const verification = await this.settings.verifyCompletion({
+                    result,
+                    iteration,
+                    allResults,
+                    originalPrompt: prompt,
+                });
+                if (verification.complete) {
+                    completionReason = 'verified';
+                    reason = verification.reason;
+                    break;
+                }
+                // If verification provides feedback, add it
+                if (verification.reason && !verification.complete) {
+                    currentMessages.push({
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'text',
+                                text: `Feedback: ${verification.reason}`,
+                            },
+                        ],
+                    });
+                    // Track feedback in context manager
+                    this.contextManager?.addChangeLogEntry({
+                        type: 'observation',
+                        summary: 'Verification feedback received',
+                        details: verification.reason.slice(0, 200),
+                    });
+                }
+            }
+        }
+        const finalResult = allResults[allResults.length - 1];
+        return {
+            text: finalResult.text,
+            iterations: iteration,
+            completionReason,
+            reason,
+            result: finalResult,
+            allResults,
+            totalUsage,
+        };
+    }
+    /**
+     * Streams the agent loop. Streams only the final iteration.
+     * For full control, use loop() with callbacks instead.
+     */
+    async stream({ prompt, abortSignal, }) {
+        const allResults = [];
+        let currentMessages = [];
+        let iteration = 0;
+        let totalUsage = this.createEmptyUsage();
+        const stopConditions = this.getStopConditions();
+        const modelId = this.getModelId();
+        const initialUserMessage = {
+            role: 'user',
+            content: [{ type: 'text', text: prompt }],
+        };
+        const systemMessages = this.buildSystemMessages();
+        // Run non-streaming iterations until we should stream the final one
+        while (true) {
+            if (abortSignal?.aborted) {
+                break;
+            }
+            iteration++;
+            // Check if THIS iteration would be the last (next would hit stop condition)
+            const nextStopContext = {
+                iteration: iteration + 1,
+                allResults,
+                totalUsage,
+                model: modelId,
+            };
+            // If next iteration would stop, stream this one instead
+            if (await isRalphStopConditionMet({ stopConditions, context: nextStopContext })) {
+                break;
+            }
+            const startTime = Date.now();
+            await this.settings.onIterationStart?.({ iteration });
+            const messages = [
+                ...systemMessages,
+                initialUserMessage,
+                ...currentMessages,
+            ];
+            if (iteration > 1) {
+                messages.push({
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'text',
+                            text: 'Continue working on the task. The previous attempt was not complete.',
+                        },
+                    ],
+                });
+            }
+            const result = (await generateText({
+                model: this.settings.model,
+                messages,
+                tools: this.settings.tools,
+                toolChoice: this.settings.toolChoice,
+                stopWhen: this.settings.toolStopWhen ?? stepCountIs(20),
+                maxOutputTokens: this.settings.maxOutputTokens,
+                temperature: this.settings.temperature,
+                topP: this.settings.topP,
+                topK: this.settings.topK,
+                presencePenalty: this.settings.presencePenalty,
+                frequencyPenalty: this.settings.frequencyPenalty,
+                stopSequences: this.settings.stopSequences,
+                seed: this.settings.seed,
+                experimental_telemetry: this.settings.experimental_telemetry,
+                activeTools: this.settings.activeTools,
+                prepareStep: this.settings.prepareStep,
+                experimental_repairToolCall: this.settings.experimental_repairToolCall,
+                providerOptions: this.settings.providerOptions,
+                experimental_context: this.settings.experimental_context,
+                abortSignal,
+            }));
+            allResults.push(result);
+            const iterationUsage = aggregateStepUsage(result);
+            totalUsage = addLanguageModelUsage(totalUsage, iterationUsage);
+            currentMessages = [...currentMessages, ...result.response.messages];
+            const duration = Date.now() - startTime;
+            await this.settings.onIterationEnd?.({ iteration, duration, result });
+            if (this.settings.verifyCompletion) {
+                const verification = await this.settings.verifyCompletion({
+                    result,
+                    iteration,
+                    allResults,
+                    originalPrompt: prompt,
+                });
+                if (verification.complete) {
+                    // Complete early - return a stream for the final message
+                    return streamText({
+                        model: this.settings.model,
+                        messages: [...systemMessages, initialUserMessage, ...currentMessages],
+                        tools: this.settings.tools,
+                        toolChoice: this.settings.toolChoice,
+                        stopWhen: this.settings.toolStopWhen ?? stepCountIs(20),
+                        maxOutputTokens: this.settings.maxOutputTokens,
+                        temperature: this.settings.temperature,
+                        abortSignal,
+                    });
+                }
+                if (verification.reason) {
+                    currentMessages.push({
+                        role: 'user',
+                        content: [{ type: 'text', text: `Feedback: ${verification.reason}` }],
+                    });
+                }
+            }
+        }
+        // Stream the final iteration
+        iteration++;
+        const finalMessages = [
+            ...systemMessages,
+            initialUserMessage,
+            ...currentMessages,
+        ];
+        if (iteration > 1) {
+            finalMessages.push({
+                role: 'user',
+                content: [
+                    {
+                        type: 'text',
+                        text: 'Continue working on the task. The previous attempt was not complete.',
+                    },
+                ],
+            });
+        }
+        return streamText({
+            model: this.settings.model,
+            messages: finalMessages,
+            tools: this.settings.tools,
+            toolChoice: this.settings.toolChoice,
+            stopWhen: this.settings.toolStopWhen ?? stepCountIs(20),
+            maxOutputTokens: this.settings.maxOutputTokens,
+            temperature: this.settings.temperature,
+            topP: this.settings.topP,
+            topK: this.settings.topK,
+            presencePenalty: this.settings.presencePenalty,
+            frequencyPenalty: this.settings.frequencyPenalty,
+            stopSequences: this.settings.stopSequences,
+            seed: this.settings.seed,
+            experimental_telemetry: this.settings.experimental_telemetry,
+            activeTools: this.settings.activeTools,
+            prepareStep: this.settings.prepareStep,
+            experimental_repairToolCall: this.settings.experimental_repairToolCall,
+            providerOptions: this.settings.providerOptions,
+            experimental_context: this.settings.experimental_context,
+            abortSignal,
+        });
+    }
+    /**
+     * Build system messages from instructions.
+     */
+    buildSystemMessages() {
+        const { instructions } = this.settings;
+        if (!instructions) {
+            return [];
+        }
+        if (typeof instructions === 'string') {
+            return [{ role: 'system', content: instructions }];
+        }
+        if (Array.isArray(instructions)) {
+            return instructions;
+        }
+        return [instructions];
+    }
+}
+//# sourceMappingURL=ralph-loop-agent.js.map

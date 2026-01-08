@@ -1,0 +1,132 @@
+import { type GenerateTextResult, type StreamTextResult, type ToolSet, type LanguageModelUsage } from 'ai';
+import type { RalphLoopAgentSettings } from './ralph-loop-agent-settings';
+import { RalphContextManager } from './ralph-context-manager';
+/**
+ * Parameters for calling a RalphLoopAgent.
+ */
+export type RalphLoopAgentCallParameters = {
+    /**
+     * The prompt/task to complete.
+     */
+    prompt: string;
+    /**
+     * Abort signal for cancellation.
+     */
+    abortSignal?: AbortSignal;
+    /**
+     * If true, preserve context from previous loop() calls instead of clearing.
+     * Useful for resuming after an abort.
+     */
+    preserveContext?: boolean;
+    /**
+     * Starting iteration number (for resuming). Defaults to 0.
+     */
+    startIteration?: number;
+};
+/**
+ * Result of a RalphLoopAgent execution.
+ */
+export interface RalphLoopAgentResult<TOOLS extends ToolSet = {}> {
+    /**
+     * The final text output.
+     */
+    readonly text: string;
+    /**
+     * The number of iterations that were executed.
+     */
+    readonly iterations: number;
+    /**
+     * Why the loop stopped.
+     */
+    readonly completionReason: 'verified' | 'max-iterations' | 'aborted';
+    /**
+     * The reason message from verifyCompletion (if provided).
+     */
+    readonly reason?: string;
+    /**
+     * The full result from the last iteration.
+     */
+    readonly result: GenerateTextResult<TOOLS, never>;
+    /**
+     * All results from each iteration.
+     */
+    readonly allResults: Array<GenerateTextResult<TOOLS, never>>;
+    /**
+     * Aggregated token usage across all iterations.
+     */
+    readonly totalUsage: LanguageModelUsage;
+}
+export { iterationCountIs } from './ralph-stop-condition';
+export type { RalphStopCondition, RalphStopConditionContext } from './ralph-stop-condition';
+/**
+ * A Ralph Loop Agent implements the "Ralph Wiggum" technique - an iterative
+ * approach that continuously runs until a task is completed.
+ *
+ * The agent has two nested loops:
+ * 1. **Outer loop (Ralph loop)**: Runs iterations until verifyCompletion returns true
+ * 2. **Inner loop (Tool loop)**: Executes tools and LLM calls within each iteration
+ *
+ * @example
+ * ```typescript
+ * const agent = new RalphLoopAgent({
+ *   model: 'anthropic/claude-opus-4.5',
+ *   instructions: 'You are a helpful assistant.',
+ *   tools: { readFile, writeFile },
+ *   stopWhen: iterationCountIs(10),
+ *   verifyCompletion: async ({ result }) => ({
+ *     complete: result.text.includes('DONE'),
+ *     reason: 'Task completed',
+ *   }),
+ * });
+ *
+ * const result = await agent.loop({ prompt: 'Do the task' });
+ * ```
+ */
+export declare class RalphLoopAgent<TOOLS extends ToolSet = {}> {
+    readonly version = "ralph-agent-v1";
+    private readonly settings;
+    private readonly contextManager;
+    constructor(settings: RalphLoopAgentSettings<TOOLS>);
+    /**
+     * Get the context manager (if enabled).
+     */
+    getContextManager(): RalphContextManager | null;
+    /**
+     * The id of the agent.
+     */
+    get id(): string | undefined;
+    /**
+     * The tools that the agent can use.
+     */
+    get tools(): TOOLS;
+    /**
+     * Get the model identifier string.
+     */
+    private getModelId;
+    /**
+     * Check if the current model is an Anthropic model (for prompt caching).
+     */
+    private isAnthropicModel;
+    /**
+     * Get the stop conditions as an array.
+     */
+    private getStopConditions;
+    /**
+     * Create an empty usage object.
+     */
+    private createEmptyUsage;
+    /**
+     * Runs the agent loop until completion or stop condition is met.
+     */
+    loop({ prompt, abortSignal, preserveContext, startIteration, }: RalphLoopAgentCallParameters): Promise<RalphLoopAgentResult<TOOLS>>;
+    /**
+     * Streams the agent loop. Streams only the final iteration.
+     * For full control, use loop() with callbacks instead.
+     */
+    stream({ prompt, abortSignal, }: RalphLoopAgentCallParameters): Promise<StreamTextResult<TOOLS, never>>;
+    /**
+     * Build system messages from instructions.
+     */
+    private buildSystemMessages;
+}
+//# sourceMappingURL=ralph-loop-agent.d.ts.map

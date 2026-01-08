@@ -1,0 +1,121 @@
+import type { GenerateTextResult, ToolSet } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+/**
+ * Context passed to stop condition functions.
+ */
+export type RalphStopConditionContext<TOOLS extends ToolSet = {}> = {
+    /**
+     * Current iteration number (1-indexed).
+     */
+    iteration: number;
+    /**
+     * All results from completed iterations.
+     */
+    allResults: Array<GenerateTextResult<TOOLS, never>>;
+    /**
+     * Aggregated token usage across all iterations.
+     */
+    totalUsage: LanguageModelUsage;
+    /**
+     * The model identifier (e.g., 'anthropic/claude-opus-4.5').
+     */
+    model: string;
+};
+/**
+ * A function that determines when to stop the Ralph loop.
+ * Return true to stop, false to continue.
+ */
+export type RalphStopCondition<TOOLS extends ToolSet = {}> = (context: RalphStopConditionContext<TOOLS>) => PromiseLike<boolean> | boolean;
+/**
+ * Cost rates per million tokens.
+ */
+export type CostRates = {
+    inputCostPerMillionTokens: number;
+    outputCostPerMillionTokens: number;
+    cacheReadCostPerMillionTokens?: number;
+    cacheWriteCostPerMillionTokens?: number;
+};
+/**
+ * Get pricing for a model.
+ */
+export declare function getModelPricing(model: string): CostRates | undefined;
+/**
+ * Add two usage objects together.
+ */
+export declare function addLanguageModelUsage(usage1: LanguageModelUsage, usage2: LanguageModelUsage): LanguageModelUsage;
+/**
+ * Aggregate usage from all steps in a generateText result.
+ * This provides more accurate token counts than result.usage alone,
+ * which may not include all tool call tokens.
+ */
+export declare function aggregateStepUsage<TOOLS extends ToolSet>(result: GenerateTextResult<TOOLS, never>): LanguageModelUsage;
+/**
+ * Calculate cost from usage and rates.
+ * Accounts for prompt caching if cache token details are available.
+ */
+export declare function calculateCost(usage: LanguageModelUsage, rates: CostRates): number;
+/**
+ * Stop when iteration count reaches the specified number.
+ *
+ * @example
+ * ```ts
+ * stopWhen: iterationCountIs(50)
+ * ```
+ */
+export declare function iterationCountIs(count: number): RalphStopCondition<any>;
+/**
+ * Stop when total token count reaches the specified number.
+ *
+ * @example
+ * ```ts
+ * stopWhen: tokenCountIs(100_000)
+ * ```
+ */
+export declare function tokenCountIs(maxTokens: number): RalphStopCondition<any>;
+/**
+ * Stop when input token count reaches the specified number.
+ *
+ * @example
+ * ```ts
+ * stopWhen: inputTokenCountIs(50_000)
+ * ```
+ */
+export declare function inputTokenCountIs(maxTokens: number): RalphStopCondition<any>;
+/**
+ * Stop when output token count reaches the specified number.
+ *
+ * @example
+ * ```ts
+ * stopWhen: outputTokenCountIs(50_000)
+ * ```
+ */
+export declare function outputTokenCountIs(maxTokens: number): RalphStopCondition<any>;
+/**
+ * Stop when cost reaches the specified amount in USD.
+ *
+ * Can infer pricing from the model, use an explicit model, or provide custom rates.
+ *
+ * @example
+ * ```ts
+ * // Infer from agent's model
+ * stopWhen: costIs(2.00)
+ *
+ * // Explicit model
+ * stopWhen: costIs(2.00, 'anthropic/claude-sonnet-4')
+ *
+ * // Custom rates
+ * stopWhen: costIs(2.00, {
+ *   inputCostPerMillionTokens: 3.00,
+ *   outputCostPerMillionTokens: 15.00
+ * })
+ * ```
+ */
+export declare function costIs(maxCostDollars: number, ratesOrModel?: CostRates | string): RalphStopCondition<any>;
+/**
+ * Check if any stop condition is met.
+ */
+export declare function isRalphStopConditionMet<TOOLS extends ToolSet>({ stopConditions, context, }: {
+    stopConditions: Array<RalphStopCondition<TOOLS>>;
+    context: RalphStopConditionContext<TOOLS>;
+}): Promise<boolean>;
+//# sourceMappingURL=ralph-stop-condition.d.ts.map
