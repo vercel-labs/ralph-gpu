@@ -44,6 +44,11 @@ export default function Home() {
           <h2>Fluid Simulation →</h2>
           <p>Navier-Stokes fluid dynamics with auto mouse</p>
         </Link>
+
+        <Link href="/simple-fluid" className={styles.card}>
+          <h2>Simple Fluid (New API) →</h2>
+          <p>Fluid sim using the simplified uniform API</p>
+        </Link>
       </div>
     </main>
   );

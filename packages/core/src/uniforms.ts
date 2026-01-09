@@ -364,3 +364,229 @@ export function parseBindGroup1Bindings(wgsl: string): WGSLBindings {
 
   return bindings;
 }
+
+// ============================================================================
+// SIMPLIFIED API - Auto-generate WGSL declarations from uniforms
+// ============================================================================
+
+/**
+ * Simple uniform types (without { value: T } wrapper)
+ */
+export type SimpleUniformValue = 
+  | number 
+  | boolean 
+  | [number, number] 
+  | [number, number, number] 
+  | [number, number, number, number]
+  | { texture: GPUTexture; sampler?: GPUSampler }  // RenderTarget-like
+  | GPUTexture;
+
+export interface SimpleUniforms {
+  [key: string]: SimpleUniformValue;
+}
+
+/**
+ * Check if shader already has @group(1) bindings (manual mode)
+ */
+export function hasManualBindings(wgsl: string): boolean {
+  return /@group\(1\)\s+@binding/.test(wgsl);
+}
+
+/**
+ * Infer WGSL type from a JS value
+ */
+export function inferWGSLType(value: SimpleUniformValue): string | null {
+  if (typeof value === "number") return "f32";
+  if (typeof value === "boolean") return "u32"; // bool stored as u32
+  if (Array.isArray(value)) {
+    const len = value.length;
+    if (len === 2) return "vec2f";
+    if (len === 3) return "vec3f";
+    if (len === 4) return "vec4f";
+  }
+  // Textures return null - they're handled separately
+  return null;
+}
+
+/**
+ * Check if a value is a texture (RenderTarget, PingPong read, or raw GPUTexture)
+ */
+export function isTextureValue(value: SimpleUniformValue): boolean {
+  if (value && typeof value === "object") {
+    // Raw GPUTexture
+    if ("createView" in value && typeof (value as any).createView === "function") {
+      return true;
+    }
+    // RenderTarget or PingPong read result
+    if ("texture" in value) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Generated WGSL bindings info
+ */
+export interface GeneratedBindings {
+  wgsl: string;
+  bindings: WGSLBindings;
+  scalarUniformNames: string[];
+}
+
+/**
+ * Generate WGSL declarations from simple uniforms
+ * 
+ * Example input:
+ *   { uTexture: someTarget, color: [1, 0, 0], radius: 0.5 }
+ * 
+ * Example output WGSL:
+ *   @group(1) @binding(0) var uTexture: texture_2d<f32>;
+ *   @group(1) @binding(1) var uTextureSampler: sampler;
+ *   struct _Uniforms { color: vec3f, radius: f32, }
+ *   @group(1) @binding(2) var<uniform> uniforms: _Uniforms;
+ */
+export function generateUniformsWGSL(simpleUniforms: SimpleUniforms): GeneratedBindings {
+  const lines: string[] = [];
+  const bindings: WGSLBindings = {
+    textures: new Map(),
+    samplers: new Map(),
+    storage: new Map(),
+  };
+  const scalarFields: { name: string; type: string }[] = [];
+  const scalarUniformNames: string[] = [];
+  let bindingIndex = 0;
+
+  // First pass: textures (they need to come before scalar uniforms in bindings)
+  for (const [name, value] of Object.entries(simpleUniforms)) {
+    if (isTextureValue(value)) {
+      // Generate texture binding
+      lines.push(`@group(1) @binding(${bindingIndex}) var ${name}: texture_2d<f32>;`);
+      bindings.textures.set(name, bindingIndex);
+      bindingIndex++;
+
+      // Generate sampler binding
+      const samplerName = `${name}Sampler`;
+      lines.push(`@group(1) @binding(${bindingIndex}) var ${samplerName}: sampler;`);
+      bindings.samplers.set(samplerName, bindingIndex);
+      bindingIndex++;
+    }
+  }
+
+  // Second pass: collect scalar uniforms
+  for (const [name, value] of Object.entries(simpleUniforms)) {
+    if (!isTextureValue(value)) {
+      const wgslType = inferWGSLType(value);
+      if (wgslType) {
+        scalarFields.push({ name, type: wgslType });
+        scalarUniformNames.push(name);
+      }
+    }
+  }
+
+  // Generate uniform struct if there are scalar uniforms
+  if (scalarFields.length > 0) {
+    lines.push("");
+    lines.push("struct _Uniforms {");
+    for (const field of scalarFields) {
+      lines.push(`  ${field.name}: ${field.type},`);
+    }
+    lines.push("}");
+    lines.push(`@group(1) @binding(${bindingIndex}) var<uniform> uniforms: _Uniforms;`);
+    bindings.uniformBuffer = bindingIndex;
+  }
+
+  return {
+    wgsl: lines.join("\n"),
+    bindings,
+    scalarUniformNames,
+  };
+}
+
+/**
+ * Convert simple uniforms to the internal Uniforms format (with { value: T } wrapper)
+ */
+export function convertToInternalUniforms(simpleUniforms: SimpleUniforms): Uniforms {
+  const result: Uniforms = {};
+  for (const [key, value] of Object.entries(simpleUniforms)) {
+    result[key] = { value };
+  }
+  return result;
+}
+
+/**
+ * Calculate uniform buffer size from simple uniforms (only scalar values)
+ */
+export function calculateSimpleUniformBufferSize(simpleUniforms: SimpleUniforms): number {
+  let offset = 0;
+  
+  for (const value of Object.values(simpleUniforms)) {
+    // Skip textures
+    if (isTextureValue(value)) continue;
+    
+    const valueSize = getUniformSize(value);
+    const alignment = getUniformAlignment(value);
+    
+    if (valueSize > 0) {
+      offset = Math.ceil(offset / alignment) * alignment;
+      offset += valueSize;
+    }
+  }
+  
+  return offset > 0 ? Math.ceil(offset / 16) * 16 : 0;
+}
+
+/**
+ * Update uniform buffer from simple uniforms
+ */
+export function updateSimpleUniformBuffer(
+  device: GPUDevice,
+  buffer: GPUBuffer,
+  simpleUniforms: SimpleUniforms,
+  bufferSize: number
+): void {
+  if (bufferSize === 0) return;
+  
+  const data = new Float32Array(bufferSize / 4);
+  let offset = 0;
+
+  for (const value of Object.values(simpleUniforms)) {
+    // Skip textures
+    if (isTextureValue(value)) continue;
+    
+    const valueSize = getUniformSize(value);
+    const alignment = getUniformAlignment(value);
+    
+    if (valueSize > 0) {
+      offset = Math.ceil(offset / alignment) * alignment;
+      writeUniformData(data, offset, value);
+      offset += valueSize;
+    }
+  }
+
+  device.queue.writeBuffer(buffer, 0, data.buffer);
+}
+
+/**
+ * Collect texture bindings from simple uniforms
+ */
+export function collectSimpleTextureBindings(simpleUniforms: SimpleUniforms): Map<string, TextureBinding> {
+  const textures = new Map<string, TextureBinding>();
+  
+  for (const [key, value] of Object.entries(simpleUniforms)) {
+    if (value && typeof value === "object") {
+      // Check if it's a GPUTexture
+      if ("createView" in value && typeof (value as any).createView === "function") {
+        textures.set(key, { texture: value as GPUTexture });
+      }
+      // Check if it's a RenderTarget or similar object with texture/sampler
+      else if ("texture" in value) {
+        const texture = (value as any).texture;
+        const sampler = "sampler" in value ? (value as any).sampler : undefined;
+        textures.set(key, { texture, sampler });
+      }
+    }
+  }
+  
+  return textures;
+}

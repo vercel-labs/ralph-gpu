@@ -33,6 +33,8 @@ export type {
   MRTOutputs,
   Uniforms,
   UniformValue,
+  SimpleUniforms,
+  SimpleUniformValue,
   BlendMode,
   BlendConfig,
   TextureFormat,

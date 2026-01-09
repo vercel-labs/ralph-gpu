@@ -9,6 +9,7 @@ import type {
   ComputeOptions,
   RenderTargetOptions,
   MRTOutputs,
+  SimpleUniforms,
 } from "./types";
 import {
   WebGPUNotSupportedError,
@@ -196,9 +197,64 @@ export class GPUContext {
 
   /**
    * Create a fullscreen pass
+   * 
+   * **Simple mode** (recommended): Pass plain values, WGSL bindings auto-generated
+   * ```typescript
+   * ctx.pass(`
+   *   @fragment
+   *   fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+   *     let tex = textureSample(uTexture, uTextureSampler, pos.xy / globals.resolution);
+   *     return tex * vec4f(uniforms.color, 1.0) * uniforms.intensity;
+   *   }
+   * `, {
+   *   uTexture: someTarget,
+   *   color: [1, 0, 0],
+   *   intensity: 0.5,
+   * });
+   * ```
+   * 
+   * **Manual mode**: Write your own @group(1) @binding() declarations
+   * ```typescript
+   * ctx.pass(`
+   *   @group(1) @binding(0) var uTexture: texture_2d<f32>;
+   *   @group(1) @binding(1) var uTextureSampler: sampler;
+   *   struct Params { color: vec3f, intensity: f32, }
+   *   @group(1) @binding(2) var<uniform> params: Params;
+   *   @fragment fn main(...) { ... }
+   * `, { uniforms: { uTexture: { value: someTarget }, ... } });
+   * ```
    */
-  pass(fragmentWGSL: string, options?: PassOptions): Pass {
-    return new Pass(this.device, fragmentWGSL, this.globalsBuffer, this, options);
+  pass(fragmentWGSL: string, options?: PassOptions): Pass;
+  pass(fragmentWGSL: string, simpleUniforms?: SimpleUniforms): Pass;
+  pass(fragmentWGSL: string, optionsOrUniforms?: PassOptions | SimpleUniforms): Pass {
+    // Detect if it's SimpleUniforms or PassOptions
+    // PassOptions has 'uniforms' or 'blend' keys with specific structure
+    // SimpleUniforms has plain values directly
+    if (optionsOrUniforms && !this.isPassOptions(optionsOrUniforms)) {
+      // Simple mode: auto-generate bindings
+      return new Pass(this.device, fragmentWGSL, this.globalsBuffer, this, {}, optionsOrUniforms as SimpleUniforms);
+    }
+    // Manual mode
+    return new Pass(this.device, fragmentWGSL, this.globalsBuffer, this, optionsOrUniforms as PassOptions);
+  }
+
+  /**
+   * Check if an object is PassOptions (has 'uniforms' key with { value: T } structure or 'blend' key)
+   */
+  private isPassOptions(obj: any): obj is PassOptions {
+    if (!obj || typeof obj !== 'object') return false;
+    // If it has 'blend' key, it's PassOptions
+    if ('blend' in obj) return true;
+    // If it has 'uniforms' key, check if uniforms have { value: T } structure
+    if ('uniforms' in obj && obj.uniforms) {
+      const firstKey = Object.keys(obj.uniforms)[0];
+      if (firstKey && obj.uniforms[firstKey] && typeof obj.uniforms[firstKey] === 'object' && 'value' in obj.uniforms[firstKey]) {
+        return true;
+      }
+    }
+    // If no uniforms but has 'uniforms' key, it's still PassOptions
+    if ('uniforms' in obj) return true;
+    return false;
   }
 
   /**

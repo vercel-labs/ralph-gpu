@@ -63,23 +63,47 @@ export interface GPUContextOptions {
 }
 
 /**
- * Uniform value wrapper (Three.js style)
+ * Uniform value wrapper (Three.js style) - for manual binding mode
  */
 export interface UniformValue<T = any> {
   value: T;
 }
 
 /**
- * Uniforms object
+ * Uniforms object - for manual binding mode
  */
 export interface Uniforms {
   [key: string]: UniformValue<any>;
 }
 
 /**
+ * Simple uniform value types - for auto-generation mode
+ */
+export type SimpleUniformValue = 
+  | number 
+  | boolean 
+  | [number, number] 
+  | [number, number, number] 
+  | [number, number, number, number]
+  | { texture: GPUTexture; sampler?: GPUSampler }
+  | GPUTexture;
+
+/**
+ * Simple uniforms object - for auto-generation mode
+ * Just use plain values without { value: T } wrapper
+ */
+export interface SimpleUniforms {
+  [key: string]: SimpleUniformValue;
+}
+
+/**
  * Pass creation options
  */
 export interface PassOptions {
+  /** 
+   * Uniforms with { value: T } wrapper (manual binding mode)
+   * Use this when you write your own @group(1) @binding() declarations in WGSL
+   */
   uniforms?: Uniforms;
   blend?: BlendMode | BlendConfig;
 }
