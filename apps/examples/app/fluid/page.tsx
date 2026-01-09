@@ -6,7 +6,7 @@ import { gpu, GPUContext } from 'ralph-gpu';
 // Simulation parameters
 const SIM_RESOLUTION = 256;
 const DYE_RESOLUTION = 512;
-const PRESSURE_ITERATIONS = 10;
+const PRESSURE_ITERATIONS = 3;
 const CURL_STRENGTH = 20;
 const PRESSURE_DISSIPATION = 0.8;
 const VELOCITY_DISSIPATION = 0.99;
@@ -202,9 +202,8 @@ export default function FluidPage() {
             let T = textureSample(uCurl, uCurlSampler, uv + vec2f(0.0, texelSize.y)).x;
             let C = textureSample(uCurl, uCurlSampler, uv).x;
             
-            var force = vec2f(abs(T) - abs(B), abs(R) - abs(L));
-            let lengthSq = max(0.00001, dot(force, force));
-            force = force / sqrt(lengthSq);
+            var force = 0.5 * vec2f(abs(T) - abs(B), abs(R) - abs(L));
+            force = force / (length(force) + 0.0001);
             force = force * params.curlStrength * C;
             force.y = -force.y;
             
@@ -230,10 +229,22 @@ export default function FluidPage() {
             let texelSize = 1.0 / globals.resolution;
             let uv = pos.xy / globals.resolution;
             
-            let L = textureSample(uVelocity, uVelocitySampler, uv - vec2f(texelSize.x, 0.0)).x;
-            let R = textureSample(uVelocity, uVelocitySampler, uv + vec2f(texelSize.x, 0.0)).x;
-            let B = textureSample(uVelocity, uVelocitySampler, uv - vec2f(0.0, texelSize.y)).y;
-            let T = textureSample(uVelocity, uVelocitySampler, uv + vec2f(0.0, texelSize.y)).y;
+            let uvL = uv - vec2f(texelSize.x, 0.0);
+            let uvR = uv + vec2f(texelSize.x, 0.0);
+            let uvB = uv - vec2f(0.0, texelSize.y);
+            let uvT = uv + vec2f(0.0, texelSize.y);
+            
+            var L = textureSample(uVelocity, uVelocitySampler, uvL).x;
+            var R = textureSample(uVelocity, uVelocitySampler, uvR).x;
+            var B = textureSample(uVelocity, uVelocitySampler, uvB).y;
+            var T = textureSample(uVelocity, uVelocitySampler, uvT).y;
+            let C = textureSample(uVelocity, uVelocitySampler, uv).xy;
+            
+            // Boundary conditions - negate velocity at walls
+            if (uvL.x < 0.0) { L = -C.x; }
+            if (uvR.x > 1.0) { R = -C.x; }
+            if (uvT.y > 1.0) { T = -C.y; }
+            if (uvB.y < 0.0) { B = -C.y; }
             
             let div = 0.5 * (R - L + T - B);
             
@@ -295,7 +306,7 @@ export default function FluidPage() {
             let T = textureSample(uPressure, uPressureSampler, uv + vec2f(0.0, texelSize.y)).x;
             
             var velocity = textureSample(uVelocity, uVelocitySampler, uv).xy;
-            velocity -= 0.5 * vec2f(R - L, T - B);
+            velocity -= vec2f(R - L, T - B);
             
             return vec4f(velocity, 0.0, 1.0);
           }
