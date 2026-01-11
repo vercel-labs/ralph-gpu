@@ -9,15 +9,23 @@
 export const brainRule = `
 ## Brain Structure
 
-This project has a \`.brain/\` directory for persistent knowledge. Use it.
+Use a \`.brain/\` directory for persistent knowledge about the project.
+
+### First Time Setup
+If \`.brain/\` doesn't exist, create it:
+\`\`\`bash
+mkdir -p .brain
+\`\`\`
+
+Then create \`.brain/index.md\` with an overview of what you've learned.
 
 ### Reading
-- Start by reading \`.brain/index.md\` to understand what's documented
+- Check if \`.brain/index.md\` exists first
+- If it exists, read it to understand what's documented
 - Each folder has an \`index.md\` describing its contents
-- Read relevant files before making changes
 
 ### Writing  
-- Update \`.brain/\` when you learn something important about the codebase
+- Create or update \`.brain/\` when you learn something important
 - Keep entries concise (1-2 paragraphs max)
 - Create subfolders if a topic grows large
 
@@ -29,11 +37,13 @@ This project has a \`.brain/\` directory for persistent knowledge. Use it.
   architecture.md    # High-level design
   decisions/         # Why things are the way they are
     index.md
-    001-auth.md
-  components/        # Major components
-    index.md
-    renderer.md
+    001-decision.md
 \`\`\`
+
+### When to Update
+- After exploring a new codebase
+- After making significant changes
+- When discovering important patterns or gotchas
 `;
 
 /**

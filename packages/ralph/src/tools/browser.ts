@@ -10,7 +10,8 @@ export function createBrowserTools(manager: BrowserManager): Record<string, Tool
   return {
     openBrowser: tool({
       description:
-        "Open a browser and navigate to a URL. Returns a screenshot and any console errors.",
+        "Open a browser and navigate to a URL. Returns a screenshot and any console errors. " +
+        "By default runs in headed mode with WebGPU support enabled.",
       inputSchema: z.object({
         url: z.string().describe("URL to navigate to"),
         name: z
@@ -24,9 +25,13 @@ export function createBrowserTools(manager: BrowserManager): Record<string, Tool
           })
           .optional()
           .describe("Viewport size (default: 1280x720)"),
+        headless: z
+          .boolean()
+          .optional()
+          .describe("Run in headless mode (default: false for WebGPU support)"),
       }),
-      execute: async ({ url, name, viewport }) => {
-        return await manager.open({ url, name, viewport });
+      execute: async ({ url, name, viewport, headless }) => {
+        return await manager.open({ url, name, viewport, headless });
       },
     }),
 

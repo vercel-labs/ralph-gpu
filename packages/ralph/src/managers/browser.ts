@@ -32,6 +32,7 @@ export class BrowserManager {
     url: string;
     name?: string;
     viewport?: { width: number; height: number };
+    headless?: boolean;
   }): Promise<{
     name: string;
     url: string;
@@ -42,6 +43,7 @@ export class BrowserManager {
       url,
       name = "main",
       viewport = { width: 1280, height: 720 },
+      headless = false, // Default to headed mode for WebGPU support
     } = options;
 
     // Close existing browser with same name
@@ -50,9 +52,30 @@ export class BrowserManager {
     }
 
     const playwright = await this.getPlaywright();
-    const browser = await playwright.chromium.launch({
-      headless: true,
-    });
+    
+    let browser: Browser;
+    try {
+      browser = await playwright.chromium.launch({
+        headless,
+        // Enable GPU for WebGPU support
+        args: [
+          '--enable-unsafe-webgpu',
+          '--enable-features=Vulkan',
+          '--use-gl=angle',
+          '--use-angle=metal', // For macOS
+          '--ignore-gpu-blocklist',
+        ],
+      });
+    } catch (error) {
+      const err = error as Error;
+      if (err.message.includes("Executable doesn't exist")) {
+        throw new Error(
+          `Playwright browser not installed. Run: npx playwright install chromium\n` +
+          `Original error: ${err.message}`
+        );
+      }
+      throw error;
+    }
 
     const context = await browser.newContext({
       viewport,

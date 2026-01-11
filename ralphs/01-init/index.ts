@@ -7,7 +7,6 @@
 
 import "dotenv/config";
 import { LoopAgent, explorationRule, brainRule } from "@ralph/core";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 // Get configuration from environment
 const AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY;
