@@ -7,6 +7,8 @@ interface ManagedProcess {
   stdout: string[];
   stderr: string[];
   maxOutputLines: number;
+  /** Process group ID for killing entire process tree (same as pid when detached) */
+  pgid: number;
 }
 
 /**
@@ -50,6 +52,8 @@ export class ProcessManager {
           cwd: workingDir,
           stdio: ["pipe", "pipe", "pipe"],
           env: { ...process.env }, // Ensure environment is passed
+          // Create new process group so we can kill entire tree
+          detached: true,
         });
       } catch (error) {
         const err = error as Error;
@@ -82,6 +86,8 @@ export class ProcessManager {
         stdout: [],
         stderr: [],
         maxOutputLines: this.maxOutputLines,
+        // Store process group ID (same as pid when detached)
+        pgid: child.pid!,
       };
 
       // Capture output
@@ -151,6 +157,7 @@ export class ProcessManager {
 
   /**
    * Stop a process by name.
+   * Kills the entire process group to ensure child processes are terminated.
    */
   async stop(name: string): Promise<boolean> {
     const managed = this.processes.get(name);
@@ -159,21 +166,58 @@ export class ProcessManager {
     }
 
     return new Promise((resolve) => {
-      const { process: child } = managed;
+      const { process: child, pgid } = managed;
+      let resolved = false;
 
-      // Try SIGTERM first
-      child.kill("SIGTERM");
-
-      const forceKillTimeout = setTimeout(() => {
-        // Force kill if still running
-        child.kill("SIGKILL");
-      }, 5000);
-
-      child.on("exit", () => {
+      const cleanup = () => {
+        if (resolved) return;
+        resolved = true;
         clearTimeout(forceKillTimeout);
+        clearTimeout(cleanupTimeout);
         this.processes.delete(name);
         resolve(true);
-      });
+      };
+
+      // Kill the entire process group using negative PID
+      // This ensures all child processes (like dev servers) are killed
+      try {
+        process.kill(-pgid, "SIGTERM");
+      } catch {
+        // Process group may already be dead, try killing just the process
+        try {
+          child.kill("SIGTERM");
+        } catch {
+          // Process already dead
+          cleanup();
+          return;
+        }
+      }
+
+      const forceKillTimeout = setTimeout(() => {
+        // Force kill the entire process group if still running
+        try {
+          process.kill(-pgid, "SIGKILL");
+        } catch {
+          // Process group already dead
+        }
+        // Give it a moment then resolve anyway
+        setTimeout(cleanup, 500);
+      }, 5000);
+
+      // Listen for exit event
+      child.on("exit", cleanup);
+      child.on("close", cleanup);
+
+      // Also handle case where child exits before we set up listener
+      if (child.killed || child.exitCode !== null) {
+        cleanup();
+        return;
+      }
+
+      // Safety timeout - resolve after 6 seconds regardless
+      const cleanupTimeout = setTimeout(() => {
+        cleanup();
+      }, 6000);
     });
   }
 

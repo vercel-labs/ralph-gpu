@@ -35,7 +35,8 @@ describe("StuckDetector", () => {
   let detector: StuckDetector;
 
   beforeEach(() => {
-    detector = new StuckDetector();
+    // Use threshold: 3 so tests with 3 iterations can detect stuck patterns
+    detector = new StuckDetector({ threshold: 3 });
   });
 
   describe("constructor", () => {
@@ -293,20 +294,37 @@ describe("StuckDetector", () => {
 
   describe("check - no progress detection", () => {
     it("should detect high token usage with no file changes", () => {
+      // no_progress requires at least 5 iterations and >150k tokens
+      // Using same tool to avoid triggering repetitive check with different args
       const iterations = [
         createIteration({
           index: 0,
-          tokens: { input: 20000, output: 10000 },
+          tokens: { input: 25000, output: 10000 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd1" } })],
           filesModified: undefined,
         }),
         createIteration({
           index: 1,
-          tokens: { input: 20000, output: 10000 },
+          tokens: { input: 25000, output: 10000 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd2" } })],
           filesModified: undefined,
         }),
         createIteration({
           index: 2,
-          tokens: { input: 20000, output: 10000 },
+          tokens: { input: 25000, output: 10000 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd3" } })],
+          filesModified: undefined,
+        }),
+        createIteration({
+          index: 3,
+          tokens: { input: 25000, output: 10000 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd4" } })],
+          filesModified: undefined,
+        }),
+        createIteration({
+          index: 4,
+          tokens: { input: 25000, output: 10000 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd5" } })],
           filesModified: undefined,
         }),
       ];
@@ -320,21 +338,37 @@ describe("StuckDetector", () => {
     });
 
     it("should not flag progress with file changes", () => {
+      // 5 iterations needed for no_progress check
       const iterations = [
         createIteration({
           index: 0,
-          tokens: { input: 20000, output: 10000 },
+          tokens: { input: 25000, output: 10000 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd1" } })],
           filesModified: ["file1.ts"],
         }),
         createIteration({
           index: 1,
-          tokens: { input: 20000, output: 10000 },
+          tokens: { input: 25000, output: 10000 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd2" } })],
           filesModified: ["file2.ts"],
         }),
         createIteration({
           index: 2,
-          tokens: { input: 20000, output: 10000 },
+          tokens: { input: 25000, output: 10000 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd3" } })],
           filesModified: ["file3.ts"],
+        }),
+        createIteration({
+          index: 3,
+          tokens: { input: 25000, output: 10000 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd4" } })],
+          filesModified: ["file4.ts"],
+        }),
+        createIteration({
+          index: 4,
+          tokens: { input: 25000, output: 10000 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd5" } })],
+          filesModified: ["file5.ts"],
         }),
       ];
 
@@ -344,20 +378,36 @@ describe("StuckDetector", () => {
     });
 
     it("should not flag low token usage without file changes", () => {
+      // 5 iterations needed for no_progress check
       const iterations = [
         createIteration({
           index: 0,
           tokens: { input: 1000, output: 500 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd1" } })],
           filesModified: undefined,
         }),
         createIteration({
           index: 1,
           tokens: { input: 1000, output: 500 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd2" } })],
           filesModified: undefined,
         }),
         createIteration({
           index: 2,
           tokens: { input: 1000, output: 500 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd3" } })],
+          filesModified: undefined,
+        }),
+        createIteration({
+          index: 3,
+          tokens: { input: 1000, output: 500 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd4" } })],
+          filesModified: undefined,
+        }),
+        createIteration({
+          index: 4,
+          tokens: { input: 1000, output: 500 },
+          toolCalls: [createToolCall({ name: "bash", args: { command: "cmd5" } })],
           filesModified: undefined,
         }),
       ];
