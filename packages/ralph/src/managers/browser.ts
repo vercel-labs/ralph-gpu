@@ -10,6 +10,74 @@ interface ManagedBrowser {
 }
 
 /**
+ * AI SDK v6 ToolResultOutput format for content with images.
+ * @see https://ai-sdk.dev/docs/reference/ai-sdk-core/model-message#languagemodelv3toolresultoutput
+ */
+interface ImageToolResult {
+  type: "content";
+  value: Array<
+    | { type: "text"; text: string }
+    | { type: "image-data"; data: string; mediaType: string }
+  >;
+}
+
+/**
+ * Compress/resize image to reduce token usage.
+ * Playwright screenshots can be quite large, we resize to max 800px and use JPEG.
+ */
+async function compressScreenshot(
+  page: Page,
+  options: { selector?: string; fullPage?: boolean } = {}
+): Promise<{ data: string; mediaType: string }> {
+  const { selector, fullPage = false } = options;
+  
+  // Take screenshot as JPEG with lower quality to reduce size
+  let screenshotBuffer: Buffer;
+  
+  if (selector) {
+    const element = await page.$(selector);
+    if (!element) {
+      throw new Error(`Element "${selector}" not found`);
+    }
+    screenshotBuffer = await element.screenshot({ 
+      type: "jpeg", 
+      quality: 60,
+    });
+  } else {
+    screenshotBuffer = await page.screenshot({ 
+      fullPage,
+      type: "jpeg",
+      quality: 60,
+    });
+  }
+  
+  // Log the size for debugging
+  const sizeKB = (screenshotBuffer.length / 1024).toFixed(1);
+  console.log(`     📷 Screenshot: ${sizeKB}KB (JPEG q60)`);
+  
+  return {
+    data: screenshotBuffer.toString("base64"),
+    mediaType: "image/jpeg",
+  };
+}
+
+/**
+ * Create a properly formatted tool result with an image for AI SDK v6.
+ */
+function createImageResult(
+  imageData: { data: string; mediaType: string },
+  textInfo: Record<string, unknown>
+): ImageToolResult {
+  return {
+    type: "content",
+    value: [
+      { type: "text", text: JSON.stringify(textInfo, null, 2) },
+      { type: "image-data", data: imageData.data, mediaType: imageData.mediaType },
+    ],
+  };
+}
+
+/**
  * Manages Playwright browsers for the agent.
  * Handles opening, interacting with, and closing browsers.
  */
@@ -27,18 +95,14 @@ export class BrowserManager {
 
   /**
    * Open a browser and navigate to a URL.
+   * Returns screenshot in AI SDK v6 content format for proper image handling.
    */
   async open(options: {
     url: string;
     name?: string;
     viewport?: { width: number; height: number };
     headless?: boolean;
-  }): Promise<{
-    name: string;
-    url: string;
-    screenshot: string;
-    consoleErrors: string[];
-  }> {
+  }): Promise<ImageToolResult> {
     const {
       url,
       name = "main",
@@ -107,26 +171,26 @@ export class BrowserManager {
 
     this.browsers.set(name, managed);
 
-    // Take initial screenshot and convert to base64
-    const screenshotBuffer = await page.screenshot();
-    const screenshot = screenshotBuffer.toString("base64");
+    // Take compressed screenshot for AI SDK
+    const imageData = await compressScreenshot(page);
 
-    return {
+    // Return in AI SDK v6 content format
+    return createImageResult(imageData, {
       name,
       url,
-      screenshot,
       consoleErrors: [...consoleErrors],
-    };
+    });
   }
 
   /**
    * Take a screenshot of current page state.
+   * Returns screenshot in AI SDK v6 content format for proper image handling.
    */
   async screenshot(options: {
     name?: string;
     selector?: string;
     fullPage?: boolean;
-  }): Promise<{ screenshot: string; url: string }> {
+  }): Promise<ImageToolResult> {
     const { name = "main", selector, fullPage = false } = options;
 
     const managed = this.browsers.get(name);
@@ -134,31 +198,22 @@ export class BrowserManager {
       throw new Error(`Browser "${name}" not found. Call openBrowser first.`);
     }
 
-    let screenshotBuffer: Buffer;
+    const imageData = await compressScreenshot(managed.page, { selector, fullPage });
 
-    if (selector) {
-      const element = await managed.page.$(selector);
-      if (!element) {
-        throw new Error(`Element "${selector}" not found`);
-      }
-      screenshotBuffer = await element.screenshot();
-    } else {
-      screenshotBuffer = await managed.page.screenshot({ fullPage });
-    }
-
-    return {
-      screenshot: screenshotBuffer.toString("base64"),
+    return createImageResult(imageData, {
       url: managed.page.url(),
-    };
+      selector: selector || null,
+    });
   }
 
   /**
    * Click an element.
+   * Returns screenshot in AI SDK v6 content format for proper image handling.
    */
   async click(options: {
     selector: string;
     name?: string;
-  }): Promise<{ clicked: string; screenshot: string }> {
+  }): Promise<ImageToolResult> {
     const { selector, name = "main" } = options;
 
     const managed = this.browsers.get(name);
@@ -169,22 +224,23 @@ export class BrowserManager {
     await managed.page.click(selector);
     await managed.page.waitForLoadState("networkidle").catch(() => {});
 
-    const screenshotBuffer = await managed.page.screenshot();
+    const imageData = await compressScreenshot(managed.page);
 
-    return {
+    return createImageResult(imageData, {
       clicked: selector,
-      screenshot: screenshotBuffer.toString("base64"),
-    };
+      url: managed.page.url(),
+    });
   }
 
   /**
    * Type text into an input.
+   * Returns screenshot in AI SDK v6 content format for proper image handling.
    */
   async type(options: {
     selector: string;
     text: string;
     name?: string;
-  }): Promise<{ typed: string; screenshot: string }> {
+  }): Promise<ImageToolResult> {
     const { selector, text, name = "main" } = options;
 
     const managed = this.browsers.get(name);
@@ -194,22 +250,24 @@ export class BrowserManager {
 
     await managed.page.fill(selector, text);
 
-    const screenshotBuffer = await managed.page.screenshot();
+    const imageData = await compressScreenshot(managed.page);
 
-    return {
+    return createImageResult(imageData, {
       typed: text,
-      screenshot: screenshotBuffer.toString("base64"),
-    };
+      selector,
+      url: managed.page.url(),
+    });
   }
 
   /**
    * Scroll the page.
+   * Returns screenshot in AI SDK v6 content format for proper image handling.
    */
   async scroll(options: {
     direction: "up" | "down";
     amount?: number;
     name?: string;
-  }): Promise<{ scrolled: number; screenshot: string }> {
+  }): Promise<ImageToolResult> {
     const { direction, amount = 500, name = "main" } = options;
 
     const managed = this.browsers.get(name);
@@ -223,21 +281,23 @@ export class BrowserManager {
       (globalThis as any).scrollBy(0, y);
     }, scrollAmount);
 
-    const screenshotBuffer = await managed.page.screenshot();
+    const imageData = await compressScreenshot(managed.page);
 
-    return {
+    return createImageResult(imageData, {
       scrolled: amount,
-      screenshot: screenshotBuffer.toString("base64"),
-    };
+      direction,
+      url: managed.page.url(),
+    });
   }
 
   /**
    * Navigate to a new URL.
+   * Returns screenshot in AI SDK v6 content format for proper image handling.
    */
   async navigate(options: {
     url: string;
     name?: string;
-  }): Promise<{ url: string; screenshot: string }> {
+  }): Promise<ImageToolResult> {
     const { url, name = "main" } = options;
 
     const managed = this.browsers.get(name);
@@ -248,12 +308,12 @@ export class BrowserManager {
     await managed.page.goto(url, { waitUntil: "networkidle" });
     managed.info.url = url;
 
-    const screenshotBuffer = await managed.page.screenshot();
+    const imageData = await compressScreenshot(managed.page);
 
-    return {
+    return createImageResult(imageData, {
       url,
-      screenshot: screenshotBuffer.toString("base64"),
-    };
+      navigatedTo: url,
+    });
   }
 
   /**
