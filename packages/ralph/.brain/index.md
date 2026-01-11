@@ -11,7 +11,7 @@ Documentation and knowledge base for the autonomous AI agent loop library.
 - [brain-instructions.md](./brain-instructions.md) - **Start here** - How to use this .brain folder
 - [architecture.md](./architecture.md) - High-level design and component overview
 - [conventions.md](./conventions.md) - Code style and patterns used
-- [decisions/](./decisions/) - Key architectural decisions
+- [decisions/](./decisions/) - Key architectural decisions (6 decisions documented)
 - [progress.md](./progress.md) - Implementation progress tracking
 - [testing.md](./testing.md) - Test suite documentation
 
@@ -31,3 +31,33 @@ Documentation and knowledge base for the autonomous AI agent loop library.
 ### Package Status
 
 ✅ Implementation complete - builds, type-checks, and **182 tests passing**
+
+## Recent Learnings (Jan 2026)
+
+### Image Handling
+
+Tool results with images **must** use AI SDK v6 `content` format:
+
+```typescript
+{ type: "content", value: [
+  { type: "text", text: "..." },
+  { type: "image-data", data: base64, mediaType: "image/jpeg" }
+]}
+```
+
+Raw base64 strings are treated as text tokens and will blow up context!
+
+### Screenshot Compression
+
+Screenshots are compressed as JPEG (quality 60) to reduce token usage.
+Typical size: ~30-50KB instead of megabytes.
+
+### Context Management
+
+Messages are automatically summarized when context exceeds ~80k tokens.
+Older messages are compressed, recent ones kept intact.
+
+### Debug Mode
+
+Enable with `debug: true` in config or `DEBUG=true` env var.
+Shows detailed tool calls, arguments, and think tool reasoning.

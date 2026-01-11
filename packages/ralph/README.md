@@ -39,6 +39,9 @@ console.log(result.summary); // "Fixed 7 type errors..."
 - ✅ Provides callbacks for monitoring and intervention
 - ✅ Provides default tools for common operations
 - ✅ Allows custom tools to be added
+- ✅ Structured logging with debug mode
+- ✅ Browser tools with proper image handling (AI SDK v6 format)
+- ✅ Automatic context management to prevent overflow
 
 ## What Ralph Does NOT Do
 
@@ -120,6 +123,49 @@ new LoopAgent({
 });
 ```
 
+## Logging & Debug Mode
+
+Ralph includes structured logging for visibility into agent behavior:
+
+```
+┌─ Iteration 0 ────────────────────────────────────────
+  🔧 [19:28:26] bash
+     ▸ command: ls -la
+     ✓ exit 0, 10 lines (28ms)
+  💭 [19:28:30] think
+     │ I need to analyze the code structure...
+     │ The main components are...
+     ✓ I need to analyze the code structure... (1ms)
+  📄 [19:28:33] readFile
+     ▸ path: src/index.ts
+     ✓ 87 lines (3ms)
+└─ Iteration 0 completed: 3 tools, 5,234 tokens, $0.0157 (8.2s)
+```
+
+Enable debug mode for verbose output:
+
+```typescript
+const agent = new LoopAgent({
+  task: "Fix the bug",
+  debug: true, // Enable verbose logging
+});
+```
+
+Or via environment variable:
+
+```bash
+DEBUG=true pnpm start
+```
+
+### Logging Utilities
+
+```typescript
+import { setDebugMode, setLogLevel, toolLogger, loopLogger } from "@ralph/core";
+
+setDebugMode(true); // Enable debug mode
+setLogLevel("debug"); // Set log level: debug | info | warn | error | silent
+```
+
 ## Stuck Detection
 
 Ralph automatically detects when the agent is spinning:
@@ -199,6 +245,44 @@ interface LoopStatus {
   elapsed: number;
   lastActions: string[];
 }
+```
+
+## Browser Tools & Visual Verification
+
+Browser tools use Playwright and return screenshots that the AI model can see:
+
+```typescript
+const agent = new LoopAgent({
+  task: "Verify the UI looks correct",
+  rules: [visualCheckRule],
+});
+```
+
+### Key Features
+
+- **Headed mode by default** - WebGPU and GPU-accelerated content works
+- **JPEG compression** - Screenshots are ~30-50KB (not megabytes)
+- **AI SDK v6 image format** - Model actually "sees" the image, not text tokens
+
+### WebGPU Support
+
+Browser launches with GPU flags enabled:
+
+```typescript
+// Automatic flags:
+--enable-unsafe-webgpu
+--enable-features=Vulkan
+--use-gl=angle
+--use-angle=metal  // macOS
+--ignore-gpu-blocklist
+```
+
+### Playwright Setup
+
+Ralph includes a postinstall script, but if needed:
+
+```bash
+npx playwright install chromium
 ```
 
 ## Custom Tools

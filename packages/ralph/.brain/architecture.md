@@ -28,19 +28,20 @@ src/
 ├── index.ts              # Public exports
 ├── agent.ts              # LoopAgent - main orchestrator
 ├── loop.ts               # Core loop execution logic
+├── logger.ts             # Structured logging (toolLogger, loopLogger)
 ├── prompt.ts             # System prompt builder
 ├── rules.ts              # Default behavioral rules
 ├── stuck.ts              # Stuck detection algorithm
 ├── types.ts              # TypeScript interfaces
 ├── tools/
-│   ├── index.ts          # Tool aggregation
+│   ├── index.ts          # Tool aggregation + logging wrapper
 │   ├── bash.ts           # bash-tool integration
 │   ├── process.ts        # Process management tools
 │   ├── browser.ts        # Playwright tools
 │   └── utility.ts        # done, think tools
 └── managers/
     ├── process.ts        # ProcessManager class
-    └── browser.ts        # BrowserManager class
+    └── browser.ts        # BrowserManager class (+ image compression)
 
 tests/
 ├── types.test.ts         # Type definitions
@@ -56,22 +57,26 @@ tests/
 ## Key Components
 
 ### LoopAgent (agent.ts)
+
 - Public-facing class that users instantiate
 - Initializes managers and tools
 - Delegates to `runLoop()` for execution
 - Handles cleanup on completion
 
 ### Loop Engine (loop.ts)
+
 - Core iteration logic
 - Token/cost tracking
 - Stuck detection integration
 - Completion checking
 
 ### Managers
+
 - **ProcessManager**: Handles long-running processes (dev servers, watch modes)
 - **BrowserManager**: Manages Playwright browser instances
 
 ### Tools
+
 All tools use AI SDK v6 format with `inputSchema` (Zod) and `execute` function.
 
 ## Data Flow
@@ -90,6 +95,7 @@ All tools use AI SDK v6 format with `inputSchema` (Zod) and `execute` function.
 ## State Management
 
 `LoopState` tracks:
+
 - Iteration count
 - Token usage (input/output)
 - Cost accumulation

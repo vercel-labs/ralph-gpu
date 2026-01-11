@@ -7,3 +7,6 @@ This folder documents key architectural decisions made during development.
 1. [001-ai-sdk-version.md](./001-ai-sdk-version.md) - Using AI SDK v6
 2. [002-tool-wrapping.md](./002-tool-wrapping.md) - Done tool signal detection
 3. [003-fallback-bash.md](./003-fallback-bash.md) - Fallback bash implementation
+4. [004-image-handling.md](./004-image-handling.md) - AI SDK v6 image format for screenshots
+5. [005-context-management.md](./005-context-management.md) - Message summarization to prevent overflow
+6. [006-logging-system.md](./006-logging-system.md) - Structured logging for debugging
