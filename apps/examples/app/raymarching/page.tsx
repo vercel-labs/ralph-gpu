@@ -355,7 +355,9 @@ export default function RaymarchingPage() {
           @fragment
           fn main(@builtin(position) fragCoord: vec4f) -> @location(0) vec4f {
             // Normalized coordinates (-1 to 1, aspect corrected)
-            let uv = (fragCoord.xy - 0.5 * globals.resolution) / globals.resolution.y;
+            // Flip Y to correct for WebGPU's top-left origin
+            var uv = (fragCoord.xy - 0.5 * globals.resolution) / globals.resolution.y;
+            uv.y = -uv.y;
             
             let time = globals.time;
             
