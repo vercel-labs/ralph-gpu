@@ -20,20 +20,18 @@
 - [x] README documentation
 - [x] TypeScript compilation passing
 - [x] Package builds successfully (CJS + ESM + DTS)
+- [x] **Test suite** - 182 tests across 8 test files (see [testing.md](./testing.md))
 
 ## In Progress
 
-- [ ] Unit tests for core components
-- [ ] Integration tests with mock model
+None currently.
 
 ## Next Steps
 
-- [ ] Add tests for StuckDetector patterns
-- [ ] Add tests for ProcessManager lifecycle
-- [ ] Add tests for completion strategies
 - [ ] Consider streaming support (`streamText` alternative)
 - [ ] Consider checkpoint/restore functionality
 - [ ] Tool middleware support
+- [ ] Integration tests with real AI model (manual)
 
 ## Blockers
 

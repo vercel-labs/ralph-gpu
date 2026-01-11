@@ -41,6 +41,16 @@ src/
 └── managers/
     ├── process.ts        # ProcessManager class
     └── browser.ts        # BrowserManager class
+
+tests/
+├── types.test.ts         # Type definitions
+├── stuck.test.ts         # StuckDetector patterns
+├── prompt.test.ts        # Prompt building
+├── rules.test.ts         # Rules exports
+├── tools.test.ts         # Tool creation
+├── managers.test.ts      # ProcessManager/BrowserManager
+├── agent.test.ts         # LoopAgent config
+└── exports.test.ts       # API exports
 ```
 
 ## Key Components

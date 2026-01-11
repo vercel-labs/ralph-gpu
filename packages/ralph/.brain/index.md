@@ -13,6 +13,7 @@ Documentation and knowledge base for the autonomous AI agent loop library.
 - [conventions.md](./conventions.md) - Code style and patterns used
 - [decisions/](./decisions/) - Key architectural decisions
 - [progress.md](./progress.md) - Implementation progress tracking
+- [testing.md](./testing.md) - Test suite documentation
 
 ## Quick Reference
 
@@ -29,4 +30,4 @@ Documentation and knowledge base for the autonomous AI agent loop library.
 
 ### Package Status
 
-✅ Initial implementation complete - builds and type-checks successfully
+✅ Implementation complete - builds, type-checks, and **182 tests passing**
