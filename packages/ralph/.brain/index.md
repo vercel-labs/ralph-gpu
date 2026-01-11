@@ -34,6 +34,16 @@ Documentation and knowledge base for the autonomous AI agent loop library.
 
 ## Recent Learnings (Jan 2026)
 
+### Process Cleanup (NEW)
+
+Processes spawned via `startProcess` are now properly killed on cleanup. Uses **process groups**:
+
+- Spawn with `detached: true` to create new process group
+- Kill with `process.kill(-pgid, "SIGTERM")` to terminate entire group
+- Fixes: dev servers, watch modes, etc. left running after agent completes
+
+See [007-process-group-killing.md](./decisions/007-process-group-killing.md) for details.
+
 ### Image Handling
 
 Tool results with images **must** use AI SDK v6 `content` format:

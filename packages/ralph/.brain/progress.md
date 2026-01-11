@@ -26,6 +26,7 @@
 - [x] **JPEG compression** - Screenshots compressed to ~30-50KB
 - [x] **Context management** - Message summarization to prevent overflow
 - [x] **Browser WebGPU support** - Headed mode with GPU flags by default
+- [x] **Process group killing** - Properly kills child processes on cleanup (Jan 2026)
 
 ## In Progress
 
