@@ -37,10 +37,19 @@ if (DEBUG) {
 }
 console.log("━".repeat(55));
 
-const EXAMPLES_DIR = `/apps/examples`;
+// Resolve the examples directory path (relative to this script)
+const EXAMPLES_DIR = `${PROJECT_ROOT}/apps/examples`;
 
 const TASK = `
 # Task: Create a 3D Raymarching WebGPU Example
+
+## Important: Working Directory
+You are running from: ${process.cwd()}
+Project root is: ${PROJECT_ROOT}
+Examples directory is: ${EXAMPLES_DIR}
+
+Use RELATIVE paths like "../../apps/examples" or FULL paths like "${EXAMPLES_DIR}".
+DO NOT use "/apps/examples" - that's an absolute path that doesn't exist!
 
 ## Objective
 Create a new raymarching example page at \`${EXAMPLES_DIR}/app/raymarching/page.tsx\` that demonstrates 3D raymarching rendering using WebGPU and the ralph-gpu library.

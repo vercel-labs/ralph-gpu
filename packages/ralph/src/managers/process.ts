@@ -39,12 +39,36 @@ export class ProcessManager {
       await this.stop(name);
     }
 
+    const workingDir = cwd ?? process.cwd();
+    
     return new Promise((resolve, reject) => {
-      const child = spawn(command, [], {
-        shell: true,
-        cwd: cwd ?? process.cwd(),
-        stdio: ["pipe", "pipe", "pipe"],
-      });
+      let child: ChildProcess;
+      
+      try {
+        child = spawn(command, [], {
+          shell: true,
+          cwd: workingDir,
+          stdio: ["pipe", "pipe", "pipe"],
+          env: { ...process.env }, // Ensure environment is passed
+        });
+      } catch (error) {
+        const err = error as Error;
+        reject(new Error(
+          `Failed to start process "${name}": ${err.message}\n` +
+          `Command: ${command}\n` +
+          `Working directory: ${workingDir}`
+        ));
+        return;
+      }
+      
+      if (!child.pid) {
+        reject(new Error(
+          `Failed to start process "${name}": No PID assigned\n` +
+          `Command: ${command}\n` +
+          `Working directory: ${workingDir}`
+        ));
+        return;
+      }
 
       const managed: ManagedProcess = {
         info: {
@@ -78,10 +102,14 @@ export class ProcessManager {
         }
       });
 
-      // Handle process exit
+      // Handle process errors
       child.on("error", (err) => {
         this.processes.delete(name);
-        reject(err);
+        reject(new Error(
+          `Process "${name}" error: ${err.message}\n` +
+          `Command: ${command}\n` +
+          `Working directory: ${workingDir}`
+        ));
       });
 
       child.on("exit", () => {

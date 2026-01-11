@@ -108,6 +108,16 @@ export const toolLogger = {
     if (args.url) {
       console.log(`     ▸ url: ${args.url}`);
     }
+    // Show thought content for think tool
+    if (toolName === "think" && args.thought) {
+      const thought = String(args.thought);
+      const lines = thought.split("\n");
+      const preview = lines.slice(0, 3).map(l => truncate(l, 100)).join("\n     │ ");
+      console.log(`     │ ${preview}`);
+      if (lines.length > 3) {
+        console.log(`     │ ... (${lines.length} lines total)`);
+      }
+    }
 
     // In debug mode, show all arguments
     if (globalDebugMode) {
@@ -286,6 +296,13 @@ function getResultPreview(toolName: string, result: unknown): string {
 
   if (typeof result === "object") {
     const obj = result as Record<string, unknown>;
+
+    // Special handling for think tool results
+    if (toolName === "think" && "thought" in obj) {
+      const thought = String(obj.thought);
+      const firstLine = thought.split("\n")[0];
+      return truncate(firstLine, 80);
+    }
 
     // Special handling for bash results
     if ("stdout" in obj || "stderr" in obj || "exitCode" in obj) {

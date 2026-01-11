@@ -44,6 +44,11 @@ export default function Home() {
           <h2>Fluid Simulation →</h2>
           <p>Full Navier-Stokes with curl, vorticity & pressure</p>
         </Link>
+
+        <Link href="/raymarching" className={styles.card}>
+          <h2>3D Raymarching →</h2>
+          <p>Raymarched scene with SDFs, soft shadows & ambient occlusion</p>
+        </Link>
       </div>
     </main>
   );
