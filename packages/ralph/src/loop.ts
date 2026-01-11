@@ -16,6 +16,118 @@ import { loopLogger, isDebugMode } from "./logger";
 import ms from "ms";
 
 /**
+ * Maximum context size before we start pruning (in estimated tokens).
+ * Most models have 100k-200k context, we want to stay well under.
+ */
+const MAX_CONTEXT_TOKENS = 80000;
+
+/**
+ * Rough estimate of tokens in a string (4 chars per token average).
+ */
+function estimateTokens(str: string): number {
+  return Math.ceil(str.length / 4);
+}
+
+/**
+ * Summarize messages when context is too large.
+ * Note: Tool results are already sanitized in tools/index.ts to remove
+ * large binary data (screenshots, base64) before they enter the message history.
+ */
+function summarizeMessages(messages: Message[], systemPrompt: string): Message[] {
+  const systemTokens = estimateTokens(systemPrompt);
+  let totalTokens = systemTokens;
+  
+  // Calculate tokens for each message
+  const messageTokens = messages.map(m => ({
+    message: m,
+    tokens: estimateTokens(JSON.stringify(m))
+  }));
+  
+  totalTokens += messageTokens.reduce((sum, m) => sum + m.tokens, 0);
+  
+  if (totalTokens <= MAX_CONTEXT_TOKENS) {
+    return messages; // No need to summarize
+  }
+  
+  loopLogger.debug(`Context too large (${totalTokens} tokens), summarizing...`);
+  
+  // Keep recent messages, summarize older ones
+  const keepRecent = 6; // Keep last 6 messages intact
+  const recentMessages = messages.slice(-keepRecent);
+  const olderMessages = messages.slice(0, -keepRecent);
+  
+  if (olderMessages.length === 0) {
+    // Even recent messages are too big - truncate individual messages
+    return recentMessages.map(m => {
+      const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+      if (content.length > 5000) {
+        return {
+          ...m,
+          content: content.slice(0, 3000) + "\n... [message truncated]"
+        };
+      }
+      return m;
+    });
+  }
+  
+  // Create summary of older messages
+  const summary = createMessageSummary(olderMessages);
+  
+  return [
+    { role: "user" as const, content: summary },
+    ...recentMessages
+  ];
+}
+
+/**
+ * Create a brief summary of messages.
+ */
+function createMessageSummary(messages: Message[]): string {
+  const toolsUsed = new Set<string>();
+  const filesRead = new Set<string>();
+  const filesWritten = new Set<string>();
+  
+  for (const msg of messages) {
+    const content = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+    
+    // Extract tool mentions (rough heuristic)
+    const toolMatches = content.match(/\b(bash|readFile|writeFile|openBrowser|screenshot|think)\b/g);
+    if (toolMatches) {
+      toolMatches.forEach(t => toolsUsed.add(t));
+    }
+    
+    // Extract file paths
+    const pathMatches = content.match(/(?:path['":\s]+)?(['"]([\w\/\.-]+\.(tsx?|jsx?|json|md|css))['"'])/g);
+    if (pathMatches) {
+      pathMatches.slice(0, 10).forEach(p => {
+        const cleaned = p.replace(/['"]/g, "").replace(/^path:\s*/, "");
+        if (cleaned.includes(".")) {
+          filesRead.add(cleaned);
+        }
+      });
+    }
+  }
+  
+  const parts: string[] = [
+    "[Earlier conversation summarized]",
+    "",
+    `Previous iterations: ${messages.length} messages`,
+  ];
+  
+  if (toolsUsed.size > 0) {
+    parts.push(`Tools used: ${Array.from(toolsUsed).join(", ")}`);
+  }
+  
+  if (filesRead.size > 0) {
+    parts.push(`Files explored: ${Array.from(filesRead).slice(0, 10).join(", ")}`);
+  }
+  
+  parts.push("", "Continue with the task. Recent context follows.");
+  
+  return parts.join("\n");
+}
+
+/**
  * Default limits for the loop.
  */
 const DEFAULT_LIMITS: Required<LimitsConfig> = {
@@ -165,11 +277,21 @@ export async function runLoop(
       messages.push({ role: "user", content: userMessage });
     }
 
+    // Summarize messages if context is getting too large
+    const contextMessages = summarizeMessages(messages, systemPrompt);
+    
     if (isDebugMode()) {
+      const originalTokens = messages.reduce((sum, m) => sum + estimateTokens(JSON.stringify(m)), 0);
+      const newTokens = contextMessages.reduce((sum, m) => sum + estimateTokens(JSON.stringify(m)), 0);
       loopLogger.debug("Calling model...", { 
-        messageCount: messages.length,
+        messageCount: contextMessages.length,
+        originalMessages: messages.length,
+        estimatedTokens: newTokens,
         toolCount: Object.keys(wrappedTools).length 
       });
+      if (newTokens < originalTokens) {
+        loopLogger.debug(`Context reduced from ~${originalTokens} to ~${newTokens} tokens`);
+      }
     }
 
     try {
@@ -177,7 +299,7 @@ export async function runLoop(
       const result = await generateText({
         model,
         system: systemPrompt,
-        messages,
+        messages: contextMessages,
         tools: wrappedTools,
         stopWhen: stepCountIs(10), // Allow up to 10 tool calls per iteration
       });

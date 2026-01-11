@@ -22,6 +22,10 @@ export interface DefaultToolsOptions {
 
 /**
  * Wrap a tool with logging.
+ * 
+ * Note: We do NOT sanitize results here because the model needs to see
+ * screenshots for visual verification. Context management happens at
+ * the message level between iterations, not at the tool result level.
  */
 function wrapToolWithLogging(name: string, tool: Tool): Tool {
   const originalExecute = tool.execute;
@@ -45,6 +49,7 @@ function wrapToolWithLogging(name: string, tool: Tool): Tool {
         // Log success
         toolLogger.success(name, result, duration);
 
+        // Return full result - model needs to see screenshots!
         return result;
       } catch (error) {
         const duration = Date.now() - startTime;
