@@ -7,6 +7,7 @@
     "start": "tsx index.ts"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^3.0.11",
     "@ai-sdk/openai-compatible": "^1.0.0",
     "@ralph/core": "workspace:*",
     "dotenv": "^16.4.5"

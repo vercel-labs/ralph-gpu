@@ -12,6 +12,7 @@ import type {
 } from "./types";
 import { StuckDetector } from "./stuck";
 import { buildNudgeMessage, formatIterationContext } from "./prompt";
+import { loopLogger, isDebugMode } from "./logger";
 import ms from "ms";
 
 /**
@@ -133,17 +134,23 @@ export async function runLoop(
     const iterationStart = Date.now();
     state.state = "running";
 
+    // Log iteration start
+    loopLogger.iterationStart(state.iteration);
+
     // Check limits
     if (state.iteration >= effectiveLimits.maxIterations) {
+      loopLogger.complete("max_iterations");
       return createResult(state, "max_iterations");
     }
 
     if (state.cost >= effectiveLimits.maxCost) {
+      loopLogger.complete("max_cost");
       return createResult(state, "max_cost");
     }
 
     const elapsed = Date.now() - state.startTime;
     if (elapsed >= timeoutMs) {
+      loopLogger.complete("timeout");
       return createResult(state, "timeout");
     }
 
@@ -156,6 +163,13 @@ export async function runLoop(
 
     if (userMessage) {
       messages.push({ role: "user", content: userMessage });
+    }
+
+    if (isDebugMode()) {
+      loopLogger.debug("Calling model...", { 
+        messageCount: messages.length,
+        toolCount: Object.keys(wrappedTools).length 
+      });
     }
 
     try {
@@ -205,14 +219,26 @@ export async function runLoop(
       state.iterations.push(iteration);
       state.pendingNudge = null;
 
+      // Log iteration end
+      loopLogger.iterationEnd(state.iteration, {
+        durationMs: iteration.duration,
+        tokens: iterationTokens.input + iterationTokens.output,
+        cost: iterationCost,
+        toolCalls: toolCalls.length,
+      });
+
       // Add assistant response to message history
       if (result.text) {
         messages.push({ role: "assistant", content: result.text });
+        if (isDebugMode()) {
+          loopLogger.debug("Model response", result.text.slice(0, 200));
+        }
       }
 
       // Check for done signal
       if (doneSignaled) {
         state.state = "completing";
+        loopLogger.complete("completed", state.summary);
         return createResult(state, "completed");
       }
 
@@ -220,6 +246,7 @@ export async function runLoop(
       const isComplete = await checkCompletion(completion, state);
       if (isComplete) {
         state.state = "completing";
+        loopLogger.complete("completed", state.summary);
         return createResult(state, "completed");
       }
 
@@ -228,11 +255,15 @@ export async function runLoop(
         const stuckContext = stuckDetector.check(state.iterations);
         if (stuckContext) {
           state.state = "stuck";
+          loopLogger.stuck(stuckContext.reason);
 
           if (onStuck) {
             const nudge = await onStuck(stuckContext);
             if (nudge) {
               state.pendingNudge = nudge;
+              if (isDebugMode()) {
+                loopLogger.debug("Nudge injected", nudge);
+              }
             }
           }
         }
@@ -252,6 +283,8 @@ export async function runLoop(
         cause: err,
       };
 
+      loopLogger.error(`Iteration ${state.iteration} failed: ${err.message}`, err);
+
       if (onError) {
         onError(loopError);
       }
@@ -269,6 +302,7 @@ export async function runLoop(
 
       if (recentErrors.length >= 3) {
         state.state = "failed";
+        loopLogger.error("Too many consecutive errors, stopping");
         return {
           ...createResult(state, "error"),
           error: loopError,

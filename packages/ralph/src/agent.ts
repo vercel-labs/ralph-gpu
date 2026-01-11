@@ -14,6 +14,7 @@ import { BrowserManager } from "./managers/browser";
 import { createDefaultTools } from "./tools";
 import { buildSystemPrompt } from "./prompt";
 import { runLoop } from "./loop";
+import { setDebugMode, loopLogger } from "./logger";
 
 /**
  * LoopAgent - Autonomous AI agent that runs in a loop until task completion.
@@ -54,6 +55,12 @@ export class LoopAgent {
   private async initialize(): Promise<void> {
     if (this.initialized) return;
 
+    // Set debug mode if enabled
+    if (this.config.debug) {
+      setDebugMode(true);
+      loopLogger.debug("Debug mode enabled");
+    }
+
     // Track done signal
     let doneSignaled = false;
     const onDone = (summary: string) => {
@@ -65,12 +72,14 @@ export class LoopAgent {
 
     // Create default tools if enabled
     const defaultToolsEnabled = this.config.defaultTools !== false;
+    const enableToolLogging = this.config.enableToolLogging !== false;
 
     if (defaultToolsEnabled) {
       const defaultTools = await createDefaultTools({
         processManager: this.processManager,
         browserManager: this.browserManager,
         onDone,
+        enableLogging: enableToolLogging,
       });
 
       // Merge with custom tools (custom tools take precedence)

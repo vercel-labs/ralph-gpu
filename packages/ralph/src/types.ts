@@ -303,6 +303,22 @@ export interface LoopAgentConfig {
    * Stuck detection configuration
    */
   stuckDetection?: StuckDetectionConfig;
+
+  // === LOGGING ===
+
+  /**
+   * Enable debug mode for verbose logging
+   * Shows detailed tool call arguments and results
+   * @default false
+   */
+  debug?: boolean;
+
+  /**
+   * Enable tool call logging
+   * Shows each tool call with success/failure status
+   * @default true
+   */
+  enableToolLogging?: boolean;
 }
 
 /**

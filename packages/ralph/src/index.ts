@@ -89,3 +89,14 @@ export {
   buildNudgeMessage,
   formatIterationContext,
 } from "./prompt";
+
+// Logging utilities
+export {
+  setDebugMode,
+  setLogLevel,
+  isDebugMode,
+  getLogLevel,
+  toolLogger,
+  loopLogger,
+  type LogLevel,
+} from "./logger";

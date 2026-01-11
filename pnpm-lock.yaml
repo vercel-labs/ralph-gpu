@@ -124,6 +124,9 @@ importers:
 
   ralphs/01-init:
     dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.0
         version: 1.0.30(zod@3.25.76)

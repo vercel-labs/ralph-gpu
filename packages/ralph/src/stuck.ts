@@ -16,8 +16,8 @@ export class StuckDetector {
   private threshold: number;
 
   constructor(options: StuckDetectorOptions = {}) {
-    this.windowSize = options.windowSize ?? 5;
-    this.threshold = options.threshold ?? 3;
+    this.windowSize = options.windowSize ?? 8;
+    this.threshold = options.threshold ?? 5;
   }
 
   /**
@@ -146,11 +146,14 @@ export class StuckDetector {
 
   /**
    * Check for no progress - high token usage but no file changes.
+   * This is more lenient to allow for exploratory tasks.
    */
   private checkNoProgress(iterations: Iteration[]): StuckContext | null {
-    if (iterations.length < this.threshold) return null;
+    // Need more iterations to detect no progress (at least 5)
+    const minIterations = Math.max(this.threshold, 5);
+    if (iterations.length < minIterations) return null;
 
-    const recent = iterations.slice(-this.threshold);
+    const recent = iterations.slice(-minIterations);
 
     // Count total tokens and file changes
     const totalTokens = recent.reduce(
@@ -162,11 +165,20 @@ export class StuckDetector {
       0
     );
 
-    // High token usage (>50k) with no file changes suggests spinning
-    if (totalTokens > 50000 && fileChanges === 0) {
+    // Count distinct tool calls - if there's variety, progress is being made
+    const allToolCalls = recent.flatMap((iter) => iter.toolCalls.map((tc) => tc.name));
+    const uniqueTools = new Set(allToolCalls);
+    
+    // If using variety of tools, probably making progress even without file writes
+    if (uniqueTools.size >= 3) {
+      return null;
+    }
+
+    // Much higher threshold - 150k tokens with no file changes over 5+ iterations
+    if (totalTokens > 150000 && fileChanges === 0) {
       return {
         reason: "no_progress",
-        details: `Used ${totalTokens} tokens in ${this.threshold} iterations with no file changes`,
+        details: `Used ${totalTokens} tokens in ${minIterations} iterations with no file changes`,
         recentIterations: recent,
       };
     }

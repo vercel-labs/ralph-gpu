@@ -19,37 +19,42 @@ if (!AI_GATEWAY_API_KEY) {
   process.exit(1);
 }
 
+// Check for debug flag
+const DEBUG = process.env.DEBUG === "true" || process.argv.includes("--debug");
+
 console.log("🤖 Ralph Agent - Repository Context Generator");
 console.log("━".repeat(50));
 console.log(`📁 Project: ${PROJECT_ROOT}`);
 console.log(`🧠 Model: ${AGENT_MODEL}`);
+if (DEBUG) {
+  console.log(`🐛 Debug: enabled`);
+}
 console.log("━".repeat(50));
 
 const TASK = `
-You are tasked with exploring this repository and creating a comprehensive context file.
+Create a REPO_CONTEXT.md file documenting this repository.
 
-## Goal
+## Important: Working Directory
+You are currently in: ${process.cwd()}
+The project root is: ${PROJECT_ROOT}
+Write the file to: ${PROJECT_ROOT}/REPO_CONTEXT.md
 
-Create a file called "REPO_CONTEXT.md" in the root of the project that documents:
-
-1. **Project Overview**: What is this project about? What problem does it solve?
-2. **Tech Stack**: What technologies, frameworks, and tools are used?
-3. **Project Structure**: Describe the directory layout and main components
-4. **Packages/Workspaces**: List all packages in the monorepo (if applicable)
-5. **Key Files**: Identify and briefly describe the most important files
-6. **Development Setup**: How to install and run the project
+## What to Document
+1. Project Overview - what is this project?
+2. Tech Stack - technologies used
+3. Project Structure - directories and their purpose
+4. Packages - list workspace packages
+5. Key Files - important files and what they do
+6. Setup - how to install and run
 
 ## Instructions
+1. FIRST: Run "ls -la ${PROJECT_ROOT}" to see the project structure
+2. Read a few key files (package.json, README.md, pnpm-workspace.yaml)
+3. THEN: Write REPO_CONTEXT.md using the writeFile tool
+4. Call done() when finished
 
-1. Start by exploring the root directory to understand the project structure
-2. Read key files like package.json, README.md, tsconfig.json, etc.
-3. Explore the main source directories
-4. Create a well-organized markdown document summarizing your findings
-5. Write the document to REPO_CONTEXT.md
-
-Be thorough but concise. Focus on information that would help a new developer understand the codebase quickly.
-
-When you're done, call the done() tool with a summary of what you created.
+IMPORTANT: Don't over-explore. Read 5-10 key files max, then WRITE the document.
+Use writeFile(path: "${PROJECT_ROOT}/REPO_CONTEXT.md", content: "...") to create the file.
 `;
 
 async function main() {
@@ -59,6 +64,7 @@ async function main() {
     model: AGENT_MODEL,
     task: TASK,
     rules: [explorationRule, brainRule],
+    debug: DEBUG,
     limits: {
       maxIterations: 30,
       maxCost: 2.0,
