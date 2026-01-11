@@ -1,0 +1,19 @@
+{
+  "name": "04-test-brain",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx index.ts",
+    "start:debug": "DEBUG=true tsx index.ts",
+    "clean": "rm -rf .brain"
+  },
+  "dependencies": {
+    "@ralph/core": "workspace:*",
+    "dotenv": "^16.5.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0"
+  }
+}

@@ -182,6 +182,22 @@ importers:
         specifier: ^5.8.0
         version: 5.9.3
 
+  ralphs/04-test-brain:
+    dependencies:
+      '@ralph/core':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.5.0
+        version: 16.6.1
+    devDependencies:
+      tsx:
+        specifier: ^4.20.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+
 packages:
 
   '@acemir/cssom@0.9.30':
