@@ -14,6 +14,7 @@ import { StuckDetector } from "./stuck";
 import { buildNudgeMessage, formatIterationContext } from "./prompt";
 import { loopLogger, isDebugMode } from "./logger";
 import type { Tracer } from "./tracer";
+import { setCurrentIteration } from "./tools";
 import ms from "ms";
 
 /**
@@ -252,6 +253,7 @@ export async function runLoop(
 
     // Log iteration start
     loopLogger.iterationStart(state.iteration);
+    setCurrentIteration(state.iteration); // Update for tool tracing
     tracer?.recordIterationStart(state.iteration, {
       cost: state.cost,
       tokens: { ...state.tokens },
@@ -289,6 +291,7 @@ export async function runLoop(
     // Summarize messages if context is getting too large
     const contextMessages = summarizeMessages(messages, systemPrompt);
     
+    const systemPromptTokens = estimateTokens(systemPrompt);
     const originalTokens = messages.reduce((sum, m) => sum + estimateTokens(JSON.stringify(m)), 0);
     const newTokens = contextMessages.reduce((sum, m) => sum + estimateTokens(JSON.stringify(m)), 0);
     
@@ -307,6 +310,32 @@ export async function runLoop(
     // Record context summarization in trace
     if (newTokens < originalTokens) {
       tracer?.recordContextSummarized(state.iteration, originalTokens, newTokens);
+    }
+    
+    // Record detailed context analysis for debugging "input is too long" errors
+    if (tracer) {
+      const messageTokens = contextMessages.map((m, i) => ({
+        index: i,
+        role: m.role,
+        tokens: estimateTokens(JSON.stringify(m)),
+        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+      }));
+      
+      // Find largest messages
+      const sortedMessages = [...messageTokens].sort((a, b) => b.tokens - a.tokens);
+      const largestMessages = sortedMessages.slice(0, 5).map(m => ({
+        index: m.index,
+        role: m.role,
+        tokens: m.tokens,
+        preview: m.content.slice(0, 200) + (m.content.length > 200 ? "..." : ""),
+      }));
+      
+      tracer.recordContextAnalysis(state.iteration, {
+        systemPromptTokens,
+        messageCount: contextMessages.length,
+        totalMessageTokens: newTokens,
+        largestMessages,
+      });
     }
 
     try {
@@ -336,20 +365,12 @@ export async function runLoop(
       // Extract tool calls from result
       const toolCalls = extractToolCalls(result);
 
-      // Record model response and tool calls in trace
+      // Record model response in trace (tool calls already traced by wrapper)
       tracer?.recordModelResponse(state.iteration, {
         text: result.text,
         toolCalls: toolCalls.map(tc => ({ name: tc.name, args: tc.args })),
         tokens: iterationTokens,
       });
-      
-      // Record individual tool calls in trace
-      for (const tc of toolCalls) {
-        tracer?.recordToolCall(state.iteration, tc.name, tc.args);
-        if (tc.result !== null) {
-          tracer?.recordToolResult(state.iteration, tc.name, tc.result, tc.duration);
-        }
-      }
 
       // Track file modifications from writeFile calls
       const filesModified = extractFilesModified(toolCalls);

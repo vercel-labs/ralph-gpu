@@ -478,6 +478,123 @@ describe("StuckDetector", () => {
     });
   });
 
+  describe("check - browser loop detection", () => {
+    it("should detect repeated URL visits without file changes", () => {
+      const iterations = [
+        createIteration({
+          index: 0,
+          toolCalls: [
+            createToolCall({ name: "openBrowser", args: { url: "http://localhost:3000/page1" } }),
+          ],
+        }),
+        createIteration({
+          index: 1,
+          toolCalls: [
+            createToolCall({ name: "openBrowser", args: { url: "http://localhost:3000/page2" } }),
+          ],
+        }),
+        createIteration({
+          index: 2,
+          toolCalls: [
+            createToolCall({ name: "openBrowser", args: { url: "http://localhost:3000/page1" } }),
+          ],
+        }),
+        createIteration({
+          index: 3,
+          toolCalls: [
+            createToolCall({ name: "openBrowser", args: { url: "http://localhost:3000/page2" } }),
+          ],
+        }),
+        createIteration({
+          index: 4,
+          toolCalls: [
+            createToolCall({ name: "openBrowser", args: { url: "http://localhost:3000/page1" } }),
+          ],
+        }),
+      ];
+
+      const result = detector.check(iterations);
+
+      expect(result).not.toBeNull();
+      expect(result?.reason).toBe("browser_loop");
+      expect(result?.details).toContain("Visiting same URLs");
+    });
+
+    it("should detect excessive browser activity with few other actions", () => {
+      const iterations = [
+        createIteration({
+          index: 0,
+          toolCalls: [
+            createToolCall({ name: "openBrowser", args: { url: "http://localhost:3000/page1" } }),
+            createToolCall({ name: "screenshot", args: {} }),
+          ],
+        }),
+        createIteration({
+          index: 1,
+          toolCalls: [
+            createToolCall({ name: "openBrowser", args: { url: "http://localhost:3000/page2" } }),
+            createToolCall({ name: "screenshot", args: {} }),
+          ],
+        }),
+        createIteration({
+          index: 2,
+          toolCalls: [
+            createToolCall({ name: "openBrowser", args: { url: "http://localhost:3000/page3" } }),
+            createToolCall({ name: "screenshot", args: {} }),
+          ],
+        }),
+        createIteration({
+          index: 3,
+          toolCalls: [
+            createToolCall({ name: "openBrowser", args: { url: "http://localhost:3000/page4" } }),
+            createToolCall({ name: "screenshot", args: {} }),
+          ],
+        }),
+      ];
+
+      const result = detector.check(iterations);
+
+      expect(result).not.toBeNull();
+      expect(result?.reason).toBe("browser_loop");
+      expect(result?.details).toContain("Excessive browser/screenshot activity");
+    });
+
+    it("should not flag browser activity when file changes are made", () => {
+      const iterations = [
+        createIteration({
+          index: 0,
+          toolCalls: [
+            createToolCall({ name: "openBrowser", args: { url: "http://localhost:3000/page1" } }),
+          ],
+          filesModified: ["file1.ts"],
+        }),
+        createIteration({
+          index: 1,
+          toolCalls: [
+            createToolCall({ name: "openBrowser", args: { url: "http://localhost:3000/page1" } }),
+          ],
+        }),
+        createIteration({
+          index: 2,
+          toolCalls: [
+            createToolCall({ name: "openBrowser", args: { url: "http://localhost:3000/page1" } }),
+          ],
+        }),
+        createIteration({
+          index: 3,
+          toolCalls: [
+            createToolCall({ name: "openBrowser", args: { url: "http://localhost:3000/page1" } }),
+          ],
+        }),
+      ];
+
+      const result = detector.check(iterations);
+
+      // With file changes, browser_loop shouldn't trigger
+      expect(result?.reason !== "browser_loop" || result === null).toBe(true);
+    });
+  });
+
   describe("edge cases", () => {
     it("should handle iterations with multiple tool calls", () => {
       const iterations = [

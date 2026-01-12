@@ -11,7 +11,7 @@ import type {
 } from "./types";
 import { ProcessManager } from "./managers/process";
 import { BrowserManager } from "./managers/browser";
-import { createDefaultTools } from "./tools";
+import { createDefaultTools, setActiveTracer } from "./tools";
 import { buildSystemPrompt } from "./prompt";
 import { runLoop } from "./loop";
 import { setDebugMode, loopLogger } from "./logger";
@@ -124,6 +124,7 @@ export class LoopAgent {
     
     if (traceOptions) {
       this.tracer = new Tracer(this.state.id, this.config.task, traceOptions);
+      setActiveTracer(this.tracer); // Make tracer available to tool wrapper
       loopLogger.debug(`Trace mode enabled, output: ${this.tracer.getOutputPath()}`);
     }
 
@@ -186,6 +187,9 @@ export class LoopAgent {
       if (this.tracer) {
         console.log(`\n📊 Trace file: ${this.tracer.getOutputPath()}`);
       }
+      
+      // Clear active tracer
+      setActiveTracer(null);
 
       // Cleanup
       await this.cleanup();

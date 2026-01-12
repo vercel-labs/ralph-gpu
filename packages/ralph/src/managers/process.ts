@@ -165,60 +165,71 @@ export class ProcessManager {
       return false;
     }
 
-    return new Promise((resolve) => {
-      const { process: child, pgid } = managed;
-      let resolved = false;
+    // Remove from map immediately to prevent double-stop
+    this.processes.delete(name);
 
-      const cleanup = () => {
-        if (resolved) return;
-        resolved = true;
-        clearTimeout(forceKillTimeout);
-        clearTimeout(cleanupTimeout);
-        this.processes.delete(name);
-        resolve(true);
-      };
+    const { process: child, pgid } = managed;
 
-      // Kill the entire process group using negative PID
-      // This ensures all child processes (like dev servers) are killed
+    // Try to kill the process group first, then the individual process
+    const killProcess = (signal: NodeJS.Signals) => {
+      // Try process group kill (negative pgid)
       try {
-        process.kill(-pgid, "SIGTERM");
+        process.kill(-pgid, signal);
+        return true;
       } catch {
-        // Process group may already be dead, try killing just the process
-        try {
-          child.kill("SIGTERM");
-        } catch {
-          // Process already dead
-          cleanup();
-          return;
-        }
+        // Process group kill failed, try individual process
       }
 
-      const forceKillTimeout = setTimeout(() => {
-        // Force kill the entire process group if still running
-        try {
-          process.kill(-pgid, "SIGKILL");
-        } catch {
-          // Process group already dead
-        }
-        // Give it a moment then resolve anyway
-        setTimeout(cleanup, 500);
-      }, 5000);
+      // Try killing just the child
+      try {
+        child.kill(signal);
+        return true;
+      } catch {
+        // Process already dead
+        return false;
+      }
+    };
 
-      // Listen for exit event
-      child.on("exit", cleanup);
-      child.on("close", cleanup);
+    // Send SIGTERM first
+    const terminated = killProcess("SIGTERM");
+    
+    if (!terminated) {
+      // Process already dead
+      return true;
+    }
 
-      // Also handle case where child exits before we set up listener
+    // Wait for process to exit gracefully
+    const exitPromise = new Promise<void>((resolve) => {
+      const onExit = () => {
+        child.removeListener("exit", onExit);
+        child.removeListener("close", onExit);
+        resolve();
+      };
+      child.on("exit", onExit);
+      child.on("close", onExit);
+      
+      // Check if already exited
       if (child.killed || child.exitCode !== null) {
-        cleanup();
-        return;
+        resolve();
       }
-
-      // Safety timeout - resolve after 6 seconds regardless
-      const cleanupTimeout = setTimeout(() => {
-        cleanup();
-      }, 6000);
     });
+
+    // Wait up to 3 seconds for graceful exit
+    const gracefulTimeout = new Promise<void>((resolve) => 
+      setTimeout(resolve, 3000)
+    );
+
+    await Promise.race([exitPromise, gracefulTimeout]);
+
+    // If still running, force kill
+    if (!child.killed && child.exitCode === null) {
+      killProcess("SIGKILL");
+      
+      // Wait a bit more for SIGKILL to take effect
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    return true;
   }
 
   /**

@@ -44,6 +44,7 @@ export type TraceEventType =
   | "stuck_detected"
   | "nudge_injected"
   | "context_summarized"
+  | "context_analysis"
   | "agent_complete"
   | "agent_error"
   | "summary";
@@ -354,6 +355,40 @@ export class Tracer {
       reductionPercent: Math.round(
         ((originalTokens - newTokens) / originalTokens) * 100
       ),
+    });
+  }
+
+  /**
+   * Record context analysis - helps diagnose "input is too long" errors
+   */
+  recordContextAnalysis(
+    iteration: number,
+    analysis: {
+      systemPromptTokens: number;
+      messageCount: number;
+      totalMessageTokens: number;
+      largestMessages: Array<{
+        index: number;
+        role: string;
+        tokens: number;
+        preview: string;
+      }>;
+      toolResultsSummary?: {
+        count: number;
+        totalSize: number;
+        largestResults: Array<{
+          tool: string;
+          size: number;
+        }>;
+      };
+    }
+  ): void {
+    this.appendEvent({
+      ts: new Date().toISOString(),
+      type: "context_analysis",
+      iter: iteration,
+      ...analysis,
+      estimatedTotalTokens: analysis.systemPromptTokens + analysis.totalMessageTokens,
     });
   }
 

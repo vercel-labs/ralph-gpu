@@ -6,11 +6,31 @@ import { createProcessTools } from "./process";
 import { createBrowserTools } from "./browser";
 import { createUtilityTools } from "./utility";
 import { toolLogger } from "../logger";
+import type { Tracer } from "../tracer";
 
 export { bashTools, createBashTools, createFallbackBashTools } from "./bash";
 export { processTools, createProcessTools } from "./process";
 export { browserTools, createBrowserTools } from "./browser";
 export { utilityTools, createUtilityTools } from "./utility";
+
+// Global tracer reference - set by agent before running
+let activeTracer: Tracer | null = null;
+let currentIteration = 0;
+
+/**
+ * Set the active tracer for tool call tracing.
+ * Call this before running the loop.
+ */
+export function setActiveTracer(tracer: Tracer | null): void {
+  activeTracer = tracer;
+}
+
+/**
+ * Set the current iteration for tool call tracing.
+ */
+export function setCurrentIteration(iteration: number): void {
+  currentIteration = iteration;
+}
 
 export interface DefaultToolsOptions {
   processManager: ProcessManager;
@@ -21,7 +41,7 @@ export interface DefaultToolsOptions {
 }
 
 /**
- * Wrap a tool with logging.
+ * Wrap a tool with logging and tracing.
  * 
  * Note: We do NOT sanitize results here because the model needs to see
  * screenshots for visual verification. Context management happens at
@@ -39,23 +59,32 @@ function wrapToolWithLogging(name: string, tool: Tool): Tool {
     execute: async (args, options) => {
       const startTime = Date.now();
 
-      // Log the tool call
+      // Log the tool call to console
       toolLogger.call(name, args as Record<string, unknown>);
+      
+      // Trace the tool call (writes immediately to file)
+      activeTracer?.recordToolCall(currentIteration, name, args as Record<string, unknown>);
 
       try {
         const result = await originalExecute(args, options);
         const duration = Date.now() - startTime;
 
-        // Log success
+        // Log success to console
         toolLogger.success(name, result, duration);
+        
+        // Trace the result
+        activeTracer?.recordToolResult(currentIteration, name, result, duration);
 
         // Return full result - model needs to see screenshots!
         return result;
       } catch (error) {
         const duration = Date.now() - startTime;
 
-        // Log error
+        // Log error to console
         toolLogger.error(name, error, duration);
+        
+        // Trace the error
+        activeTracer?.recordToolError(currentIteration, name, error, duration);
 
         // Re-throw the error
         throw error;

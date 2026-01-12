@@ -93,7 +93,8 @@ export type StuckReason =
   | "repetitive"
   | "error_loop"
   | "oscillation"
-  | "no_progress";
+  | "no_progress"
+  | "browser_loop";
 
 /**
  * Context passed to onStuck callback

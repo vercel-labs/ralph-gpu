@@ -35,6 +35,10 @@ export class StuckDetector {
     const repetitive = this.checkRepetitive(recent);
     if (repetitive) return repetitive;
 
+    // Check for browser/screenshot loops (visiting same URLs repeatedly)
+    const browserLoop = this.checkBrowserLoop(recent);
+    if (browserLoop) return browserLoop;
+
     // Check for error loops
     const errorLoop = this.checkErrorLoop(recent);
     if (errorLoop) return errorLoop;
@@ -73,6 +77,76 @@ export class StuckDetector {
       };
     }
 
+    return null;
+  }
+
+  /**
+   * Check for browser/screenshot loops - visiting same URLs repeatedly.
+   * This catches when agent keeps taking screenshots without making progress.
+   */
+  private checkBrowserLoop(iterations: Iteration[]): StuckContext | null {
+    if (iterations.length < 3) return null;
+
+    const recent = iterations.slice(-this.windowSize);
+    
+    // Extract all browser-related tool calls
+    const browserCalls: Array<{ url?: string; tool: string; iter: number }> = [];
+    
+    for (let i = 0; i < recent.length; i++) {
+      for (const tc of recent[i].toolCalls) {
+        if (tc.name === "openBrowser" || tc.name === "screenshot" || tc.name === "navigate") {
+          const url = tc.args.url as string | undefined;
+          browserCalls.push({ url, tool: tc.name, iter: i });
+        }
+      }
+    }
+    
+    // Count how many times each URL was visited
+    const urlVisits = new Map<string, number>();
+    for (const call of browserCalls) {
+      if (call.url) {
+        urlVisits.set(call.url, (urlVisits.get(call.url) || 0) + 1);
+      }
+    }
+    
+    // Check if any URL was visited too many times (more than 2)
+    const repeatedUrls = Array.from(urlVisits.entries())
+      .filter(([, count]) => count > 2)
+      .map(([url, count]) => ({ url, count }));
+    
+    if (repeatedUrls.length > 0) {
+      // Also check if there are file modifications - if yes, probably making progress
+      const fileChanges = recent.reduce(
+        (sum, iter) => sum + (iter.filesModified?.length ?? 0),
+        0
+      );
+      
+      // If visiting same URLs but no file changes, definitely stuck
+      if (fileChanges === 0) {
+        const totalBrowserCalls = browserCalls.length;
+        return {
+          reason: "browser_loop",
+          details: `Visiting same URLs repeatedly (${repeatedUrls.map(r => `${r.url}: ${r.count}x`).join(", ")}) with ${totalBrowserCalls} browser calls but no file changes. Consider: The examples may already be complete. Update .progress.md and call done() if verification is successful.`,
+          recentIterations: recent,
+        };
+      }
+    }
+    
+    // Check for excessive screenshot calls without other actions
+    const screenshotCalls = browserCalls.filter(c => c.tool === "screenshot" || c.tool === "openBrowser").length;
+    const otherCalls = recent.reduce((sum, iter) => sum + iter.toolCalls.filter(tc => 
+      !["openBrowser", "screenshot", "navigate", "getProcessOutput"].includes(tc.name)
+    ).length, 0);
+    
+    // If browser calls dominate and few other actions, might be stuck in verification loop
+    if (screenshotCalls > 6 && otherCalls < 3) {
+      return {
+        reason: "browser_loop",
+        details: `Excessive browser/screenshot activity (${screenshotCalls} calls) with few other actions (${otherCalls}). The visual verification may be complete. Update .progress.md with verification results and call done() if the task is finished.`,
+        recentIterations: recent,
+      };
+    }
+    
     return null;
   }
 

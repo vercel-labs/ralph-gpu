@@ -268,6 +268,87 @@ describe("ProcessManager", () => {
       expect(manager.isRunning("test")).toBe(false);
     });
   });
+
+  describe("port-binding processes", () => {
+    it("should kill process and release port", async () => {
+      // Use Python's built-in HTTP server which stays alive
+      // Skip if Python not available
+      await manager.start({
+        name: "server",
+        command: "python3 -c \"import http.server; import socketserver; handler = http.server.SimpleHTTPRequestHandler; httpd = socketserver.TCPServer(('', 19999), handler); print('ready'); httpd.serve_forever()\"",
+        readyPattern: "ready",
+        timeout: 5000,
+      });
+
+      // Verify server is running
+      expect(manager.isRunning("server")).toBe(true);
+
+      // Stop the server
+      await manager.stop("server");
+
+      // Wait for port to be released
+      await new Promise((r) => setTimeout(r, 1000));
+
+      // Verify server is stopped
+      expect(manager.isRunning("server")).toBe(false);
+
+      // Try to start another server on the same port
+      await manager.start({
+        name: "server2",
+        command: "python3 -c \"import http.server; import socketserver; handler = http.server.SimpleHTTPRequestHandler; httpd = socketserver.TCPServer(('', 19999), handler); print('ready'); httpd.serve_forever()\"",
+        readyPattern: "ready",
+        timeout: 5000,
+      });
+
+      expect(manager.isRunning("server2")).toBe(true);
+    }, 25000);
+
+    it("should kill child processes when parent is killed", async () => {
+      // Start a process that spawns a child using bash (ensures process group)
+      await manager.start({
+        name: "parent",
+        command: "bash -c 'sleep 60 & wait'",
+      });
+
+      await new Promise((r) => setTimeout(r, 300));
+
+      // Get the parent PID
+      const list = manager.list();
+      expect(list).toHaveLength(1);
+
+      // Stop the parent
+      await manager.stop("parent");
+
+      await new Promise((r) => setTimeout(r, 500));
+
+      // Verify parent is stopped
+      expect(manager.isRunning("parent")).toBe(false);
+    }, 15000);
+
+    it("should replace long-running process when starting with same name", async () => {
+      // Start first long-running process
+      const info1 = await manager.start({
+        name: "longrun",
+        command: "bash -c 'echo ready && sleep 300'",
+        readyPattern: "ready",
+        timeout: 5000,
+      });
+
+      expect(manager.isRunning("longrun")).toBe(true);
+
+      // Start second process with same name (should kill first)
+      const info2 = await manager.start({
+        name: "longrun",
+        command: "bash -c 'echo ready && sleep 300'",
+        readyPattern: "ready",
+        timeout: 5000,
+      });
+
+      expect(info2.pid).not.toBe(info1.pid);
+      expect(manager.list()).toHaveLength(1);
+      expect(manager.isRunning("longrun")).toBe(true);
+    }, 20000);
+  });
 });
 
 // BrowserManager tests are separate because they require playwright
