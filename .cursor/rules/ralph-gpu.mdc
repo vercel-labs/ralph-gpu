@@ -139,21 +139,65 @@ export default function ShaderComponent() {
 
 ### 2. Fullscreen Pass (Fragment Shader)
 
-Use `ctx.pass()` for fullscreen effects where you only need a fragment shader:
+Use `ctx.pass()` for fullscreen effects. It has two modes:
+
+#### Simple Mode (Recommended)
+
+Pass an object with plain values. WGSL bindings are auto-generated and uniforms are available via the `uniforms` struct.
 
 ```tsx
-const gradient = ctx.pass(/* wgsl */ `
+const wave = ctx.pass(
+  /* wgsl */ `
   @fragment
   fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
     let uv = pos.xy / globals.resolution;
-    let color = vec3f(uv, 0.5 + 0.5 * sin(globals.time));
-    return vec4f(color, 1.0);
+    // Bindings for uTexture, uSampler, and uniforms struct are auto-generated!
+    let tex = textureSample(uTexture, uSampler, uv);
+    return tex * vec4f(uniforms.color, 1.0) * uniforms.intensity;
   }
-`);
+`,
+  {
+    uTexture: someTarget,
+    color: [1, 0, 0],
+    intensity: 0.5,
+  }
+);
+
+// Update values directly
+wave.set("intensity", 0.8);
+```
+
+#### Manual Mode (Three.js style)
+
+Define uniforms with `{ value: X }` wrapper for reactive updates. Requires manual `@group(1)` declarations in WGSL.
+
+```tsx
+const gradient = ctx.pass(
+  /* wgsl */ `
+  struct MyUniforms { color: vec3f }
+  @group(1) @binding(0) var<uniform> u: MyUniforms;
+
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let uv = pos.xy / globals.resolution;
+    return vec4f(u.color, 1.0);
+  }
+`,
+  {
+    uniforms: {
+      color: { value: [1, 0, 0] },
+    },
+  }
+);
+
+// Update value
+gradient.uniforms.color.value = [0, 1, 0];
+```
 
 // In render loop
-gradient.draw();
-```
+wave.draw();
+
+````
 
 ### 3. Custom Uniforms (Three.js Style)
 
@@ -190,7 +234,7 @@ const wave = ctx.pass(
 // Update uniforms anywhere - changes apply automatically
 uniforms.amplitude.value = 0.8;
 uniforms.color.value = [0.2, 1.0, 0.5];
-```
+````
 
 ### 4. Render Targets (Offscreen Rendering)
 
@@ -1012,14 +1056,19 @@ fn opSmoothUnion(d1: f32, d2: f32, k: f32) -> f32 {
    ```tsx
    ctx = await gpu.init(canvas, { autoResize: true });
    ```
-   This uses ResizeObserver to automatically track canvas size changes and applies DPR.
+   This uses ResizeObserver to automatically track canvas size changes and applies DPR to the resolution.
 4. **Or manually handle resize** if you need more control:
+
    ```tsx
-   const dpr = Math.min(window.devicePixelRatio, 2);
-   canvas.width = displayWidth * dpr;
-   canvas.height = displayHeight * dpr;
-   ctx.resize(displayWidth * dpr, displayHeight * dpr);
+   // Set pixel dimensions directly on canvas
+   canvas.width = 1280;
+   canvas.height = 720;
+
+   // Init without autoResize uses canvas.width/height directly
+   // No extra DPR multiplication is applied in this mode.
+   ctx = await gpu.init(canvas, { autoResize: false });
    ```
+
 5. **Use `ctx.particles()` for sized particles** - provides instanced quads with built-in helpers:
    ```tsx
    ctx.particles(count, { shader: `...`, bufferSize: count * 16 });

@@ -61,17 +61,12 @@ function ShaderCanvas() {
     let animationId: number;
     let disposed = false;
 
-    const onResize = () => {
-      if (!ctx || !canvasRef.current) return;
-      const rect = canvasRef.current.getBoundingClientRect();
-      ctx.resize(rect.width, rect.height);
-    };
-
     async function init() {
       if (!canvasRef.current || !gpu.isSupported()) return;
 
+      // Recommended: autoResize handles sizing and DPR automatically
       ctx = await gpu.init(canvasRef.current, {
-        dpr: Math.min(window.devicePixelRatio, 2),
+        autoResize: true,
       });
 
       if (disposed) {
@@ -87,9 +82,6 @@ function ShaderCanvas() {
         }
       \`);
 
-      window.addEventListener("resize", onResize);
-      onResize();
-
       function frame() {
         if (disposed) return;
         pass.draw();
@@ -103,7 +95,6 @@ function ShaderCanvas() {
     return () => {
       disposed = true;
       cancelAnimationFrame(animationId);
-      window.removeEventListener("resize", onResize);
       ctx?.dispose();
     };
   }, []);
@@ -222,7 +213,7 @@ export default function GettingStartedPage() {
           <ul className="mt-2 space-y-1 text-sm">
             <li>• Use a <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">disposed</code> flag to prevent rendering after unmount</li>
             <li>• Clean up with <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">ctx.dispose()</code> in the effect cleanup</li>
-            <li>• Handle resize events with <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">ctx.resize()</code></li>
+            <li>• Use <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">autoResize: true</code> to handle canvas sizing and DPR automatically</li>
           </ul>
         </Callout>
       </section>

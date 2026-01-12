@@ -9,20 +9,23 @@ gpu.isSupported()  // → boolean
 gpu.init(canvas, options?)  // → Promise<GPUContext>`;
 
 const initOptionsCode = `interface InitOptions {
-  autoResize?: boolean;  // Auto-resize canvas with ResizeObserver (default: false)
+  autoResize?: boolean;  // Auto-resize from CSS size (default: false)
   dpr?: number;          // Device pixel ratio (default: min(devicePixelRatio, 2))
   debug?: boolean;       // Enable debug logging (default: false)
 }
 
-// Recommended: autoResize handles canvas sizing automatically
+// Recommended: autoResize handles canvas sizing and DPR automatically
 const ctx = await gpu.init(canvas, {
   autoResize: true,
-  debug: true,
 });
 
-// Or manual control:
+// Manual control:
+// If autoResize is false, library uses canvas.width/height directly
+// as pixel dimensions. No extra DPR multiplication is applied.
+canvas.width = 1280;
+canvas.height = 720;
 const ctx = await gpu.init(canvas, {
-  dpr: Math.min(window.devicePixelRatio, 2),
+  autoResize: false,
 });`;
 
 const contextCreationCode = `// Create a fullscreen pass
@@ -83,19 +86,29 @@ ctx.timeScale = 2.0;       // Fast forward (double speed)
 // Reset time
 ctx.time = 0;              // Jump to time 0`;
 
-const passOptionsCode = `interface PassOptions {
-  uniforms?: Record<string, { value: any }>;
-  blend?: BlendMode;
-}
+const passOptionsCode = `// 1. Simple Mode (Recommended)
+// Bindings are auto-generated. Uniforms available via 'uniforms' struct.
+const pass = ctx.pass(shaderCode, {
+  color: [1, 0.5, 0.2],
+  intensity: 0.5,
+  uTexture: someTarget,
+});
 
-// Create with options
+// Update values
+pass.set("intensity", 0.8);
+
+// 2. Manual Mode (Three.js style)
+// Requires manual @group(1) declarations in WGSL.
 const pass = ctx.pass(shaderCode, {
   uniforms: {
-    amplitude: { value: 0.5 },
     color: { value: [1, 0.5, 0.2] },
+    intensity: { value: 0.5 },
   },
   blend: "additive",
-});`;
+});
+
+// Update values
+pass.uniforms.intensity.value = 0.8;`;
 
 const passMethodsCode = `// Draw the pass to current target
 pass.draw()
