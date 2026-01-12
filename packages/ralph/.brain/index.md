@@ -62,10 +62,19 @@ Raw base64 strings are treated as text tokens and will blow up context!
 Screenshots are compressed as JPEG (quality 60) to reduce token usage.
 Typical size: ~30-50KB instead of megabytes.
 
-### Context Management
+### Context Management (AI-Powered)
 
-Messages are automatically summarized when context exceeds ~80k tokens.
-Older messages are compressed, recent ones kept intact.
+Two-tier automatic context management:
+
+1. **Heuristic summarization** (80k-120k tokens): Fast regex-based extraction
+2. **AI summarization** (>120k tokens): Detailed LLM-generated summaries
+
+AI summaries preserve critical context that heuristics miss:
+- Task progress and decisions made
+- Files modified and errors encountered  
+- Domain-specific knowledge discovered
+
+See [005-context-management.md](./decisions/005-context-management.md) for details.
 
 ### Debug Mode
 

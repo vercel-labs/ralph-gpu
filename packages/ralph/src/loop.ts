@@ -18,10 +18,11 @@ import { setCurrentIteration } from "./tools";
 import ms from "ms";
 
 /**
- * Maximum context size before we start pruning (in estimated tokens).
+ * Context thresholds for summarization (in estimated tokens).
  * Most models have 100k-200k context, we want to stay well under.
  */
-const MAX_CONTEXT_TOKENS = 80000;
+const CONTEXT_THRESHOLD_BASIC = 80000;    // Fast heuristic-based summarization
+const CONTEXT_THRESHOLD_AI = 120000;      // AI-powered detailed summarization
 
 /**
  * Rough estimate of tokens in a string (4 chars per token average).
@@ -31,11 +32,29 @@ function estimateTokens(str: string): number {
 }
 
 /**
+ * Cache for AI-generated summaries to avoid re-summarizing the same content.
+ */
+let cachedAISummary: { hash: string; summary: string } | null = null;
+
+/**
+ * Simple hash for detecting if messages have changed.
+ */
+function hashMessages(messages: Message[]): string {
+  return messages.map(m => `${m.role}:${typeof m.content === "string" ? m.content.slice(0, 100) : "obj"}`).join("|");
+}
+
+/**
  * Summarize messages when context is too large.
+ * Uses AI-powered summarization for very large contexts.
+ * 
  * Note: Tool results are already sanitized in tools/index.ts to remove
  * large binary data (screenshots, base64) before they enter the message history.
  */
-function summarizeMessages(messages: Message[], systemPrompt: string): Message[] {
+async function summarizeMessages(
+  messages: Message[], 
+  systemPrompt: string,
+  model?: LanguageModel
+): Promise<Message[]> {
   const systemTokens = estimateTokens(systemPrompt);
   let totalTokens = systemTokens;
   
@@ -47,14 +66,12 @@ function summarizeMessages(messages: Message[], systemPrompt: string): Message[]
   
   totalTokens += messageTokens.reduce((sum, m) => sum + m.tokens, 0);
   
-  if (totalTokens <= MAX_CONTEXT_TOKENS) {
+  if (totalTokens <= CONTEXT_THRESHOLD_BASIC) {
     return messages; // No need to summarize
   }
   
-  loopLogger.debug(`Context too large (${totalTokens} tokens), summarizing...`);
-  
   // Keep recent messages, summarize older ones
-  const keepRecent = 6; // Keep last 6 messages intact
+  const keepRecent = 8; // Keep last 8 messages intact for better context
   const recentMessages = messages.slice(-keepRecent);
   const olderMessages = messages.slice(0, -keepRecent);
   
@@ -72,8 +89,18 @@ function summarizeMessages(messages: Message[], systemPrompt: string): Message[]
     });
   }
   
-  // Create summary of older messages
-  const summary = createMessageSummary(olderMessages);
+  // Decide which summarization strategy to use
+  const useAISummarization = totalTokens > CONTEXT_THRESHOLD_AI && model;
+  
+  let summary: string;
+  
+  if (useAISummarization) {
+    loopLogger.debug(`Context very large (${totalTokens} tokens), using AI summarization...`);
+    summary = await createAISummary(olderMessages, model);
+  } else {
+    loopLogger.debug(`Context large (${totalTokens} tokens), using heuristic summarization...`);
+    summary = createHeuristicSummary(olderMessages);
+  }
   
   return [
     { role: "user" as const, content: summary },
@@ -82,49 +109,194 @@ function summarizeMessages(messages: Message[], systemPrompt: string): Message[]
 }
 
 /**
- * Create a brief summary of messages.
+ * Create an AI-powered detailed summary of messages.
+ * The LLM analyzes the conversation and produces a comprehensive summary
+ * that preserves important context, decisions, and progress.
  */
-function createMessageSummary(messages: Message[]): string {
+async function createAISummary(messages: Message[], model: LanguageModel): Promise<string> {
+  // Check cache first
+  const hash = hashMessages(messages);
+  if (cachedAISummary && cachedAISummary.hash === hash) {
+    loopLogger.debug("Using cached AI summary");
+    return cachedAISummary.summary;
+  }
+  
+  loopLogger.debug("🧠 Generating AI summary of earlier conversation...");
+  
+  // Extract key information to include in the summary request
   const toolsUsed = new Set<string>();
+  const filesModified = new Set<string>();
   const filesRead = new Set<string>();
-  const filesWritten = new Set<string>();
+  const errors: string[] = [];
   
   for (const msg of messages) {
     const content = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
     
-    // Extract tool mentions (rough heuristic)
-    const toolMatches = content.match(/\b(bash|readFile|writeFile|openBrowser|screenshot|think)\b/g);
+    // Extract tool mentions
+    const toolMatches = content.match(/\b(bash|readFile|writeFile|editFile|openBrowser|screenshot|think|done)\b/g);
+    if (toolMatches) {
+      toolMatches.forEach(t => toolsUsed.add(t));
+    }
+    
+    // Extract file paths for writes
+    const writeMatches = content.match(/writeFile[^}]*path["']?\s*[:=]\s*["']([^"']+)["']/g);
+    if (writeMatches) {
+      writeMatches.forEach(m => {
+        const pathMatch = m.match(/["']([^"']+\.[a-z]+)["']/);
+        if (pathMatch) filesModified.add(pathMatch[1]);
+      });
+    }
+    
+    // Extract file paths for reads
+    const readMatches = content.match(/readFile[^}]*path["']?\s*[:=]\s*["']([^"']+)["']/g);
+    if (readMatches) {
+      readMatches.forEach(m => {
+        const pathMatch = m.match(/["']([^"']+\.[a-z]+)["']/);
+        if (pathMatch) filesRead.add(pathMatch[1]);
+      });
+    }
+    
+    // Extract errors
+    const errorMatches = content.match(/(?:error|Error|ERROR|failed|Failed|FAILED)[:\s]+([^\n]{10,100})/g);
+    if (errorMatches) {
+      errorMatches.slice(0, 5).forEach(e => errors.push(e.slice(0, 100)));
+    }
+  }
+  
+  // Prepare conversation content (truncated to fit in context)
+  const conversationContent = messages
+    .map((m, i) => {
+      const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+      // Truncate very long messages but keep enough for context
+      const truncated = content.length > 2000 
+        ? content.slice(0, 1500) + "\n...[truncated]..." + content.slice(-300)
+        : content;
+      return `[${m.role.toUpperCase()} ${i + 1}]\n${truncated}`;
+    })
+    .join("\n\n---\n\n");
+  
+  // Limit total content to avoid blowing up the summarization call
+  const maxContentLength = 50000;
+  const truncatedContent = conversationContent.length > maxContentLength
+    ? conversationContent.slice(0, maxContentLength) + "\n\n...[earlier messages truncated]..."
+    : conversationContent;
+  
+  const metadataContext = [
+    `Messages being summarized: ${messages.length}`,
+    toolsUsed.size > 0 ? `Tools used: ${Array.from(toolsUsed).join(", ")}` : null,
+    filesModified.size > 0 ? `Files modified: ${Array.from(filesModified).slice(0, 20).join(", ")}` : null,
+    filesRead.size > 0 ? `Files read: ${Array.from(filesRead).slice(0, 20).join(", ")}` : null,
+    errors.length > 0 ? `Errors encountered: ${errors.slice(0, 3).join("; ")}` : null,
+  ].filter(Boolean).join("\n");
+  
+  try {
+    const result = await generateText({
+      model,
+      messages: [
+        {
+          role: "system",
+          content: `You are summarizing an AI agent's earlier conversation history to preserve context while reducing token usage.
+
+Your summary will be injected into the conversation so the agent can continue its work with full awareness of what happened before.
+
+Create a detailed, structured summary that includes:
+
+1. **Task Progress**: What has been accomplished so far? What's the current state?
+2. **Key Decisions**: Important choices made and why (e.g., "chose X approach because Y")
+3. **Files & Changes**: What files were created, modified, or read? Include relevant paths.
+4. **Errors & Solutions**: Any errors encountered and how they were resolved (or if still pending)
+5. **Current Focus**: What was the agent working on most recently?
+6. **Important Context**: Any domain-specific knowledge, constraints, or requirements discovered
+
+Be thorough - this summary replaces the original messages, so don't lose critical information.
+Use markdown formatting for readability. Include specific file paths, error messages, and code snippets when relevant.`,
+        },
+        {
+          role: "user",
+          content: `Summarize this agent conversation history:\n\n**Metadata:**\n${metadataContext}\n\n**Conversation:**\n${truncatedContent}`,
+        },
+      ],
+      maxOutputTokens: 2000, // Allow detailed summaries
+    });
+    
+    const summary = `## Earlier Conversation Summary (AI-Generated)
+
+${result.text}
+
+---
+*${messages.length} messages summarized. Recent context follows.*`;
+    
+    // Cache the result
+    cachedAISummary = { hash, summary };
+    
+    loopLogger.debug(`✅ AI summary generated (${estimateTokens(summary)} tokens)`);
+    
+    return summary;
+  } catch (error) {
+    loopLogger.error("AI summarization failed, falling back to heuristic", error);
+    return createHeuristicSummary(messages);
+  }
+}
+
+/**
+ * Create a fast heuristic-based summary of messages (no LLM call).
+ * Used when context is moderately large but not huge.
+ */
+function createHeuristicSummary(messages: Message[]): string {
+  const toolsUsed = new Set<string>();
+  const filesRead = new Set<string>();
+  const filesWritten = new Set<string>();
+  const commandsRun: string[] = [];
+  
+  for (const msg of messages) {
+    const content = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+    
+    // Extract tool mentions
+    const toolMatches = content.match(/\b(bash|readFile|writeFile|editFile|openBrowser|screenshot|think)\b/g);
     if (toolMatches) {
       toolMatches.forEach(t => toolsUsed.add(t));
     }
     
     // Extract file paths
-    const pathMatches = content.match(/(?:path['":\s]+)?(['"]([\w\/\.-]+\.(tsx?|jsx?|json|md|css))['"'])/g);
+    const pathMatches = content.match(/(?:path['":\s]+)?["']([\w\/\.-]+\.(tsx?|jsx?|json|md|css|html|yml|yaml))["']/g);
     if (pathMatches) {
-      pathMatches.slice(0, 10).forEach(p => {
+      pathMatches.slice(0, 20).forEach(p => {
         const cleaned = p.replace(/['"]/g, "").replace(/^path:\s*/, "");
         if (cleaned.includes(".")) {
           filesRead.add(cleaned);
         }
       });
     }
+    
+    // Extract bash commands
+    const bashMatches = content.match(/(?:bash|command)['":\s]+["']([^"']{5,80})["']/g);
+    if (bashMatches) {
+      bashMatches.slice(0, 5).forEach(c => {
+        const cmd = c.replace(/^[^"']*["']/, "").replace(/["']$/, "");
+        if (cmd.length > 5) commandsRun.push(cmd);
+      });
+    }
   }
   
   const parts: string[] = [
-    "[Earlier conversation summarized]",
+    "## Earlier Conversation Summary (Heuristic)",
     "",
-    `Previous iterations: ${messages.length} messages`,
+    `**Messages summarized:** ${messages.length}`,
   ];
   
   if (toolsUsed.size > 0) {
-    parts.push(`Tools used: ${Array.from(toolsUsed).join(", ")}`);
+    parts.push(`**Tools used:** ${Array.from(toolsUsed).join(", ")}`);
   }
   
   if (filesRead.size > 0) {
-    parts.push(`Files explored: ${Array.from(filesRead).slice(0, 10).join(", ")}`);
+    parts.push(`**Files explored:** ${Array.from(filesRead).slice(0, 15).join(", ")}`);
   }
   
-  parts.push("", "Continue with the task. Recent context follows.");
+  if (commandsRun.length > 0) {
+    parts.push(`**Commands run:** ${commandsRun.slice(0, 5).join("; ")}`);
+  }
+  
+  parts.push("", "---", "*Continue with the task. Recent context follows.*");
   
   return parts.join("\n");
 }
@@ -288,8 +460,8 @@ export async function runLoop(
       tracer?.recordMessage("user", userMessage);
     }
 
-    // Summarize messages if context is getting too large
-    const contextMessages = summarizeMessages(messages, systemPrompt);
+    // Summarize messages if context is getting too large (AI-powered for very large contexts)
+    const contextMessages = await summarizeMessages(messages, systemPrompt, model);
     
     const systemPromptTokens = estimateTokens(systemPrompt);
     const originalTokens = messages.reduce((sum, m) => sum + estimateTokens(JSON.stringify(m)), 0);
