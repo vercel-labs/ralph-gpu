@@ -20,6 +20,16 @@ export default function Home() {
           <p>Animated wave with controllable parameters</p>
         </Link>
 
+        <Link href="/geometry" className={styles.card}>
+          <h2>Custom Geometry →</h2>
+          <p>Triangle and cube with storage buffer positions</p>
+        </Link>
+
+        <Link href="/lines" className={styles.card}>
+          <h2>Line Rendering →</h2>
+          <p>Line-list, line-strip and point-list topologies</p>
+        </Link>
+
         <Link href="/render-target" className={styles.card}>
           <h2>Render Target →</h2>
           <p>Render to texture and post-processing</p>
@@ -48,6 +58,31 @@ export default function Home() {
         <Link href="/raymarching" className={styles.card}>
           <h2>3D Raymarching →</h2>
           <p>Raymarched scene with SDFs, soft shadows & ambient occlusion</p>
+        </Link>
+
+        <Link href="/metaballs" className={styles.card}>
+          <h2>Metaballs →</h2>
+          <p>Smooth blob-like organic shapes using SDFs</p>
+        </Link>
+
+        <Link href="/morphing" className={styles.card}>
+          <h2>Shape Morphing →</h2>
+          <p>Animated transitions between different SDF shapes</p>
+        </Link>
+
+        <Link href="/mandelbulb" className={styles.card}>
+          <h2>Mandelbulb →</h2>
+          <p>3D fractal rendered with raymarching</p>
+        </Link>
+
+        <Link href="/terrain" className={styles.card}>
+          <h2>Terrain →</h2>
+          <p>Procedural terrain with raymarched heightmaps</p>
+        </Link>
+
+        <Link href="/alien-planet" className={styles.card}>
+          <h2>Alien Planet →</h2>
+          <p>Stylized alien landscape with atmosphere</p>
         </Link>
       </div>
     </main>

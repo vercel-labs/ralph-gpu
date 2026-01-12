@@ -41,6 +41,8 @@ export type {
   FilterMode,
   WrapMode,
   GlobalUniforms,
+  PrimitiveTopology,
+  IndexFormat,
 } from "./types";
 
 /**

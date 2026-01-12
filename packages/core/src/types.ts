@@ -2,6 +2,8 @@
  * TypeScript type definitions for ralph-gpu
  */
 
+import type { StorageBuffer } from "./storage";
+
 /**
  * Texture format options
  */
@@ -26,6 +28,21 @@ export type WrapMode = "clamp" | "repeat" | "mirror";
  * Blend mode presets
  */
 export type BlendMode = "none" | "alpha" | "additive" | "multiply" | "screen";
+
+/**
+ * WebGPU primitive topology for rendering
+ */
+export type PrimitiveTopology =
+  | "triangle-list"
+  | "triangle-strip"
+  | "line-list"
+  | "line-strip"
+  | "point-list";
+
+/**
+ * Index buffer format
+ */
+export type IndexFormat = "uint16" | "uint32";
 
 /**
  * Custom blend configuration
@@ -116,6 +133,14 @@ export interface MaterialOptions {
   blend?: BlendMode | BlendConfig;
   vertexCount?: number;
   instances?: number;
+  /** Primitive topology for rendering (default: "triangle-list") */
+  topology?: PrimitiveTopology;
+  /** Index buffer for indexed drawing */
+  indexBuffer?: StorageBuffer;
+  /** Index format (default: "uint32") */
+  indexFormat?: IndexFormat;
+  /** Number of indices to draw */
+  indexCount?: number;
 }
 
 /**

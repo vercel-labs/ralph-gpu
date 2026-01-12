@@ -288,6 +288,75 @@ function frame() {
 
 **IMPORTANT:** ralph-gpu does NOT support WebGPU's `point-list` topology for particles. Instead, use **instanced rendering** where each particle is a quad (2 triangles).
 
+#### WGSL Alignment Requirements
+
+**CRITICAL:** When using `array<vec3f>` in storage buffers, each element is **16-byte aligned** (not 12 bytes). You must pad your data accordingly.
+
+| WGSL Type | Size | Alignment | Stride in Array |
+| --------- | ---- | --------- | --------------- |
+| `f32`     | 4    | 4         | 4               |
+| `vec2f`   | 8    | 8         | 8               |
+| `vec3f`   | 12   | 16        | **16** (padded) |
+| `vec4f`   | 16   | 16        | 16              |
+| `mat4x4f` | 64   | 16        | 64              |
+
+**Wrong (data will be misaligned):**
+
+```tsx
+// DON'T: Packed 12-byte vec3f data
+const buffer = ctx.storage(3 * 3 * 4); // 36 bytes
+buffer.write(
+  new Float32Array([
+    0.0,
+    0.5,
+    0.0, // vertex 0
+    -0.5,
+    -0.5,
+    0.0, // vertex 1
+    0.5,
+    -0.5,
+    0.0, // vertex 2
+  ])
+);
+```
+
+**Correct (16-byte aligned):**
+
+```tsx
+// DO: Pad each vec3f to 16 bytes (add 4th component)
+const buffer = ctx.storage(3 * 16); // 48 bytes
+buffer.write(
+  new Float32Array([
+    0.0,
+    0.5,
+    0.0,
+    0.0, // vertex 0 (x, y, z, padding)
+    -0.5,
+    -0.5,
+    0.0,
+    0.0, // vertex 1 (x, y, z, padding)
+    0.5,
+    -0.5,
+    0.0,
+    0.0, // vertex 2 (x, y, z, padding)
+  ])
+);
+```
+
+**Alternative: Use vec4f or structs with explicit padding:**
+
+```wgsl
+// Option 1: Use vec4f instead of vec3f
+@group(1) @binding(0) var<storage, read> positions: array<vec4f>;
+
+// Option 2: Use struct with padding
+struct Vertex {
+  position: vec3f,
+  _pad: f32,  // explicit padding
+}
+@group(1) @binding(0) var<storage, read> vertices: array<Vertex>;
+```
+
 #### Basic Particle System
 
 ```tsx
@@ -611,6 +680,127 @@ function frame() {
 frame();
 ```
 
+### 9. Line Rendering
+
+Use the `topology` option in materials for line rendering:
+
+```tsx
+// Separate line segments (pairs of vertices)
+const lines = ctx.material(shader, {
+  vertexCount: 6, // 3 lines = 6 vertices
+  topology: "line-list",
+});
+
+// Connected line strip
+const strip = ctx.material(shader, {
+  vertexCount: 20, // 20 connected points
+  topology: "line-strip",
+});
+```
+
+#### Available Topologies
+
+| Topology           | Description                                | Use Case           |
+| ------------------ | ------------------------------------------ | ------------------ |
+| `"triangle-list"`  | Default, separate triangles (3 verts each) | Standard geometry  |
+| `"triangle-strip"` | Connected triangles (shared verts)         | Efficient meshes   |
+| `"line-list"`      | Separate line segments (2 verts each)      | Disconnected lines |
+| `"line-strip"`     | Connected line (shared vertices)           | Paths, waveforms   |
+| `"point-list"`     | Individual points                          | Point clouds (1px) |
+
+#### Line-List Example (Separate Segments)
+
+```tsx
+const lineList = ctx.material(
+  /* wgsl */ `
+  @vertex
+  fn vs_main(@builtin(vertex_index) vid: u32) -> @builtin(position) vec4f {
+    // 6 vertices = 3 separate lines
+    var positions = array<vec2f, 6>(
+      vec2f(-0.8, 0.0), vec2f(-0.4, 0.5),  // Line 1
+      vec2f(-0.2, -0.3), vec2f(0.2, 0.3),  // Line 2
+      vec2f(0.4, -0.5), vec2f(0.8, 0.0),   // Line 3
+    );
+    let p = positions[vid];
+    let y = p.y + sin(globals.time + p.x * 3.0) * 0.1;
+    return vec4f(p.x, y, 0.0, 1.0);
+  }
+
+  @fragment
+  fn fs_main() -> @location(0) vec4f {
+    return vec4f(0.2, 0.8, 1.0, 1.0);
+  }
+`,
+  {
+    vertexCount: 6,
+    topology: "line-list",
+  }
+);
+```
+
+#### Line-Strip Example (Connected Line)
+
+```tsx
+const lineStrip = ctx.material(
+  /* wgsl */ `
+  @vertex
+  fn vs_main(@builtin(vertex_index) vid: u32) -> @builtin(position) vec4f {
+    let count = 50u;
+    let t = f32(vid) / f32(count - 1u);
+    let x = t * 2.0 - 1.0;  // -1 to 1
+    let y = sin(x * 6.28 + globals.time * 2.0) * 0.4;
+    return vec4f(x * 0.9, y, 0.0, 1.0);
+  }
+
+  @fragment
+  fn fs_main() -> @location(0) vec4f {
+    return vec4f(1.0, 0.5, 0.2, 1.0);
+  }
+`,
+  {
+    vertexCount: 50,
+    topology: "line-strip",
+  }
+);
+```
+
+#### Dynamic Grid Lines
+
+```tsx
+const gridLines = ctx.material(
+  /* wgsl */ `
+  @vertex
+  fn vs_main(@builtin(vertex_index) vid: u32) -> @builtin(position) vec4f {
+    // Create grid lines dynamically
+    let lineCount = 20u;
+    let lineIndex = vid / 2u;
+    let isStart = (vid % 2u) == 0u;
+    
+    let isHorizontal = lineIndex < lineCount / 2u;
+    let idx = lineIndex % (lineCount / 2u);
+    let pos = f32(idx) / f32(lineCount / 2u - 1u) * 2.0 - 1.0;
+    
+    if (isHorizontal) {
+      let x = select(0.9, -0.9, isStart);
+      return vec4f(x, pos * 0.9, 0.0, 1.0);
+    } else {
+      let y = select(0.9, -0.9, isStart);
+      return vec4f(pos * 0.9, y, 0.0, 1.0);
+    }
+  }
+
+  @fragment
+  fn fs_main() -> @location(0) vec4f {
+    return vec4f(0.3, 0.3, 0.3, 1.0);
+  }
+`,
+  {
+    vertexCount: 40, // 20 lines × 2 vertices
+    topology: "line-list",
+  }
+);
+```
+
 ## Blend Modes
 
 ```tsx
@@ -735,6 +925,11 @@ fn opSmoothUnion(d1: f32, d2: f32, k: f32) -> f32 {
 11. **Create circular particles** with fragment shader `discard` for pixels outside radius
 12. **Use `/* wgsl */`** template tag for syntax highlighting
 13. **Dispose resources** on cleanup: `ctx.dispose()`, `target.dispose()`, `pass.dispose()`
+14. **Respect WGSL alignment** for storage buffers - `array<vec3f>` has 16-byte stride, not 12:
+    ```tsx
+    // Pad vec3f data to 16 bytes: [x, y, z, 0.0]
+    const buffer = ctx.storage(vertexCount * 16); // NOT vertexCount * 12
+    ```
 
 ## API Quick Reference
 
