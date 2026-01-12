@@ -32,7 +32,7 @@ const VELOCITY_DAMPING = 0.99; // Velocity decay per frame (0-1)
 const RESPAWN_VELOCITY_JITTER = INITIAL_VELOCITY_JITTER; // Velocity randomness on respawn
 
 // Rendering
-const POINT_SIZE = 0.2;
+const POINT_SIZE = 0.3;
 const FADE_DURATION = MAX_LIFETIME * 0.4; // How long the fade-out takes
 
 // Postprocessing blur
