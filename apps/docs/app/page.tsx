@@ -21,6 +21,15 @@ frame();`;
 
 const features = [
   {
+    title: '~6kB Gzipped',
+    description: 'Tiny footprint. Full WebGPU power without the bloat.',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+      </svg>
+    ),
+  },
+  {
     title: 'Simple API',
     description: 'Write shaders, draw them. No boilerplate, no complexity.',
     icon: (
@@ -81,9 +90,18 @@ export default function HomePage() {
     <div className="px-6 py-16 lg:px-12 lg:py-20">
       {/* Hero Section */}
       <section className="max-w-4xl mx-auto text-center mb-24">
-        <div className="mb-8 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-bg-tertiary border border-border-default text-text-secondary text-sm">
-          <span className="w-2 h-2 rounded-full bg-accent-green"></span>
-          WebGPU Ready
+        {/* Badges */}
+        <div className="mb-8 flex flex-wrap justify-center gap-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-blue/10 border border-accent-blue/20 text-accent-blue text-sm font-medium">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            ~6kB gzipped
+          </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-bg-tertiary border border-border-default text-text-secondary text-sm">
+            <span className="w-2 h-2 rounded-full bg-accent-green"></span>
+            WebGPU Ready
+          </div>
         </div>
         
         <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-text-primary mb-6 tracking-tight">

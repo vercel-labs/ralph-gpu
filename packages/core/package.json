@@ -1,6 +1,6 @@
 {
   "name": "ralph-gpu",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Minimal WebGPU shader library",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -16,7 +16,10 @@
     "dist"
   ],
   "scripts": {
-    "build": "webpack --mode production && tsc --emitDeclarationOnly",
+    "build": "rm -rf dist tsconfig.tsbuildinfo && webpack --mode production && tsc --emitDeclarationOnly && node scripts/bundle-size.js",
+    "build:size": "rm -rf dist tsconfig.tsbuildinfo && webpack --mode production && tsc --emitDeclarationOnly && node scripts/bundle-size.js --update-readme",
+    "size": "node scripts/bundle-size.js",
+    "size:update": "node scripts/bundle-size.js --update-readme",
     "dev": "webpack --mode development --watch",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -29,6 +32,7 @@
     "@webgpu/types": "^0.1.68",
     "jsdom": "^27.4.0",
     "swc-loader": "^0.2.6",
+    "terser-webpack-plugin": "^5.3.16",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
     "webpack": "^5.97.1",
