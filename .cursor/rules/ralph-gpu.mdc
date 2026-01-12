@@ -1,0 +1,569 @@
+---
+description: Complete guide for using ralph-gpu - a minimal WebGPU shader library for creative coding and real-time graphics.
+globs:
+  - "**/*.tsx"
+  - "**/*.ts"
+  - "**/*.wgsl"
+alwaysApply: false
+---
+
+# ralph-gpu Usage Guide
+
+ralph-gpu is a ~6kB gzipped WebGPU shader library for creative coding and real-time graphics. This rule provides comprehensive guidance on using the library effectively.
+
+## Installation
+
+```bash
+npm install ralph-gpu
+# or
+pnpm add ralph-gpu
+```
+
+For TypeScript support (recommended):
+
+```bash
+npm install -D @webgpu/types
+```
+
+## Core Concepts
+
+| Concept    | Description                                            |
+| ---------- | ------------------------------------------------------ |
+| `gpu`      | Module entry point for initialization                  |
+| `ctx`      | GPU context — manages state and rendering              |
+| `pass`     | Fullscreen shader (fragment only, uses internal quad)  |
+| `material` | Shader with custom vertex code (particles, geometry)   |
+| `target`   | Render target (offscreen texture)                      |
+| `pingPong` | Pair of render targets for iterative effects           |
+| `compute`  | Compute shader for GPU-parallel computation            |
+| `storage`  | Storage buffer for large data (particles, simulations) |
+
+## Auto-Injected Globals
+
+Every shader automatically has access to these uniforms via `globals`:
+
+```wgsl
+struct Globals {
+  resolution: vec2f,  // Current render target size in pixels
+  time: f32,          // Seconds since init (affected by timeScale)
+  deltaTime: f32,     // Seconds since last frame
+  frame: u32,         // Frame count since init
+  aspect: f32,        // resolution.x / resolution.y
+}
+@group(0) @binding(0) var<uniform> globals: Globals;
+```
+
+**Usage in shaders:**
+
+```wgsl
+let uv = pos.xy / globals.resolution;        // Normalized UV coordinates
+let t = globals.time;                         // Animated time
+let dt = globals.deltaTime;                   // Frame delta
+let ar = globals.aspect;                      // Aspect ratio
+```
+
+## Basic Patterns
+
+### 1. Initialization with React
+
+```tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+import { gpu, GPUContext, Pass } from "ralph-gpu";
+
+export default function ShaderComponent() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    let ctx: GPUContext | null = null;
+    let pass: Pass;
+    let animationId: number;
+    let disposed = false;
+
+    async function init() {
+      if (!canvasRef.current) return;
+
+      // Always check WebGPU support first
+      if (!gpu.isSupported()) {
+        console.error("WebGPU is not supported");
+        return;
+      }
+
+      ctx = await gpu.init(canvasRef.current, {
+        dpr: Math.min(window.devicePixelRatio, 2),
+        debug: true,
+      });
+
+      // Handle disposal during async init
+      if (disposed) {
+        ctx.dispose();
+        return;
+      }
+
+      pass = ctx.pass(/* wgsl */ `
+        @fragment
+        fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+          let uv = pos.xy / globals.resolution;
+          return vec4f(uv, sin(globals.time) * 0.5 + 0.5, 1.0);
+        }
+      `);
+
+      function frame() {
+        if (disposed) return;
+        pass.draw();
+        animationId = requestAnimationFrame(frame);
+      }
+      frame();
+    }
+
+    init();
+
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(animationId);
+      ctx?.dispose();
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width: "100%", height: "100%" }}
+      width={800}
+      height={600}
+    />
+  );
+}
+```
+
+### 2. Fullscreen Pass (Fragment Shader)
+
+Use `ctx.pass()` for fullscreen effects where you only need a fragment shader:
+
+```tsx
+const gradient = ctx.pass(/* wgsl */ `
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let uv = pos.xy / globals.resolution;
+    let color = vec3f(uv, 0.5 + 0.5 * sin(globals.time));
+    return vec4f(color, 1.0);
+  }
+`);
+
+// In render loop
+gradient.draw();
+```
+
+### 3. Custom Uniforms (Three.js Style)
+
+Define uniforms with `{ value: X }` wrapper for reactive updates:
+
+```tsx
+// Define uniforms object
+const uniforms = {
+  amplitude: { value: 0.5 },
+  frequency: { value: 10.0 },
+  color: { value: [1.0, 0.5, 0.2] },
+};
+
+const wave = ctx.pass(
+  /* wgsl */ `
+  struct MyUniforms {
+    amplitude: f32,
+    frequency: f32,
+    color: vec3f,
+  }
+  @group(1) @binding(0) var<uniform> u: MyUniforms;
+
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let uv = pos.xy / globals.resolution;
+    let y = sin(uv.x * u.frequency + globals.time) * u.amplitude;
+    let c = smoothstep(0.0, 0.02, abs(uv.y - 0.5 - y));
+    return vec4f(u.color * (1.0 - c), 1.0);
+  }
+`,
+  { uniforms }
+);
+
+// Update uniforms anywhere - changes apply automatically
+uniforms.amplitude.value = 0.8;
+uniforms.color.value = [0.2, 1.0, 0.5];
+```
+
+### 4. Render Targets (Offscreen Rendering)
+
+```tsx
+// Create offscreen target
+const buffer = ctx.target(512, 512, {
+  format: "rgba16float", // or "rgba8unorm", "r16float", "rg16float"
+  filter: "linear", // or "nearest"
+  wrap: "clamp", // or "repeat", "mirror"
+});
+
+// Scene pass renders to target
+const scenePass = ctx.pass(/* wgsl */ `...`);
+
+// Display pass samples from target
+const displayUniforms = {
+  inputTex: { value: buffer },
+};
+
+const displayPass = ctx.pass(
+  /* wgsl */ `
+  @group(1) @binding(0) var inputTex: texture_2d<f32>;
+  @group(1) @binding(1) var inputSampler: sampler;
+
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let uv = pos.xy / globals.resolution;
+    return textureSample(inputTex, inputSampler, uv);
+  }
+`,
+  { uniforms: displayUniforms }
+);
+
+// Render loop
+function frame() {
+  ctx.setTarget(buffer); // Render to buffer
+  scenePass.draw();
+
+  ctx.setTarget(null); // Render to screen
+  displayPass.draw();
+}
+```
+
+### 5. Ping-Pong Buffers (Iterative Effects)
+
+For simulations, blur, feedback effects:
+
+```tsx
+const simulation = ctx.pingPong(128, 128, {
+  format: "rgba16float",
+  filter: "linear",
+  wrap: "clamp",
+});
+
+const processUniforms = {
+  inputTex: { value: simulation.read },
+};
+
+const processPass = ctx.pass(
+  /* wgsl */ `
+  @group(1) @binding(0) var inputTex: texture_2d<f32>;
+  @group(1) @binding(1) var inputSampler: sampler;
+
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let uv = pos.xy / globals.resolution;
+    let prev = textureSample(inputTex, inputSampler, uv);
+    // Process and return new value...
+    return prev * 0.99;
+  }
+`,
+  { uniforms: processUniforms }
+);
+
+// Render loop
+function frame() {
+  // Update uniform to read from current state
+  processUniforms.inputTex.value = simulation.read;
+
+  // Write to write buffer
+  ctx.setTarget(simulation.write);
+  ctx.autoClear = false;
+  processPass.draw();
+
+  // Swap read/write
+  simulation.swap();
+
+  // Display
+  ctx.setTarget(null);
+  displayPass.draw();
+}
+```
+
+### 6. Storage Buffers & Materials (Particles)
+
+For custom geometry and instanced rendering:
+
+```tsx
+const particleCount = 1000;
+const particleBuffer = ctx.storage(particleCount * 4 * 4); // 4 floats × 4 bytes
+
+// Initialize data
+const initialData = new Float32Array(particleCount * 4);
+for (let i = 0; i < particleCount; i++) {
+  initialData[i * 4 + 0] = (Math.random() - 0.5) * 2; // x
+  initialData[i * 4 + 1] = (Math.random() - 0.5) * 2; // y
+  initialData[i * 4 + 2] = Math.random(); // hue
+  initialData[i * 4 + 3] = 0.02; // size
+}
+particleBuffer.write(initialData);
+
+// Material with vertex + fragment shaders
+const particles = ctx.material(
+  /* wgsl */ `
+  struct Particle {
+    pos: vec2f,
+    hue: f32,
+    size: f32,
+  }
+
+  @group(1) @binding(0) var<storage, read> particles: array<Particle>;
+
+  struct VertexOutput {
+    @builtin(position) pos: vec4f,
+    @location(0) uv: vec2f,
+    @location(1) hue: f32,
+  }
+
+  @vertex
+  fn vs_main(
+    @builtin(vertex_index) vid: u32,
+    @builtin(instance_index) iid: u32
+  ) -> VertexOutput {
+    let p = particles[iid];
+
+    // Quad vertices (two triangles)
+    var quad = array<vec2f, 6>(
+      vec2f(-1, -1), vec2f(1, -1), vec2f(-1, 1),
+      vec2f(-1, 1), vec2f(1, -1), vec2f(1, 1),
+    );
+
+    let aspect = globals.resolution.x / globals.resolution.y;
+    let localPos = quad[vid] * vec2f(p.size / aspect, p.size);
+
+    var out: VertexOutput;
+    out.pos = vec4f(p.pos + localPos, 0.0, 1.0);
+    out.uv = quad[vid] * 0.5 + 0.5;
+    out.hue = p.hue;
+    return out;
+  }
+
+  @fragment
+  fn fs_main(in: VertexOutput) -> @location(0) vec4f {
+    let d = length(in.uv - 0.5);
+    if (d > 0.5) { discard; }
+    let alpha = smoothstep(0.5, 0.3, d);
+    return vec4f(1.0, in.hue, 0.5, alpha);
+  }
+`,
+  {
+    vertexCount: 6,
+    instances: particleCount,
+    blend: "alpha", // or "additive", "multiply", "screen"
+  }
+);
+
+// Bind storage buffer
+particles.storage("particles", particleBuffer);
+
+// Draw
+particles.draw();
+```
+
+### 7. Compute Shaders
+
+For GPU-parallel computation:
+
+```tsx
+const particleBuffer = ctx.storage(particleCount * 8 * 4);
+
+const computeShader = ctx.compute(/* wgsl */ `
+  struct Particle {
+    position: vec2f,
+    velocity: vec2f,
+    life: f32,
+    age: f32,
+    size: f32,
+    padding: f32,
+  }
+
+  @group(1) @binding(0) var<storage, read_write> particles: array<Particle>;
+
+  @compute @workgroup_size(64, 1, 1)
+  fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let index = id.x;
+    if (index >= arrayLength(&particles)) { return; }
+
+    var p = particles[index];
+
+    // Update physics
+    p.position += p.velocity * globals.deltaTime;
+    p.velocity.y -= 9.8 * globals.deltaTime;  // gravity
+
+    // Bounce
+    if (p.position.y < -1.0) {
+      p.velocity.y *= -0.8;
+      p.position.y = -1.0;
+    }
+
+    particles[index] = p;
+  }
+`);
+
+computeShader.storage("particles", particleBuffer);
+
+// In render loop
+computeShader.dispatch(Math.ceil(particleCount / 64));
+```
+
+## Blend Modes
+
+```tsx
+// Presets
+ctx.pass(shader, { blend: "alpha" }); // Standard transparency
+ctx.pass(shader, { blend: "additive" }); // Glow, fire, light
+ctx.pass(shader, { blend: "multiply" }); // Darken
+ctx.pass(shader, { blend: "screen" }); // Lighten
+
+// Custom blend
+ctx.pass(shader, {
+  blend: {
+    color: { src: "src-alpha", dst: "one", operation: "add" },
+    alpha: { src: "one", dst: "one-minus-src-alpha", operation: "add" },
+  },
+});
+```
+
+## Time Control
+
+```tsx
+ctx.paused = true; // Pause time
+ctx.paused = false; // Resume
+ctx.timeScale = 0.5; // Slow motion
+ctx.timeScale = 2.0; // Fast forward
+ctx.time = 0; // Reset time
+```
+
+## Error Handling
+
+```tsx
+import {
+  WebGPUNotSupportedError,
+  DeviceCreationError,
+  ShaderCompileError,
+} from "ralph-gpu";
+
+try {
+  const ctx = await gpu.init(canvas);
+} catch (e) {
+  if (e instanceof WebGPUNotSupportedError) {
+    // Browser doesn't support WebGPU
+  } else if (e instanceof DeviceCreationError) {
+    // GPU device couldn't be created
+  } else if (e instanceof ShaderCompileError) {
+    console.error(`Line ${e.line}, Col ${e.column}: ${e.message}`);
+  }
+}
+```
+
+## Texture Formats
+
+| Format        | Description                 | Use Case                      |
+| ------------- | --------------------------- | ----------------------------- |
+| `rgba8unorm`  | 8-bit RGBA, 0-1 range       | General purpose, final output |
+| `rgba16float` | 16-bit float RGBA           | HDR, accumulation buffers     |
+| `r16float`    | Single channel 16-bit float | Pressure, divergence          |
+| `rg16float`   | Two channel 16-bit float    | Velocity fields               |
+| `r32float`    | Single channel 32-bit float | High precision                |
+
+## Common WGSL Patterns
+
+### UV Coordinates
+
+```wgsl
+let uv = pos.xy / globals.resolution;        // 0 to 1
+let centered = uv * 2.0 - 1.0;               // -1 to 1
+let aspect_correct = centered * vec2f(globals.aspect, 1.0);
+```
+
+### Texture Sampling with Uniforms
+
+```wgsl
+// Declare in shader
+@group(1) @binding(0) var inputTex: texture_2d<f32>;
+@group(1) @binding(1) var inputSampler: sampler;
+
+// In TypeScript
+const uniforms = {
+  inputTex: { value: someRenderTarget },
+};
+```
+
+### SDF Primitives
+
+```wgsl
+fn sdSphere(p: vec3f, r: f32) -> f32 {
+  return length(p) - r;
+}
+
+fn sdBox(p: vec3f, b: vec3f) -> f32 {
+  let q = abs(p) - b;
+  return length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+fn opSmoothUnion(d1: f32, d2: f32, k: f32) -> f32 {
+  let h = clamp(0.5 + 0.5 * (d2 - d1) / k, 0.0, 1.0);
+  return mix(d2, d1, h) - k * h * (1.0 - h);
+}
+```
+
+## Best Practices
+
+1. **Always check WebGPU support** before initializing
+2. **Handle async disposal** in React useEffect cleanup
+3. **Limit DPR** to 2 for performance: `Math.min(window.devicePixelRatio, 2)`
+4. **Use `ctx.autoClear = false`** when doing ping-pong operations
+5. **Update uniform references** before each ping-pong iteration
+6. **Use appropriate texture formats** - `rgba8unorm` for display, `*16float` for computation
+7. **Structure uniforms as { value: T }** for the Three.js-style reactive pattern
+8. **Declare storage buffers** with matching struct layouts in WGSL
+9. **Use `/* wgsl */`** template tag for syntax highlighting
+10. **Dispose resources** on cleanup: `ctx.dispose()`, `target.dispose()`, `pass.dispose()`
+
+## API Quick Reference
+
+```tsx
+// Module
+gpu.isSupported()                          // → boolean
+gpu.init(canvas, options?)                 // → Promise<GPUContext>
+
+// Context
+ctx.pass(fragmentWGSL, options?)           // → Pass
+ctx.material(wgsl, options?)               // → Material
+ctx.compute(wgsl, options?)                // → ComputeShader
+ctx.target(width, height, options?)        // → RenderTarget
+ctx.pingPong(width, height, options?)      // → PingPongTarget
+ctx.storage(byteSize)                      // → StorageBuffer
+
+ctx.setTarget(target | null)               // Set render target
+ctx.clear(target?, color?)                 // Clear target
+ctx.resize(width, height)                  // Resize context
+ctx.dispose()                              // Cleanup all resources
+
+// Pass / Material
+pass.draw()                                // Draw to current target
+pass.storage(name, buffer)                 // Bind storage buffer
+pass.dispose()                             // Cleanup
+
+// Compute
+compute.dispatch(x, y?, z?)                // Run compute shader
+compute.storage(name, buffer)              // Bind storage buffer
+
+// Render Target
+target.texture                             // GPUTexture
+target.resize(width, height)               // Resize
+target.dispose()                           // Cleanup
+
+// Ping-Pong
+pingPong.read                              // Current state (RenderTarget)
+pingPong.write                             // Next state (RenderTarget)
+pingPong.swap()                            // Swap read/write
+
+// Storage Buffer
+storage.write(data)                        // Write TypedArray
+storage.dispose()                          // Cleanup
+```
