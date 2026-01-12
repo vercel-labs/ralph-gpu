@@ -23,6 +23,7 @@ export default function RenderTargetPage() {
         ctx = await gpu.init(canvasRef.current, {
           dpr: Math.min(window.devicePixelRatio, 2),
           debug: true,
+          autoResize: true
         });
 
         if (disposed) {

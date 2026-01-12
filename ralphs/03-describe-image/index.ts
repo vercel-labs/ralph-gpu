@@ -9,7 +9,7 @@
  */
 
 import "dotenv/config";
-import { LoopAgent, setDebugMode } from "@ralph/core";
+import { LoopAgent, setDebugMode } from "@ralph/agent-loop";
 
 // Get config from environment
 const PROJECT_ROOT = process.env.PROJECT_ROOT || process.cwd();

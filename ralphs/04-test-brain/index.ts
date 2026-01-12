@@ -9,7 +9,7 @@
  */
 
 import "dotenv/config";
-import { LoopAgent, brainRule, explorationRule, setDebugMode } from "@ralph/core";
+import { LoopAgent, brainRule, explorationRule, setDebugMode } from "@ralph/agent-loop";
 import * as fs from "fs/promises";
 
 // Get config from environment

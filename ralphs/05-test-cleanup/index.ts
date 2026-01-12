@@ -8,7 +8,7 @@
  */
 
 import "dotenv/config";
-import { LoopAgent } from "@ralph/core";
+import { LoopAgent } from "@ralph/agent-loop";
 import { execSync } from "child_process";
 
 // Get configuration from environment

@@ -1,5 +1,5 @@
 {
-  "name": "@ralph/core",
+  "name": "@ralph/agent-loop",
   "version": "0.0.1",
   "description": "Autonomous AI agent loop library - the Ralph Wiggum pattern",
   "main": "./dist/index.js",

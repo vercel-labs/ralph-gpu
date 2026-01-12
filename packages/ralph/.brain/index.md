@@ -1,10 +1,10 @@
-# @ralph/core - Brain Index
+# @ralph/agent-loop - Brain Index
 
 Documentation and knowledge base for the autonomous AI agent loop library.
 
 ## Overview
 
-`@ralph/core` is a TypeScript library for running autonomous AI agent loops. It implements the "Ralph Wiggum" pattern: a simple loop that feeds tasks to an AI model with tools until completion.
+`@ralph/agent-loop` is a TypeScript library for running autonomous AI agent loops. It implements the "Ralph Wiggum" pattern: a simple loop that feeds tasks to an AI model with tools until completion.
 
 ## Contents
 
@@ -70,8 +70,9 @@ Two-tier automatic context management:
 2. **AI summarization** (>120k tokens): Detailed LLM-generated summaries
 
 AI summaries preserve critical context that heuristics miss:
+
 - Task progress and decisions made
-- Files modified and errors encountered  
+- Files modified and errors encountered
 - Domain-specific knowledge discovered
 
 See [005-context-management.md](./decisions/005-context-management.md) for details.

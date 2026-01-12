@@ -2,6 +2,8 @@
  * TypeScript type definitions for ralph-gpu
  */
 
+import type { StorageBuffer } from "./storage";
+
 /**
  * Texture format options
  */
@@ -26,6 +28,21 @@ export type WrapMode = "clamp" | "repeat" | "mirror";
  * Blend mode presets
  */
 export type BlendMode = "none" | "alpha" | "additive" | "multiply" | "screen";
+
+/**
+ * WebGPU primitive topology for rendering
+ */
+export type PrimitiveTopology =
+  | "triangle-list"
+  | "triangle-strip"
+  | "line-list"
+  | "line-strip"
+  | "point-list";
+
+/**
+ * Index buffer format
+ */
+export type IndexFormat = "uint16" | "uint32";
 
 /**
  * Custom blend configuration
@@ -56,10 +73,12 @@ export interface RenderTargetOptions {
  * GPU context initialization options
  */
 export interface GPUContextOptions {
-  /** Device pixel ratio for high-DPI displays */
+  /** Device pixel ratio for high-DPI displays (default: 1) */
   dpr?: number;
   /** Enable debug mode with extra validation */
   debug?: boolean;
+  /** Automatically resize canvas to match display size using ResizeObserver (default: false) */
+  autoResize?: boolean;
 }
 
 /**
@@ -116,6 +135,14 @@ export interface MaterialOptions {
   blend?: BlendMode | BlendConfig;
   vertexCount?: number;
   instances?: number;
+  /** Primitive topology for rendering (default: "triangle-list") */
+  topology?: PrimitiveTopology;
+  /** Index buffer for indexed drawing */
+  indexBuffer?: StorageBuffer;
+  /** Index format (default: "uint32") */
+  indexFormat?: IndexFormat;
+  /** Number of indices to draw */
+  indexCount?: number;
 }
 
 /**
@@ -142,4 +169,18 @@ export interface GlobalUniforms {
   deltaTime: number;
   frame: number;
   aspect: number;
+}
+
+/**
+ * Particles helper options
+ * User provides full shader control - no built-in colors, shapes, or assumptions about data layout
+ */
+export interface ParticlesOptions {
+  /** Full WGSL shader with vertex and fragment functions. 
+   * Built-in helpers available: quadOffset(vid), quadUV(vid) */
+  shader: string;
+  /** Size of the particle storage buffer in bytes */
+  bufferSize: number;
+  /** Blend mode (default: "alpha") */
+  blend?: BlendMode | BlendConfig;
 }

@@ -1,12 +1,12 @@
 /**
- * 01-init: Test the @ralph/core library by generating a repository context file
+ * 01-init: Test the @ralph/agent-loop library by generating a repository context file
  *
  * This script uses the LoopAgent to explore the repository and create
  * a comprehensive context document about its structure and purpose.
  */
 
 import "dotenv/config";
-import { LoopAgent, explorationRule, brainRule } from "@ralph/core";
+import { LoopAgent, explorationRule, brainRule } from "@ralph/agent-loop";
 
 // Get configuration from environment
 const AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY;

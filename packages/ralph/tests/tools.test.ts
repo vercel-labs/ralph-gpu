@@ -147,7 +147,7 @@ describe("Tools", () => {
         );
 
         expect(typeof result).toBe("string");
-        expect(result as string).toContain("@ralph/core");
+        expect(result as string).toContain("@ralph/agent-loop");
       });
 
       it("should throw error for non-existent file", async () => {

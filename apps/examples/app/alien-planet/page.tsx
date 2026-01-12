@@ -21,8 +21,8 @@ export default function AlienPlanetPage() {
         }
 
         ctx = await gpu.init(canvasRef.current, {
-          dpr: Math.min(window.devicePixelRatio, 2),
-          debug: true,
+          dpr: 1,
+          autoResize: true
         });
 
         if (disposed) {

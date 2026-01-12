@@ -2,7 +2,7 @@
  * Material for custom geometry rendering
  */
 
-import type { MaterialOptions, Uniforms } from "./types";
+import type { MaterialOptions, Uniforms, PrimitiveTopology, IndexFormat } from "./types";
 import { ShaderCompileError } from "./errors";
 import {
   getGlobalsWGSL,
@@ -10,7 +10,7 @@ import {
   updateUniformBuffer,
   getBlendState,
   collectTextureBindings,
-  parseBindGroup1Bindings,
+  parseBindGroupBindings,
 } from "./uniforms";
 import type { StorageBuffer } from "./storage";
 
@@ -29,7 +29,14 @@ export class Material {
   private blendMode: MaterialOptions["blend"];
   private vertexCount: number;
   private instances: number;
+  private topology: PrimitiveTopology;
   private context: import("./context").GPUContext;
+  private usesGlobals: boolean;
+  
+  // Index buffer support
+  private indexBuffer: StorageBuffer | null = null;
+  private indexFormat: GPUIndexFormat = "uint32";
+  private indexCount: number = 0;
 
   constructor(
     device: GPUDevice,
@@ -45,7 +52,18 @@ export class Material {
     this.blendMode = options.blend;
     this.vertexCount = options.vertexCount || 3;
     this.instances = options.instances || 1;
+    this.topology = options.topology || "triangle-list";
     this.context = context;
+    
+    // Detect if shader uses globals (references globals. anywhere)
+    this.usesGlobals = /\bglobals\.\w+/.test(wgsl);
+    
+    // Index buffer support
+    if (options.indexBuffer) {
+      this.indexBuffer = options.indexBuffer;
+      this.indexFormat = options.indexFormat || "uint32";
+      this.indexCount = options.indexCount || 0;
+    }
 
     // Calculate uniform buffer size (excluding textures)
     if (Object.keys(this._uniforms).length > 0) {
@@ -70,15 +88,16 @@ export class Material {
    * Get or build pipeline for a specific format
    */
   private getPipeline(format: GPUTextureFormat): GPURenderPipeline {
-    if (this.pipelines.has(format)) {
-      return this.pipelines.get(format)!;
+    // Include topology in the cache key to ensure different topologies get different pipelines
+    const cacheKey = `${format}:${this.topology}`;
+    if (this.pipelines.has(cacheKey)) {
+      return this.pipelines.get(cacheKey)!;
     }
 
-    // Prepend globals to shader
-    const fullWGSL = `
-${getGlobalsWGSL()}
-${this.wgsl}
-`;
+    // Only prepend globals to shader if it uses them
+    const fullWGSL = this.usesGlobals 
+      ? `${getGlobalsWGSL()}\n${this.wgsl}`
+      : this.wgsl;
 
     try {
       // Create shader module
@@ -121,11 +140,11 @@ ${this.wgsl}
           ],
         },
         primitive: {
-          topology: "triangle-list",
+          topology: this.topology,
         },
       });
 
-      this.pipelines.set(format, pipeline);
+      this.pipelines.set(cacheKey, pipeline);
       return pipeline;
     } catch (error) {
       if (error instanceof ShaderCompileError) {
@@ -174,21 +193,26 @@ ${this.wgsl}
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     passEncoder.setPipeline(pipeline);
 
-    // Bind globals (group 0)
-    const globalsBindGroup = this.device.createBindGroup({
-      layout: pipeline.getBindGroupLayout(0),
-      entries: [
-        {
-          binding: 0,
-          resource: { buffer: this.globalsBuffer },
-        },
-      ],
-    });
-    passEncoder.setBindGroup(0, globalsBindGroup);
+    // Bind globals (group 0) only if shader uses them
+    if (this.usesGlobals) {
+      const globalsBindGroup = this.device.createBindGroup({
+        layout: pipeline.getBindGroupLayout(0),
+        entries: [
+          {
+            binding: 0,
+            resource: { buffer: this.globalsBuffer },
+          },
+        ],
+      });
+      passEncoder.setBindGroup(0, globalsBindGroup);
+    }
 
-    // Bind user uniforms (group 1)
-    // We recreate this to ensure we pick up latest textures
-    const bindings = parseBindGroup1Bindings(this.wgsl);
+    // When usesGlobals is true, user bindings are at group 1
+    // When usesGlobals is false, user bindings are at group 0
+    const userBindGroupIndex = this.usesGlobals ? 1 : 0;
+    
+    // Parse bindings from the correct group in the WGSL
+    const bindings = parseBindGroupBindings(this.wgsl, userBindGroupIndex);
     const bindGroupEntries: GPUBindGroupEntry[] = [];
 
     // Add uniform buffer if present and used
@@ -245,16 +269,22 @@ ${this.wgsl}
     }
 
     if (bindGroupEntries.length > 0) {
-      const userBindGroupLayout = pipeline.getBindGroupLayout(1);
+      const userBindGroupLayout = pipeline.getBindGroupLayout(userBindGroupIndex);
       const bindGroup = this.device.createBindGroup({
         layout: userBindGroupLayout,
         entries: bindGroupEntries,
       });
-      passEncoder.setBindGroup(1, bindGroup);
+      passEncoder.setBindGroup(userBindGroupIndex, bindGroup);
     }
 
-    // Draw instances
-    passEncoder.draw(this.vertexCount, this.instances, 0, 0);
+    // Draw - use indexed drawing if index buffer is present
+    if (this.indexBuffer) {
+      passEncoder.setIndexBuffer(this.indexBuffer.gpuBuffer, this.indexFormat);
+      passEncoder.drawIndexed(this.indexCount, this.instances, 0, 0, 0);
+    } else {
+      passEncoder.draw(this.vertexCount, this.instances, 0, 0);
+    }
+    
     passEncoder.end();
   }
 

@@ -8,7 +8,7 @@
     "start:debug": "DEBUG=true tsx index.ts"
   },
   "dependencies": {
-    "@ralph/core": "workspace:*",
+    "@ralph/agent-loop": "workspace:*",
     "dotenv": "^16.4.5"
   },
   "devDependencies": {

@@ -13,7 +13,7 @@ import {
   explorationRule,
   minimalChangesRule,
   trackProgressRule,
-} from "@ralph/core";
+} from "@ralph/agent-loop";
 
 // Get configuration from environment
 const AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY;

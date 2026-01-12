@@ -1,4 +1,4 @@
-# @ralph/core
+# @ralph/agent-loop
 
 ## Autonomous Agent Loop Library - Technical Specification v1.0
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-`@ralph/core` is a TypeScript library for running autonomous AI agent loops. It implements the "Ralph Wiggum" pattern: a simple loop that feeds tasks to an AI model with tools until completion.
+`@ralph/agent-loop` is a TypeScript library for running autonomous AI agent loops. It implements the "Ralph Wiggum" pattern: a simple loop that feeds tasks to an AI model with tools until completion.
 
 **This library handles only the AI execution loop.** It assumes:
 
@@ -42,7 +42,7 @@
 ## Installation
 
 ```bash
-npm install @ralph/core ai
+npm install @ralph/agent-loop ai
 ```
 
 ---
@@ -50,7 +50,7 @@ npm install @ralph/core ai
 ## Quick Start
 
 ```typescript
-import { LoopAgent } from "@ralph/core";
+import { LoopAgent } from "@ralph/agent-loop";
 import { anthropic } from "@ai-sdk/anthropic";
 
 const agent = new LoopAgent({
@@ -184,7 +184,7 @@ completion: {
 ### LoopAgent
 
 ```typescript
-import { LoopAgent } from '@ralph/core'
+import { LoopAgent } from '@ralph/agent-loop'
 
 const agent = new LoopAgent(config: LoopAgentConfig)
 ```
@@ -796,7 +796,7 @@ import {
   brainRule,
   visualCheckRule,
   trackProgressRule,
-} from "@ralph/core";
+} from "@ralph/agent-loop";
 
 new LoopAgent({
   model: anthropic("claude-sonnet-4-20250514"),
@@ -1045,7 +1045,7 @@ rules: [brainRule, "Do not modify package.json", "Do not delete any tests"];
 Add your own tools using the AI SDK tool format:
 
 ```typescript
-import { LoopAgent } from "@ralph/core";
+import { LoopAgent } from "@ralph/agent-loop";
 import { tool } from "ai";
 import { z } from "zod";
 import { anthropic } from "@ai-sdk/anthropic";
@@ -1395,7 +1395,7 @@ export { StuckDetector } from "./stuck";
 ## Package Structure
 
 ```
-@ralph/core
+@ralph/agent-loop
 ├── src/
 │   ├── index.ts              # Exports
 │   ├── agent.ts              # LoopAgent class

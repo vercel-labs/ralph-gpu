@@ -76,6 +76,15 @@ function getUniformSize(value: any): number {
     if (len === 9) return 48; // mat3x3f (3 vec4s with padding)
     if (len === 16) return 64; // mat4x4f
   }
+  // Check for Float32Array (commonly used for matrices)
+  if (value instanceof Float32Array) {
+    const len = value.length;
+    if (len === 2) return 8;
+    if (len === 3) return 12;
+    if (len === 4) return 16;
+    if (len === 9) return 48;
+    if (len === 16) return 64;
+  }
   return 0;
 }
 
@@ -90,7 +99,7 @@ function getUniformSize(value: any): number {
 function getUniformAlignment(value: any): number {
   if (typeof value === "number") return 4;  // f32
   if (typeof value === "boolean") return 4; // bool (stored as u32)
-  if (Array.isArray(value)) {
+  if (Array.isArray(value) || value instanceof Float32Array) {
     const len = value.length;
     if (len === 2) return 8;   // vec2f - 8-byte alignment
     if (len === 3) return 16;  // vec3f - 16-byte alignment
@@ -111,7 +120,7 @@ export function calculateUniformBufferSize(uniforms: Uniforms): number {
     const value = uniforms[key].value;
     
     // Skip textures and samplers (they have their own bindings)
-    if (value && typeof value === "object") {
+    if (value && typeof value === "object" && !(value instanceof Float32Array) && !Array.isArray(value)) {
       if ("createView" in value || "texture" in value) {
         continue; // Skip texture uniforms
       }
@@ -148,7 +157,8 @@ export function writeUniformData(
     view[0] = value ? 1 : 0;
     return 4;
   }
-  if (Array.isArray(value)) {
+  // Handle both Array and Float32Array
+  if (Array.isArray(value) || value instanceof Float32Array) {
     const len = value.length;
     if (len === 2) {
       data[offset / 4] = value[0];
@@ -167,6 +177,24 @@ export function writeUniformData(
       data[offset / 4 + 2] = value[2];
       data[offset / 4 + 3] = value[3];
       return 16;
+    }
+    if (len === 9) {
+      // mat3x3f is stored as 3 vec3s, each padded to vec4 (12 bytes of data + 4 bytes padding per column)
+      // Column-major order in WGSL
+      for (let col = 0; col < 3; col++) {
+        data[offset / 4 + col * 4] = value[col * 3];
+        data[offset / 4 + col * 4 + 1] = value[col * 3 + 1];
+        data[offset / 4 + col * 4 + 2] = value[col * 3 + 2];
+        // 4th element is padding (leave as 0)
+      }
+      return 48; // 3 vec4s = 48 bytes
+    }
+    if (len === 16) {
+      // mat4x4f - 4 vec4s, column-major, no padding needed
+      for (let i = 0; i < 16; i++) {
+        data[offset / 4 + i] = value[i];
+      }
+      return 64;
     }
   }
   return 0;
@@ -191,7 +219,7 @@ export function updateUniformBuffer(
     const value = uniforms[key].value;
     
     // Skip textures and samplers (they have their own bindings)
-    if (value && typeof value === "object") {
+    if (value && typeof value === "object" && !(value instanceof Float32Array) && !Array.isArray(value)) {
       if ("createView" in value || "texture" in value) {
         continue; // Skip texture uniforms
       }
@@ -292,7 +320,7 @@ export function collectTextureBindings(uniforms: Uniforms): Map<string, TextureB
   
   for (const [key, uniform] of Object.entries(uniforms)) {
     const value = uniform.value;
-    if (value && typeof value === "object") {
+    if (value && typeof value === "object" && !(value instanceof Float32Array) && !Array.isArray(value)) {
       // Check if it's a GPUTexture
       if ("createView" in value && typeof value.createView === "function") {
         textures.set(key, { texture: value as GPUTexture });
@@ -326,31 +354,32 @@ export interface WGSLBindings {
 }
 
 /**
- * Parse bindings from WGSL code
- * Looks for @group(1) @binding(N) var...
+ * Parse bindings from WGSL code for a specific bind group
+ * @param wgsl - The WGSL shader code
+ * @param group - The bind group number to parse (default: 1)
  */
-export function parseBindGroup1Bindings(wgsl: string): WGSLBindings {
+export function parseBindGroupBindings(wgsl: string, group: number = 1): WGSLBindings {
   const bindings: WGSLBindings = {
     textures: new Map(),
     samplers: new Map(),
     storage: new Map(),
   };
 
-  // Regex to match group 1 bindings
-  // Matches: @group(1) @binding(N) var<type> name : type;
-  // OR: @group(1) @binding(N) var name : type;
-  const regex = /@group\(1\)\s+@binding\((\d+)\)\s+var(?:<([^>]+)>)?\s+(\w+)\s*:\s*([^;]+);/g;
+  // Regex to match group N bindings
+  // Matches: @group(N) @binding(M) var<type> name : type;
+  // OR: @group(N) @binding(M) var name : type;
+  const regex = new RegExp(`@group\\(${group}\\)\\s+@binding\\((\\d+)\\)\\s+var(?:<([^>]+)>)?\\s+(\\w+)\\s*:\\s*([^;]+);`, 'g');
   
   let match;
   while ((match = regex.exec(wgsl)) !== null) {
     const binding = parseInt(match[1]);
-    const varModifier = match[2]; // 'uniform', 'storage', etc.
+    const varModifier = match[2]; // 'uniform', 'storage', 'storage, read', etc.
     const name = match[3];
     const type = match[4].trim();
 
     if (varModifier === 'uniform') {
       bindings.uniformBuffer = binding;
-    } else if (varModifier === 'storage' || type.includes('array<')) {
+    } else if (varModifier && (varModifier.startsWith('storage') || varModifier === 'storage, read')) {
       // Storage buffer
       bindings.storage.set(name, binding);
     } else if (type.includes('texture_')) {
@@ -363,6 +392,15 @@ export function parseBindGroup1Bindings(wgsl: string): WGSLBindings {
   }
 
   return bindings;
+}
+
+/**
+ * Parse bindings from WGSL code
+ * Looks for @group(1) @binding(N) var...
+ * @deprecated Use parseBindGroupBindings(wgsl, 1) instead
+ */
+export function parseBindGroup1Bindings(wgsl: string): WGSLBindings {
+  return parseBindGroupBindings(wgsl, 1);
 }
 
 // ============================================================================
@@ -378,6 +416,7 @@ export type SimpleUniformValue =
   | [number, number] 
   | [number, number, number] 
   | [number, number, number, number]
+  | Float32Array
   | { texture: GPUTexture; sampler?: GPUSampler }  // RenderTarget-like
   | GPUTexture;
 
@@ -398,11 +437,13 @@ export function hasManualBindings(wgsl: string): boolean {
 export function inferWGSLType(value: SimpleUniformValue): string | null {
   if (typeof value === "number") return "f32";
   if (typeof value === "boolean") return "u32"; // bool stored as u32
-  if (Array.isArray(value)) {
+  if (Array.isArray(value) || value instanceof Float32Array) {
     const len = value.length;
     if (len === 2) return "vec2f";
     if (len === 3) return "vec3f";
     if (len === 4) return "vec4f";
+    if (len === 9) return "mat3x3f";
+    if (len === 16) return "mat4x4f";
   }
   // Textures return null - they're handled separately
   return null;
@@ -412,7 +453,7 @@ export function inferWGSLType(value: SimpleUniformValue): string | null {
  * Check if a value is a texture (RenderTarget, PingPong read, or raw GPUTexture)
  */
 export function isTextureValue(value: SimpleUniformValue): boolean {
-  if (value && typeof value === "object") {
+  if (value && typeof value === "object" && !(value instanceof Float32Array)) {
     // Raw GPUTexture
     if ("createView" in value && typeof (value as any).createView === "function") {
       return true;
@@ -574,7 +615,7 @@ export function collectSimpleTextureBindings(simpleUniforms: SimpleUniforms): Ma
   const textures = new Map<string, TextureBinding>();
   
   for (const [key, value] of Object.entries(simpleUniforms)) {
-    if (value && typeof value === "object") {
+    if (value && typeof value === "object" && !(value instanceof Float32Array)) {
       // Check if it's a GPUTexture
       if ("createView" in value && typeof (value as any).createView === "function") {
         textures.set(key, { texture: value as GPUTexture });

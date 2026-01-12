@@ -1,12 +1,12 @@
 /**
- * @ralph/core - Autonomous AI Agent Loop Library
+ * @ralph/agent-loop - Autonomous AI Agent Loop Library
  *
  * A minimal library for running AI agent loops. Handles the loop execution,
  * tool management, stuck detection, and completion checking.
  *
  * @example
  * ```typescript
- * import { LoopAgent } from '@ralph/core'
+ * import { LoopAgent } from '@ralph/agent-loop'
  * import { anthropic } from '@ai-sdk/anthropic'
  *
  * const agent = new LoopAgent({

@@ -10,6 +10,7 @@ import type {
   RenderTargetOptions,
   MRTOutputs,
   SimpleUniforms,
+  ParticlesOptions,
 } from "./types";
 import {
   WebGPUNotSupportedError,
@@ -22,6 +23,7 @@ import { RenderTarget } from "./target";
 import { PingPongTarget } from "./ping-pong";
 import { createMultiRenderTarget, MultiRenderTarget } from "./mrt";
 import { StorageBuffer } from "./storage";
+import { Particles } from "./particles";
 import {
   createGlobalsBuffer,
   updateGlobalsBuffer,
@@ -49,8 +51,9 @@ export class GPUContext {
   private currentTarget: RenderTarget | MultiRenderTarget | null = null;
   private viewportState: { x: number; y: number; width: number; height: number } | null = null;
   private scissorState: { x: number; y: number; width: number; height: number } | null = null;
-  private dpr: number;
+  private _dpr: number;
   private debug: boolean;
+  private resizeObserver: ResizeObserver | null = null;
 
   constructor(
     device: GPUDevice,
@@ -63,14 +66,36 @@ export class GPUContext {
     this.context = context;
     this.canvas = canvas;
     this.format = format;
-    this.dpr = options.dpr || 1;
+    this._dpr = options.dpr ?? Math.min(window.devicePixelRatio, 2);
     this.debug = options.debug || false;
 
-    // Set canvas size
-    this._width = Math.floor(canvas.width * this.dpr);
-    this._height = Math.floor(canvas.height * this.dpr);
-    canvas.width = this._width;
-    canvas.height = this._height;
+    // Set canvas size based on display size or canvas attributes
+    if (options.autoResize) {
+      // Use display size (CSS size) for autoResize - apply DPR
+      const rect = canvas.getBoundingClientRect();
+      this._width = Math.floor(rect.width * this._dpr);
+      this._height = Math.floor(rect.height * this._dpr);
+      canvas.width = this._width;
+      canvas.height = this._height;
+      
+      // Setup ResizeObserver to track canvas size changes
+      this.resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          this._width = Math.floor(width * this._dpr);
+          this._height = Math.floor(height * this._dpr);
+          this.canvas.width = this._width;
+          this.canvas.height = this._height;
+        }
+      });
+      this.resizeObserver.observe(canvas);
+    } else {
+      // When NOT using autoResize, use canvas.width/height directly as pixel dimensions
+      // User has already set the pixel size they want - don't multiply by DPR
+      // This avoids double-multiplication issues with React StrictMode remounts
+      this._width = canvas.width;
+      this._height = canvas.height;
+    }
 
     // Configure context
     context.configure({
@@ -305,6 +330,43 @@ export class GPUContext {
   }
 
   /**
+   * Create a particle system with instanced quads
+   * 
+   * User provides full shader control - no built-in colors, shapes, or assumptions.
+   * Built-in helpers: quadOffset(vid) returns -0.5 to 0.5, quadUV(vid) returns 0 to 1
+   * 
+   * ```typescript
+   * const particles = ctx.particles(1000, {
+   *   shader: \`
+   *     struct Particle { pos: vec2f, size: f32, _pad: f32 }
+   *     @group(1) @binding(0) var<storage, read> particles: array<Particle>;
+   *     
+   *     struct VertexOutput { @builtin(position) position: vec4f, @location(0) uv: vec2f }
+   *     
+   *     @vertex fn vs_main(@builtin(instance_index) iid: u32, @builtin(vertex_index) vid: u32) -> VertexOutput {
+   *       let p = particles[iid];
+   *       var out: VertexOutput;
+   *       out.position = vec4f(p.pos + quadOffset(vid) * p.size, 0.0, 1.0);
+   *       out.uv = quadUV(vid);
+   *       return out;
+   *     }
+   *     
+   *     @fragment fn fs_main(in: VertexOutput) -> @location(0) vec4f {
+   *       return vec4f(1.0); // White square
+   *     }
+   *   \`,
+   *   bufferSize: 1000 * 16, // 16 bytes per particle
+   * });
+   * 
+   * particles.write(myFloat32Array);
+   * particles.draw();
+   * ```
+   */
+  particles(count: number, options: ParticlesOptions): Particles {
+    return new Particles(this, count, options);
+  }
+
+  /**
    * Set the render target
    */
   setTarget(target: RenderTarget | MultiRenderTarget | null): void {
@@ -403,11 +465,31 @@ export class GPUContext {
   }
 
   /**
-   * Resize the context
+   * Resize the context (width/height in pixels, DPR already applied)
    */
   resize(width: number, height: number): void {
-    this._width = Math.floor(width * this.dpr);
-    this._height = Math.floor(height * this.dpr);
+    this._width = Math.floor(width);
+    this._height = Math.floor(height);
+    this.canvas.width = this._width;
+    this.canvas.height = this._height;
+  }
+
+  /**
+   * Get the current device pixel ratio
+   */
+  get dpr(): number {
+    return this._dpr;
+  }
+
+  /**
+   * Set the device pixel ratio and resize canvas accordingly
+   */
+  set dpr(value: number) {
+    this._dpr = value;
+    // Recalculate size based on display size
+    const rect = this.canvas.getBoundingClientRect();
+    this._width = Math.floor(rect.width * this._dpr);
+    this._height = Math.floor(rect.height * this._dpr);
     this.canvas.width = this._width;
     this.canvas.height = this._height;
   }
@@ -535,6 +617,11 @@ export class GPUContext {
    * Dispose the context
    */
   dispose(): void {
+    // Disconnect ResizeObserver if active
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
     this.globalsBuffer.destroy();
     // Unconfigure the canvas context before destroying the device
     // This is required to allow re-initialization with a new device

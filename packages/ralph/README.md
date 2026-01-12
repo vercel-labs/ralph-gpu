@@ -1,17 +1,17 @@
-# @ralph/core
+# @ralph/agent-loop
 
 Autonomous AI agent loop library. The "Ralph Wiggum" pattern - a simple loop that feeds tasks to an AI model with tools until completion.
 
 ## Installation
 
 ```bash
-npm install @ralph/core ai
+npm install @ralph/agent-loop ai
 ```
 
 ## Quick Start
 
 ```typescript
-import { LoopAgent } from "@ralph/core";
+import { LoopAgent } from "@ralph/agent-loop";
 import { gateway } from "@ai-sdk/gateway";
 
 const agent = new LoopAgent({
@@ -114,7 +114,7 @@ import {
   explorationRule, // Explore codebase before editing
   gitCheckpointRule, // Commit after each change
   debugRule, // Systematic debugging approach
-} from "@ralph/core";
+} from "@ralph/agent-loop";
 
 new LoopAgent({
   model: gateway("xai/grok-code-fast-1"),
@@ -160,7 +160,12 @@ DEBUG=true pnpm start
 ### Logging Utilities
 
 ```typescript
-import { setDebugMode, setLogLevel, toolLogger, loopLogger } from "@ralph/core";
+import {
+  setDebugMode,
+  setLogLevel,
+  toolLogger,
+  loopLogger,
+} from "@ralph/agent-loop";
 
 setDebugMode(true); // Enable debug mode
 setLogLevel("debug"); // Set log level: debug | info | warn | error | silent
@@ -207,6 +212,7 @@ tail -f .traces/trace-*.ndjson | jq .
 ```
 
 This means:
+
 - **Every event** (tool call, response, etc.) is written immediately
 - If the agent crashes or is interrupted (`Ctrl+C`), you have all data up to that point
 - You can monitor progress in real-time
@@ -237,7 +243,7 @@ NDJSON files can be parsed line-by-line or with tools like `jq`:
 # Get all tool calls
 cat trace.ndjson | jq 'select(.type == "tool_call")'
 
-# Find stuck events  
+# Find stuck events
 cat trace.ndjson | jq 'select(.type == "stuck_detected")'
 
 # Get the summary (last line with type "summary")
