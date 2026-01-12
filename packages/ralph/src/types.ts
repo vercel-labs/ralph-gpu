@@ -1,4 +1,5 @@
 import type { LanguageModel, Tool } from "ai";
+import type { TraceConfig } from "./tracer";
 
 /**
  * Context file to include in the system prompt
@@ -319,6 +320,34 @@ export interface LoopAgentConfig {
    * @default true
    */
   enableToolLogging?: boolean;
+
+  // === TRACE MODE ===
+
+  /**
+   * Trace mode - captures detailed execution data for later analysis.
+   * 
+   * - `trace: true` - Enable with defaults
+   * - `trace: { outputPath: "..." }` - Enable with custom options
+   * - `trace: false` or omit - Disabled
+   * 
+   * Can also enable via env var `RALPH_TRACE=true`
+   * 
+   * @example
+   * ```typescript
+   * // Simple
+   * const agent = new LoopAgent({ task: "...", trace: true });
+   * 
+   * // With options
+   * const agent = new LoopAgent({
+   *   task: "...",
+   *   trace: {
+   *     outputPath: ".traces/my-trace.ndjson",
+   *     includeToolResults: true,
+   *   }
+   * });
+   * ```
+   */
+  trace?: TraceConfig;
 }
 
 /**

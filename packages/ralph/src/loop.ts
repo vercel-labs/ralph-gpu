@@ -13,6 +13,7 @@ import type {
 import { StuckDetector } from "./stuck";
 import { buildNudgeMessage, formatIterationContext } from "./prompt";
 import { loopLogger, isDebugMode } from "./logger";
+import type { Tracer } from "./tracer";
 import ms from "ms";
 
 /**
@@ -170,6 +171,8 @@ export interface LoopOptions {
   onComplete?: (result: LoopResult) => void;
   onError?: (error: { code: string; message: string; cause?: Error }) => void;
   onDoneSignal?: () => void;
+  /** Tracer instance for recording detailed execution data */
+  tracer?: Tracer | null;
 }
 
 /**
@@ -189,6 +192,7 @@ export async function runLoop(
     onUpdate,
     onStuck,
     onError,
+    tracer,
   } = options;
 
   // Merge limits with defaults
@@ -248,6 +252,10 @@ export async function runLoop(
 
     // Log iteration start
     loopLogger.iterationStart(state.iteration);
+    tracer?.recordIterationStart(state.iteration, {
+      cost: state.cost,
+      tokens: { ...state.tokens },
+    });
 
     // Check limits
     if (state.iteration >= effectiveLimits.maxIterations) {
@@ -275,14 +283,16 @@ export async function runLoop(
 
     if (userMessage) {
       messages.push({ role: "user", content: userMessage });
+      tracer?.recordMessage("user", userMessage);
     }
 
     // Summarize messages if context is getting too large
     const contextMessages = summarizeMessages(messages, systemPrompt);
     
+    const originalTokens = messages.reduce((sum, m) => sum + estimateTokens(JSON.stringify(m)), 0);
+    const newTokens = contextMessages.reduce((sum, m) => sum + estimateTokens(JSON.stringify(m)), 0);
+    
     if (isDebugMode()) {
-      const originalTokens = messages.reduce((sum, m) => sum + estimateTokens(JSON.stringify(m)), 0);
-      const newTokens = contextMessages.reduce((sum, m) => sum + estimateTokens(JSON.stringify(m)), 0);
       loopLogger.debug("Calling model...", { 
         messageCount: contextMessages.length,
         originalMessages: messages.length,
@@ -292,6 +302,11 @@ export async function runLoop(
       if (newTokens < originalTokens) {
         loopLogger.debug(`Context reduced from ~${originalTokens} to ~${newTokens} tokens`);
       }
+    }
+    
+    // Record context summarization in trace
+    if (newTokens < originalTokens) {
+      tracer?.recordContextSummarized(state.iteration, originalTokens, newTokens);
     }
 
     try {
@@ -321,6 +336,21 @@ export async function runLoop(
       // Extract tool calls from result
       const toolCalls = extractToolCalls(result);
 
+      // Record model response and tool calls in trace
+      tracer?.recordModelResponse(state.iteration, {
+        text: result.text,
+        toolCalls: toolCalls.map(tc => ({ name: tc.name, args: tc.args })),
+        tokens: iterationTokens,
+      });
+      
+      // Record individual tool calls in trace
+      for (const tc of toolCalls) {
+        tracer?.recordToolCall(state.iteration, tc.name, tc.args);
+        if (tc.result !== null) {
+          tracer?.recordToolResult(state.iteration, tc.name, tc.result, tc.duration);
+        }
+      }
+
       // Track file modifications from writeFile calls
       const filesModified = extractFilesModified(toolCalls);
       filesModified.forEach((f) => state.filesModified.add(f));
@@ -348,10 +378,17 @@ export async function runLoop(
         cost: iterationCost,
         toolCalls: toolCalls.length,
       });
+      tracer?.recordIterationEnd(state.iteration, {
+        duration: iteration.duration,
+        tokens: iterationTokens,
+        cost: iterationCost,
+        toolCallCount: toolCalls.length,
+      });
 
       // Add assistant response to message history
       if (result.text) {
         messages.push({ role: "assistant", content: result.text });
+        tracer?.recordMessage("assistant", result.text);
         if (isDebugMode()) {
           loopLogger.debug("Model response", result.text.slice(0, 200));
         }
@@ -378,11 +415,13 @@ export async function runLoop(
         if (stuckContext) {
           state.state = "stuck";
           loopLogger.stuck(stuckContext.reason);
+          tracer?.recordStuck(state.iteration, stuckContext.reason, stuckContext.details);
 
           if (onStuck) {
             const nudge = await onStuck(stuckContext);
             if (nudge) {
               state.pendingNudge = nudge;
+              tracer?.recordNudge(state.iteration, nudge);
               if (isDebugMode()) {
                 loopLogger.debug("Nudge injected", nudge);
               }

@@ -11,3 +11,4 @@ This folder documents key architectural decisions made during development.
 5. [005-context-management.md](./005-context-management.md) - Message summarization to prevent overflow
 6. [006-logging-system.md](./006-logging-system.md) - Structured logging for debugging
 7. [007-process-group-killing.md](./007-process-group-killing.md) - Kill process groups for proper cleanup
+8. [008-trace-mode.md](./008-trace-mode.md) - Trace mode for execution analysis

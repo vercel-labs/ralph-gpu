@@ -166,6 +166,104 @@ setDebugMode(true); // Enable debug mode
 setLogLevel("debug"); // Set log level: debug | info | warn | error | silent
 ```
 
+## Trace Mode
+
+Trace mode captures detailed execution data to a JSON file for later analysis. This is useful for debugging stuck loops, understanding agent behavior, or having another AI model analyze the execution.
+
+```typescript
+// Simple - enable with defaults
+const agent = new LoopAgent({
+  task: "Fix the bug",
+  trace: true,
+});
+
+// With options
+const agent = new LoopAgent({
+  task: "Fix the bug",
+  trace: {
+    outputPath: ".traces/my-trace.ndjson", // Optional, auto-generated
+    includeToolResults: false, // Exclude large tool results (screenshots)
+  },
+});
+```
+
+Or via environment variable:
+
+```bash
+RALPH_TRACE=true pnpm start
+RALPH_TRACE_PATH=.traces/custom.ndjson pnpm start
+```
+
+### Real-time Streaming
+
+Traces use **NDJSON** (newline-delimited JSON) format. Each event is immediately appended as a single JSON line:
+
+```bash
+# Watch trace in real-time while agent runs
+tail -f .traces/trace-*.ndjson
+
+# Or with pretty-printing
+tail -f .traces/trace-*.ndjson | jq .
+```
+
+This means:
+- **Every event** (tool call, response, etc.) is written immediately
+- If the agent crashes or is interrupted (`Ctrl+C`), you have all data up to that point
+- You can monitor progress in real-time
+
+### Trace Output
+
+Each line is a JSON object with a `type` field. The file contains:
+
+- **Metadata**: Agent ID, task, timestamps, model info
+- **Events**: Chronological log of all events (tool calls, model responses, stuck detection, etc.)
+- **Summary**: Statistics including tool call counts, tokens, cost, errors
+- **Messages**: Full conversation history (optional)
+
+Example trace event types:
+
+- `agent_start` / `agent_complete` / `agent_error`
+- `iteration_start` / `iteration_end`
+- `tool_call` / `tool_result` / `tool_error`
+- `model_response`
+- `stuck_detected` / `nudge_injected`
+- `context_summarized`
+
+### Analyzing Traces
+
+NDJSON files can be parsed line-by-line or with tools like `jq`:
+
+```bash
+# Get all tool calls
+cat trace.ndjson | jq 'select(.type == "tool_call")'
+
+# Find stuck events  
+cat trace.ndjson | jq 'select(.type == "stuck_detected")'
+
+# Get the summary (last line with type "summary")
+tail -1 trace.ndjson | jq .
+
+# Count tool calls by name
+cat trace.ndjson | jq -r 'select(.type == "tool_call") | .tool' | sort | uniq -c
+```
+
+Or in TypeScript:
+
+```typescript
+import { readFileSync } from "fs";
+
+const lines = readFileSync(".traces/trace.ndjson", "utf-8")
+  .trim()
+  .split("\n")
+  .map((line) => JSON.parse(line));
+
+// Find stuck events
+const stuckEvents = lines.filter((e) => e.type === "stuck_detected");
+
+// Get summary (last event)
+const summary = lines.find((e) => e.type === "summary");
+```
+
 ## Stuck Detection
 
 Ralph automatically detects when the agent is spinning:

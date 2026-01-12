@@ -71,3 +71,20 @@ Older messages are compressed, recent ones kept intact.
 
 Enable with `debug: true` in config or `DEBUG=true` env var.
 Shows detailed tool calls, arguments, and think tool reasoning.
+
+### Trace Mode (NEW)
+
+Captures detailed execution data to NDJSON file (append-only, real-time):
+
+```typescript
+const agent = new LoopAgent({
+  task: "...",
+  trace: { enabled: true },
+});
+```
+
+Or via `RALPH_TRACE=true` env var. Output: `.traces/trace-{timestamp}.ndjson`
+
+Watch in real-time: `tail -f .traces/*.ndjson | jq .`
+
+See [008-trace-mode.md](./decisions/008-trace-mode.md) for details.

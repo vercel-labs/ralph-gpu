@@ -15,6 +15,7 @@ import { createDefaultTools } from "./tools";
 import { buildSystemPrompt } from "./prompt";
 import { runLoop } from "./loop";
 import { setDebugMode, loopLogger } from "./logger";
+import { Tracer, getTraceConfigFromEnv, normalizeTraceConfig } from "./tracer";
 
 /**
  * LoopAgent - Autonomous AI agent that runs in a loop until task completion.
@@ -40,6 +41,7 @@ export class LoopAgent {
   private state: LoopState | null = null;
   private processManager: ProcessManager;
   private browserManager: BrowserManager;
+  private tracer: Tracer | null = null;
   private initialized = false;
   private tools: Record<string, Tool> | null = null;
 
@@ -116,6 +118,15 @@ export class LoopAgent {
       shouldStop: false,
     };
 
+    // Initialize tracer if enabled (config takes precedence over env)
+    const traceConfig = this.config.trace ?? getTraceConfigFromEnv();
+    const traceOptions = normalizeTraceConfig(traceConfig);
+    
+    if (traceOptions) {
+      this.tracer = new Tracer(this.state.id, this.config.task, traceOptions);
+      loopLogger.debug(`Trace mode enabled, output: ${this.tracer.getOutputPath()}`);
+    }
+
     // Build system prompt
     const systemPrompt = buildSystemPrompt({
       task: this.config.task,
@@ -123,6 +134,20 @@ export class LoopAgent {
       context: this.config.context,
       customSystemPrompt: this.config.systemPrompt,
     });
+
+    // Record trace metadata
+    if (this.tracer) {
+      this.tracer.setSystemPrompt(systemPrompt);
+      this.tracer.setConfig({
+        limits: this.config.limits as unknown as Record<string, unknown>,
+        completion: this.config.completion as unknown as Record<string, unknown>,
+        rules: this.config.rules,
+      });
+      this.tracer.recordAgentStart({
+        task: this.config.task,
+        toolCount: Object.keys(this.tools || {}).length,
+      });
+    }
 
     try {
       // Run the loop
@@ -136,7 +161,13 @@ export class LoopAgent {
         onUpdate: this.config.onUpdate,
         onStuck: this.config.onStuck,
         onError: this.config.onError,
+        tracer: this.tracer,
       });
+
+      // Record completion in trace
+      if (this.tracer) {
+        this.tracer.recordAgentComplete(result, this.state);
+      }
 
       // Call completion callback
       if (this.config.onComplete) {
@@ -144,7 +175,18 @@ export class LoopAgent {
       }
 
       return result;
+    } catch (error) {
+      // Record error in trace
+      if (this.tracer) {
+        this.tracer.recordAgentError(error);
+      }
+      throw error;
     } finally {
+      // Log trace file location
+      if (this.tracer) {
+        console.log(`\n📊 Trace file: ${this.tracer.getOutputPath()}`);
+      }
+
       // Cleanup
       await this.cleanup();
     }

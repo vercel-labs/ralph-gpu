@@ -100,3 +100,16 @@ export {
   loopLogger,
   type LogLevel,
 } from "./logger";
+
+// Trace mode
+export {
+  Tracer,
+  createTracer,
+  getTraceConfigFromEnv,
+  normalizeTraceConfig,
+  type TraceConfig,
+  type TraceOptions,
+  type TraceEvent,
+  type TraceEventType,
+  type TraceData,
+} from "./tracer";

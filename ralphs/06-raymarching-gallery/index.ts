@@ -168,6 +168,7 @@ fn main(@builtin(position) fragCoord: vec4f) -> @location(0) vec4f {
 \`\`\`
 
 ## Implementation Order
+0. Check the real progress of the task, it may be already started
 1. First, read the existing raymarching example thoroughly
 2. Create examples ONE AT A TIME in this order: mandelbulb → terrain → metaballs → morphing → alien-planet
 3. After creating each file, run typecheck: \`cd ${EXAMPLES_DIR} && pnpm typecheck\`
@@ -190,6 +191,7 @@ async function main() {
 
   const agent = new LoopAgent({
     model: AGENT_MODEL,
+    trace: true, // Writes to .traces/trace-{timestamp}.ndjson
     task: TASK,
     rules: [
       brainRule,
