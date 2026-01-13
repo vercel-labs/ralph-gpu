@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ralph-gl: Material Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      background: #1a1a2e; 
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, sans-serif;
+      color: #fff;
+    }
+    h1 { margin-bottom: 1rem; font-size: 1.5rem; }
+    canvas { 
+      border: 1px solid #333;
+      border-radius: 4px;
+    }
+    .info {
+      margin-top: 1rem;
+      color: #888;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>ralph-gl: Material Test</h1>
+  <canvas id="canvas" width="800" height="600"></canvas>
+  <p class="info">Triangle + Instanced Quads with custom vertex/fragment shaders</p>
+  
+  <script type="module">
+    import { gl } from './dist/index.mjs';
+    
+    async function main() {
+      const canvas = document.getElementById('canvas');
+      const ctx = await gl.init(canvas);
+      
+      // Set canvas dimensions
+      ctx.width = canvas.width;
+      ctx.height = canvas.height;
+      
+      // Clear the canvas
+      const glCtx = ctx.gl;
+      glCtx.viewport(0, 0, ctx.width, ctx.height);
+      glCtx.clearColor(0.05, 0.05, 0.1, 1.0);
+      glCtx.clear(glCtx.COLOR_BUFFER_BIT);
+      
+      // ============================================
+      // Test 1: Simple Triangle
+      // ============================================
+      const triangleVertexShader = `#version 300 es
+        precision highp float;
+        
+        uniform vec2 u_resolution;
+        uniform float u_time;
+        
+        // Hardcoded triangle vertices
+        const vec2 positions[3] = vec2[3](
+          vec2(0.0, 0.5),      // top
+          vec2(-0.5, -0.5),    // bottom left  
+          vec2(0.5, -0.5)      // bottom right
+        );
+        
+        const vec3 colors[3] = vec3[3](
+          vec3(1.0, 0.2, 0.3),  // red
+          vec3(0.2, 1.0, 0.3),  // green
+          vec3(0.2, 0.3, 1.0)   // blue
+        );
+        
+        out vec3 v_color;
+        
+        void main() {
+          vec2 pos = positions[gl_VertexID];
+          
+          // Scale and offset to left side of screen
+          pos.x = pos.x * 0.4 - 0.5;
+          pos.y = pos.y * 0.6;
+          
+          // Add slight rotation based on time
+          float angle = u_time * 0.5;
+          float c = cos(angle);
+          float s = sin(angle);
+          pos = vec2(
+            pos.x * c - pos.y * s,
+            pos.x * s + pos.y * c
+          );
+          
+          // Offset to left side
+          pos.x -= 0.3;
+          
+          gl_Position = vec4(pos, 0.0, 1.0);
+          v_color = colors[gl_VertexID];
+        }
+      `;
+      
+      const triangleFragmentShader = `#version 300 es
+        precision highp float;
+        
+        in vec3 v_color;
+        out vec4 fragColor;
+        
+        void main() {
+          fragColor = vec4(v_color, 1.0);
+        }
+      `;
+      
+      const triangle = ctx.material(triangleVertexShader, triangleFragmentShader, {
+        vertexCount: 3,
+        topology: 'triangles'
+      });
+      
+      // ============================================
+      // Test 2: Instanced Quads
+      // ============================================
+      const quadVertexShader = `#version 300 es
+        precision highp float;
+        
+        uniform vec2 u_resolution;
+        uniform float u_time;
+        
+        // Quad vertices (two triangles)
+        const vec2 positions[6] = vec2[6](
+          vec2(-0.5, -0.5),
+          vec2(0.5, -0.5),
+          vec2(-0.5, 0.5),
+          vec2(-0.5, 0.5),
+          vec2(0.5, -0.5),
+          vec2(0.5, 0.5)
+        );
+        
+        out vec3 v_color;
+        out vec2 v_uv;
+        flat out int v_instanceID;
+        
+        void main() {
+          vec2 pos = positions[gl_VertexID];
+          
+          // Instance-specific properties
+          int instanceID = gl_InstanceID;
+          float row = float(instanceID / 4);
+          float col = float(instanceID % 4);
+          
+          // Grid layout: 4x3 grid
+          float spacing = 0.15;
+          float scale = 0.08;
+          
+          // Scale down the quad
+          pos *= scale;
+          
+          // Offset based on instance
+          pos.x += (col - 1.5) * spacing + 0.5;
+          pos.y += (row - 1.0) * spacing;
+          
+          // Add animation
+          float phase = float(instanceID) * 0.5;
+          float bounce = sin(u_time * 3.0 + phase) * 0.02;
+          pos.y += bounce;
+          
+          // Rotation per instance
+          float angle = u_time + float(instanceID) * 0.3;
+          float c = cos(angle);
+          float s = sin(angle);
+          
+          // Apply rotation around instance center
+          vec2 center = vec2(
+            (col - 1.5) * spacing + 0.5,
+            (row - 1.0) * spacing
+          );
+          vec2 offset = pos - center;
+          pos = center + vec2(
+            offset.x * c - offset.y * s,
+            offset.x * s + offset.y * c
+          );
+          
+          gl_Position = vec4(pos, 0.0, 1.0);
+          
+          // Generate colors based on instance
+          float hue = float(instanceID) / 12.0;
+          v_color = vec3(
+            0.5 + 0.5 * cos(6.28 * hue),
+            0.5 + 0.5 * cos(6.28 * (hue + 0.33)),
+            0.5 + 0.5 * cos(6.28 * (hue + 0.66))
+          );
+          
+          // UV for quad
+          v_uv = positions[gl_VertexID] + 0.5;
+          v_instanceID = instanceID;
+        }
+      `;
+      
+      const quadFragmentShader = `#version 300 es
+        precision highp float;
+        
+        uniform float u_time;
+        
+        in vec3 v_color;
+        in vec2 v_uv;
+        flat in int v_instanceID;
+        
+        out vec4 fragColor;
+        
+        void main() {
+          // Create a simple pattern inside each quad
+          vec2 uv = v_uv;
+          
+          // Checkerboard pattern
+          float checker = step(0.5, fract(uv.x * 2.0)) + step(0.5, fract(uv.y * 2.0));
+          checker = mod(checker, 2.0);
+          
+          // Mix color with checker pattern
+          vec3 color = v_color * (0.7 + 0.3 * checker);
+          
+          // Add border
+          vec2 border = smoothstep(0.0, 0.1, uv) * smoothstep(0.0, 0.1, 1.0 - uv);
+          float borderMask = border.x * border.y;
+          
+          fragColor = vec4(color * borderMask, 1.0);
+        }
+      `;
+      
+      const instancedQuads = ctx.material(quadVertexShader, quadFragmentShader, {
+        vertexCount: 6,
+        instances: 12,
+        topology: 'triangles'
+      });
+      
+      // ============================================
+      // Test 3: Points with varying sizes
+      // ============================================
+      const pointsVertexShader = `#version 300 es
+        precision highp float;
+        
+        uniform float u_time;
+        
+        out vec3 v_color;
+        
+        void main() {
+          int id = gl_VertexID;
+          
+          // Arrange points in a circle at bottom
+          float angle = float(id) * 6.28318 / 8.0 + u_time;
+          float radius = 0.15;
+          
+          vec2 pos = vec2(
+            cos(angle) * radius,
+            sin(angle) * radius - 0.65
+          );
+          
+          gl_Position = vec4(pos, 0.0, 1.0);
+          gl_PointSize = 8.0 + 6.0 * sin(u_time * 2.0 + float(id));
+          
+          // Color based on angle
+          v_color = vec3(
+            0.5 + 0.5 * cos(angle),
+            0.5 + 0.5 * cos(angle + 2.09),
+            0.5 + 0.5 * cos(angle + 4.18)
+          );
+        }
+      `;
+      
+      const pointsFragmentShader = `#version 300 es
+        precision highp float;
+        
+        in vec3 v_color;
+        out vec4 fragColor;
+        
+        void main() {
+          // Create circular points
+          vec2 coord = gl_PointCoord * 2.0 - 1.0;
+          float dist = length(coord);
+          
+          if (dist > 1.0) discard;
+          
+          // Soft edge
+          float alpha = 1.0 - smoothstep(0.7, 1.0, dist);
+          fragColor = vec4(v_color, alpha);
+        }
+      `;
+      
+      const points = ctx.material(pointsVertexShader, pointsFragmentShader, {
+        vertexCount: 8,
+        topology: 'points'
+      });
+      
+      // ============================================
+      // Test 4: Lines
+      // ============================================
+      const linesVertexShader = `#version 300 es
+        precision highp float;
+        
+        uniform float u_time;
+        
+        out vec3 v_color;
+        
+        void main() {
+          int lineIndex = gl_VertexID / 2;
+          int vertexInLine = gl_VertexID % 2;
+          
+          // 5 lines
+          float t = float(lineIndex) / 4.0;
+          
+          // Line endpoints
+          float startX = -0.9;
+          float endX = -0.5;
+          float y = 0.5 - t * 1.0;
+          
+          // Animate endpoints
+          float wave = sin(u_time * 2.0 + t * 3.14159);
+          y += wave * 0.05;
+          
+          vec2 pos;
+          if (vertexInLine == 0) {
+            pos = vec2(startX, y);
+          } else {
+            pos = vec2(endX, y + sin(u_time + t * 6.28) * 0.1);
+          }
+          
+          gl_Position = vec4(pos, 0.0, 1.0);
+          
+          v_color = vec3(0.3 + t * 0.7, 0.8 - t * 0.3, 0.5);
+        }
+      `;
+      
+      const linesFragmentShader = `#version 300 es
+        precision highp float;
+        
+        in vec3 v_color;
+        out vec4 fragColor;
+        
+        void main() {
+          fragColor = vec4(v_color, 1.0);
+        }
+      `;
+      
+      const lines = ctx.material(linesVertexShader, linesFragmentShader, {
+        vertexCount: 10, // 5 lines * 2 vertices
+        topology: 'lines'
+      });
+      
+      // ============================================
+      // Animation Loop
+      // ============================================
+      let startTime = performance.now();
+      
+      function render() {
+        const now = performance.now();
+        ctx.time = (now - startTime) / 1000;
+        
+        // Clear
+        glCtx.clearColor(0.05, 0.05, 0.1, 1.0);
+        glCtx.clear(glCtx.COLOR_BUFFER_BIT);
+        
+        // Enable blending for points
+        glCtx.enable(glCtx.BLEND);
+        glCtx.blendFunc(glCtx.SRC_ALPHA, glCtx.ONE_MINUS_SRC_ALPHA);
+        
+        // Draw all materials
+        triangle.draw();
+        instancedQuads.draw();
+        points.draw();
+        lines.draw();
+        
+        requestAnimationFrame(render);
+      }
+      
+      render();
+      console.log('Material test running!');
+      console.log('- Triangle: rotating, vertex colors');
+      console.log('- Instanced Quads: 12 instances, individual rotation');
+      console.log('- Points: 8 points in circle, varying sizes');
+      console.log('- Lines: 5 animated lines');
+    }
+    
+    main().catch(console.error);
+  </script>
+</body>
+</html>

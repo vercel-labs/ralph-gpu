@@ -102,7 +102,7 @@ export function Navigation() {
           {/* Footer */}
           <div className="p-4 border-t border-border-default">
             <a
-              href="https://github.com/phasewalk1/ralph"
+              href="https://github.com/vercel-labs/ralph-gpu"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-3 py-2 text-text-secondary hover:text-text-primary transition-colors text-sm rounded-md hover:bg-bg-secondary"

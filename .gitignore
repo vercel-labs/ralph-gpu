@@ -5,6 +5,8 @@ node_modules
 .playwright-mcp
 .references
 .plans
+ralph-output.log
+.traces
 
 # Testing
 coverage

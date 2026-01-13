@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ralph GL - Blend Modes Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #1a1a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      font-family: system-ui, sans-serif;
+      color: #fff;
+    }
+    h1 {
+      margin-bottom: 20px;
+      font-weight: 300;
+    }
+    .container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .blend-example {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    canvas {
+      border: 1px solid #333;
+      border-radius: 4px;
+    }
+    .label {
+      margin-top: 10px;
+      color: #aaa;
+      font-size: 14px;
+      text-transform: capitalize;
+    }
+    .info {
+      margin-top: 20px;
+      color: #666;
+      font-size: 12px;
+      text-align: center;
+      max-width: 600px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ralph GL - Blend Modes</h1>
+  <div class="container">
+    <div class="blend-example">
+      <canvas id="canvas-alpha" width="256" height="256"></canvas>
+      <span class="label">Alpha</span>
+    </div>
+    <div class="blend-example">
+      <canvas id="canvas-additive" width="256" height="256"></canvas>
+      <span class="label">Additive</span>
+    </div>
+    <div class="blend-example">
+      <canvas id="canvas-multiply" width="256" height="256"></canvas>
+      <span class="label">Multiply</span>
+    </div>
+  </div>
+  <p class="info">
+    Each canvas shows overlapping circles with different blend modes.<br>
+    Alpha: standard transparency | Additive: colors add together | Multiply: colors multiply
+  </p>
+
+  <script type="module">
+    import { gl } from './dist/index.mjs';
+
+    // Background shader - draws a checkerboard pattern
+    const backgroundShader = `#version 300 es
+precision highp float;
+
+in vec2 v_uv;
+out vec4 fragColor;
+
+void main() {
+  vec2 uv = v_uv * 8.0;
+  float checker = mod(floor(uv.x) + floor(uv.y), 2.0);
+  float gray = mix(0.2, 0.3, checker);
+  fragColor = vec4(gray, gray, gray, 1.0);
+}
+`;
+
+    // Circle shader - draws a colored circle with soft edges
+    const circleShader = `#version 300 es
+precision highp float;
+
+in vec2 v_uv;
+out vec4 fragColor;
+
+uniform vec3 u_color;
+uniform vec2 u_center;
+uniform float u_radius;
+
+void main() {
+  vec2 uv = v_uv;
+  float dist = length(uv - u_center);
+  
+  // Soft circle with gradient
+  float circle = 1.0 - smoothstep(u_radius * 0.5, u_radius, dist);
+  
+  // Output with alpha
+  fragColor = vec4(u_color, circle * 0.8);
+}
+`;
+
+    // Setup a canvas with a specific blend mode
+    async function setupBlendDemo(canvasId, blendMode) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = await gl.init(canvas, {
+        alpha: true,
+        premultipliedAlpha: false
+      });
+
+      // Background pass (no blending)
+      const bgPass = ctx.pass(backgroundShader);
+
+      // Circle passes with blend mode
+      const redCircle = ctx.pass(circleShader, { blend: blendMode });
+      const greenCircle = ctx.pass(circleShader, { blend: blendMode });
+      const blueCircle = ctx.pass(circleShader, { blend: blendMode });
+
+      // Set colors
+      redCircle.setUniform('u_color', [1.0, 0.2, 0.2]);
+      greenCircle.setUniform('u_color', [0.2, 1.0, 0.2]);
+      blueCircle.setUniform('u_color', [0.2, 0.2, 1.0]);
+
+      // Set radius
+      const radius = 0.35;
+      redCircle.setUniform('u_radius', radius);
+      greenCircle.setUniform('u_radius', radius);
+      blueCircle.setUniform('u_radius', radius);
+
+      return { ctx, bgPass, redCircle, greenCircle, blueCircle };
+    }
+
+    // Run all demos
+    async function main() {
+      // Setup all three demos
+      const alphaDemo = await setupBlendDemo('canvas-alpha', 'alpha');
+      const additiveDemo = await setupBlendDemo('canvas-additive', 'additive');
+      const multiplyDemo = await setupBlendDemo('canvas-multiply', 'multiply');
+
+      // Animation loop
+      function render() {
+        const time = performance.now() / 1000;
+        
+        // Animate circle centers with triangle arrangement
+        const animOffset = 0.05 * Math.sin(time * 2);
+        
+        const redCenter = [0.5 + animOffset, 0.35 + animOffset];
+        const greenCenter = [0.35 - animOffset, 0.65 - animOffset];
+        const blueCenter = [0.65 - animOffset, 0.65 - animOffset];
+
+        // Render each demo
+        [alphaDemo, additiveDemo, multiplyDemo].forEach(demo => {
+          const g = demo.ctx.gl;
+          
+          // Clear canvas
+          g.clearColor(0, 0, 0, 1);
+          g.clear(g.COLOR_BUFFER_BIT);
+          
+          // Draw background
+          demo.bgPass.draw();
+          
+          // Draw circles with blend mode
+          demo.redCircle.setUniform('u_center', redCenter);
+          demo.greenCircle.setUniform('u_center', greenCenter);
+          demo.blueCircle.setUniform('u_center', blueCenter);
+          
+          demo.redCircle.draw();
+          demo.greenCircle.draw();
+          demo.blueCircle.draw();
+        });
+
+        requestAnimationFrame(render);
+      }
+
+      render();
+      console.log('Ralph GL Blend Modes test running');
+      console.log('Blend presets: alpha, additive, multiply');
+    }
+
+    main().catch(err => console.error('Error:', err));
+  </script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ralph GL - Pass Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #1a1a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: system-ui, sans-serif;
+      color: #fff;
+    }
+    h1 {
+      margin-bottom: 20px;
+      font-weight: 300;
+    }
+    canvas {
+      border: 1px solid #333;
+      border-radius: 4px;
+    }
+    .info {
+      margin-top: 16px;
+      color: #888;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ralph GL - Pass Test</h1>
+  <canvas id="canvas" width="512" height="512"></canvas>
+  <p class="info">Animated gradient using fullscreen Pass</p>
+
+  <script type="module">
+    import { GLContext, Pass } from './dist/index.js';
+
+    // Fragment shader that renders a gradient
+    const fragmentShader = `#version 300 es
+precision highp float;
+
+in vec2 v_uv;
+out vec4 fragColor;
+
+uniform vec2 u_resolution;
+uniform float u_time;
+
+void main() {
+  // Animated gradient
+  vec2 uv = v_uv;
+  
+  // Create a diagonal animated gradient
+  float t = u_time * 0.5;
+  float diagonal = (uv.x + uv.y) * 0.5;
+  
+  // RGB channels with different phase offsets
+  float r = sin(diagonal * 3.14159 + t) * 0.5 + 0.5;
+  float g = sin(diagonal * 3.14159 + t + 2.094) * 0.5 + 0.5;  // +2π/3
+  float b = sin(diagonal * 3.14159 + t + 4.189) * 0.5 + 0.5;  // +4π/3
+  
+  // Add some circular pattern
+  vec2 center = vec2(0.5);
+  float dist = length(uv - center);
+  float wave = sin(dist * 10.0 - u_time * 2.0) * 0.2 + 0.8;
+  
+  fragColor = vec4(r * wave, g * wave, b * wave, 1.0);
+}
+`;
+
+    // Initialize
+    const ctx = new GLContext();
+    ctx.init('#canvas', {
+      antialias: true,
+      alpha: false
+    });
+
+    // Create pass with fragment shader
+    const pass = new Pass(ctx, fragmentShader);
+
+    // Animation loop
+    function render() {
+      ctx.updateTime();
+      ctx.clear({ r: 0, g: 0, b: 0 });
+      pass.draw();
+      requestAnimationFrame(render);
+    }
+
+    render();
+
+    console.log('Ralph GL Pass test running');
+    console.log('Canvas size:', ctx.width, 'x', ctx.height);
+  </script>
+</body>
+</html>
