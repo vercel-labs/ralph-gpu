@@ -644,37 +644,36 @@ export default function Page() {
           let hash = pixelHash(vec2u(pos.xy));
           let rotation = hash * 6.28318; // 0 to 2π
           
-          // Accumulate samples using Vogel disk with chromatic aberration
-          var colorR = vec3f(0.0);
-          var colorG = vec3f(0.0);
-          var colorB = vec3f(0.0);
+          // Accumulate samples using Vogel disk - OPTIMIZED: single sample per iteration
+          var color = vec3f(0.0);
           let sampleCount = i32(u.samples);
+          
+          // Chromatic aberration strength (applied mathematically after sampling)
+          let chromaticStrength = 1.9;
           
           for (var i = 0; i < sampleCount; i++) {
             let offset = vogelDisk(f32(i), u.samples, rotation);
             // Scale offset.x by aspect ratio to create circular disk instead of elliptical
             let aspectCorrectedOffset = vec2f(offset.x / globals.aspect, offset.y);
             
-            // Chromatic aberration: shift samples based on horizontal offset
-            // Right samples (+x) shift more for red, left samples (-x) shift more for blue
-            let chromaticShift = offset.x * 0.2; // Adjust strength of chromatic aberration
-            
+            // Single texture sample per iteration (3x faster than before)
             let sampleUV = uv + aspectCorrectedOffset * blurSize;
-            let sampleR = sampleUV + vec2f(chromaticShift, 0.0) * blurSize;
-            let sampleB = sampleUV - vec2f(chromaticShift, 0.0) * blurSize;
+            let sampledColor = textureSample(inputTex, inputSampler, sampleUV).rgb;
             
-            colorR += textureSample(inputTex, inputSampler, sampleR).rgb * 1.2;
-            colorG += textureSample(inputTex, inputSampler, sampleUV).rgb * 1.1;
-            colorB += textureSample(inputTex, inputSampler, sampleB).rgb * 1.0;
+            // Apply chromatic aberration mathematically based on sample offset
+            // Samples on the right (+x) are more red, samples on the left are more blue
+            let chromaticFactor = offset.x * chromaticStrength;
+            let channelWeights = vec3f(
+              1.2 + chromaticFactor,  // Red boosted for positive x offset
+              1.1,                     // Green neutral
+              1.0 - chromaticFactor    // Blue boosted for negative x offset
+            );
+            
+            color += sampledColor * channelWeights;
           }
           
-          // Average the samples and combine channels
-          let avgR = colorR / u.samples;
-          let avgG = colorG / u.samples;
-          let avgB = colorB / u.samples;
-          
-          // Combine: take red from avgR, green from avgG, blue from avgB
-          let finalColor = vec3f(avgR.r, avgG.g, avgB.b);
+          // Average the samples
+          let finalColor = color / u.samples;
           
           return vec4f(finalColor, 1.0);
         }
