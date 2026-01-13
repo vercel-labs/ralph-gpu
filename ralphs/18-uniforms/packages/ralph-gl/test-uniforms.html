@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ralph GL - Uniform Handling Test</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: #fff;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h1 { margin-bottom: 10px; }
+    .info { color: #888; margin-bottom: 20px; }
+    canvas {
+      border: 1px solid #333;
+      max-width: 100%;
+    }
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .control {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .control label {
+      margin-bottom: 5px;
+      color: #aaa;
+    }
+    .control input {
+      width: 150px;
+    }
+    .value {
+      font-size: 12px;
+      color: #666;
+      margin-top: 3px;
+    }
+    #status {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: #222;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Uniform Handling Test</h1>
+  <p class="info">Tests animated uniforms with Three.js-style { value: X } pattern</p>
+  
+  <canvas id="canvas" width="512" height="512"></canvas>
+  
+  <div class="controls">
+    <div class="control">
+      <label>Scale</label>
+      <input type="range" id="scale" min="0.5" max="10" step="0.1" value="3">
+      <div class="value" id="scaleValue">3.0</div>
+    </div>
+    <div class="control">
+      <label>Speed</label>
+      <input type="range" id="speed" min="0.1" max="5" step="0.1" value="1">
+      <div class="value" id="speedValue">1.0</div>
+    </div>
+    <div class="control">
+      <label>Color Mix</label>
+      <input type="range" id="colorMix" min="0" max="1" step="0.01" value="0.5">
+      <div class="value" id="colorMixValue">0.5</div>
+    </div>
+  </div>
+  
+  <div id="status">Loading...</div>
+
+  <script type="module">
+    import { GLContext, Pass } from './dist/index.js';
+
+    // Fragment shader using custom uniforms
+    // Note: Uniforms are NOT declared - they will be auto-injected!
+    const fragmentShader = `#version 300 es
+precision highp float;
+
+in vec2 v_uv;
+out vec4 fragColor;
+
+void main() {
+  // Animated pattern using auto-injected uniforms
+  vec2 uv = v_uv;
+  
+  // Scale the UV coordinates
+  vec2 scaledUV = (uv - 0.5) * u_scale + 0.5;
+  
+  // Create animated patterns
+  float t = u_time * u_speed;
+  float pattern1 = sin(scaledUV.x * 10.0 + t) * sin(scaledUV.y * 10.0 + t);
+  float pattern2 = length(scaledUV - 0.5) * 2.0 - sin(t);
+  
+  // Mix between two color schemes based on u_colorMix
+  vec3 color1 = vec3(
+    0.5 + 0.5 * sin(pattern1 * 3.14159 + 0.0),
+    0.5 + 0.5 * sin(pattern1 * 3.14159 + 2.094),
+    0.5 + 0.5 * sin(pattern1 * 3.14159 + 4.188)
+  );
+  
+  vec3 color2 = vec3(
+    0.5 + 0.5 * sin(pattern2 * 3.14159 + 1.0),
+    0.5 + 0.5 * sin(pattern2 * 3.14159 + 2.0),
+    0.5 + 0.5 * sin(pattern2 * 3.14159 + 3.0)
+  );
+  
+  vec3 finalColor = mix(color1, color2, u_colorMix);
+  
+  // Add resolution-based vignette using auto-injected u_resolution
+  vec2 center = v_uv - 0.5;
+  float vignette = 1.0 - dot(center, center) * 1.5;
+  finalColor *= vignette;
+  
+  fragColor = vec4(finalColor, 1.0);
+}`;
+
+    async function main() {
+      const canvas = document.getElementById('canvas');
+      const status = document.getElementById('status');
+      
+      try {
+        // Initialize GL context (call init() with canvas)
+        const ctx = new GLContext();
+        ctx.init(canvas);
+        
+        // Create pass with custom uniforms (Three.js-style { value: X })
+        const pass = new Pass(ctx, fragmentShader, {
+          uniforms: {
+            u_scale: { value: 3.0 },
+            u_speed: { value: 1.0 },
+            u_colorMix: { value: 0.5 }
+          }
+        });
+        
+        // Setup UI controls
+        const scaleInput = document.getElementById('scale');
+        const speedInput = document.getElementById('speed');
+        const colorMixInput = document.getElementById('colorMix');
+        
+        scaleInput.addEventListener('input', (e) => {
+          const value = parseFloat(e.target.value);
+          pass.uniforms.u_scale.value = value;
+          document.getElementById('scaleValue').textContent = value.toFixed(1);
+        });
+        
+        speedInput.addEventListener('input', (e) => {
+          const value = parseFloat(e.target.value);
+          pass.uniforms.u_speed.value = value;
+          document.getElementById('speedValue').textContent = value.toFixed(1);
+        });
+        
+        colorMixInput.addEventListener('input', (e) => {
+          const value = parseFloat(e.target.value);
+          pass.uniforms.u_colorMix.value = value;
+          document.getElementById('colorMixValue').textContent = value.toFixed(2);
+        });
+        
+        // Animation loop
+        function animate() {
+          // Update time tracking each frame
+          ctx.updateTime();
+          
+          // Clear and draw
+          ctx.clear({ r: 0, g: 0, b: 0, a: 1 });
+          pass.draw();
+          
+          status.textContent = `Frame: ${ctx.frame} | Time: ${ctx.time.toFixed(2)}s`;
+          requestAnimationFrame(animate);
+        }
+        
+        animate();
+        status.textContent = 'Running! Use sliders to adjust uniforms.';
+        
+      } catch (err) {
+        console.error(err);
+        status.textContent = `Error: ${err.message}`;
+        status.style.color = '#f55';
+      }
+    }
+    
+    main();
+  </script>
+</body>
+</html>

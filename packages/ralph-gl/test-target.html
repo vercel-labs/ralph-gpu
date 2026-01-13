@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RenderTarget Test - ralph-gl</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #111;
+      color: #fff;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    p {
+      margin-bottom: 20px;
+      color: #888;
+    }
+    canvas {
+      border: 1px solid #333;
+      border-radius: 4px;
+    }
+    #info {
+      margin-top: 20px;
+      color: #666;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>RenderTarget Test</h1>
+  <p>Render to offscreen target, then display on screen</p>
+  <canvas id="canvas" width="512" height="512"></canvas>
+  <div id="info">Loading...</div>
+
+  <script type="module">
+    import { gl, RenderTarget } from './dist/index.mjs';
+
+    async function main() {
+      const canvas = document.getElementById('canvas');
+      const info = document.getElementById('info');
+      
+      // Initialize context
+      const ctx = await gl.init(canvas);
+      ctx.width = canvas.width;
+      ctx.height = canvas.height;
+      
+      // Create a render target at half resolution
+      const target = ctx.target(256, 256, { format: 'rgba8' });
+      
+      // Pass that renders a gradient pattern to the target
+      const patternPass = ctx.pass(`#version 300 es
+        precision highp float;
+        
+        uniform vec2 u_resolution;
+        uniform float u_time;
+        
+        out vec4 fragColor;
+        
+        void main() {
+          vec2 uv = gl_FragCoord.xy / u_resolution;
+          
+          // Create an animated pattern
+          float pattern = sin(uv.x * 10.0 + u_time) * sin(uv.y * 10.0 + u_time * 0.7);
+          
+          // Color based on UV and pattern
+          vec3 col = vec3(
+            uv.x + 0.2 * pattern,
+            uv.y + 0.2 * pattern,
+            0.5 + 0.5 * sin(u_time)
+          );
+          
+          fragColor = vec4(col, 1.0);
+        }
+      `);
+      
+      // Pass that displays a texture on screen
+      const displayPass = ctx.pass(`#version 300 es
+        precision highp float;
+        
+        uniform vec2 u_resolution;
+        uniform sampler2D u_texture;
+        
+        out vec4 fragColor;
+        
+        void main() {
+          vec2 uv = gl_FragCoord.xy / u_resolution;
+          
+          // Flip Y for correct orientation
+          uv.y = 1.0 - uv.y;
+          
+          // Sample the texture
+          vec4 tex = texture(u_texture, uv);
+          
+          // Add a subtle vignette
+          float vignette = 1.0 - length(uv - 0.5) * 0.5;
+          
+          fragColor = vec4(tex.rgb * vignette, 1.0);
+        }
+      `);
+      
+      let startTime = performance.now();
+      let lastTime = startTime;
+      
+      function render() {
+        const now = performance.now();
+        ctx.time = (now - startTime) / 1000;
+        ctx.deltaTime = (now - lastTime) / 1000;
+        lastTime = now;
+        ctx.frame++;
+        
+        // Render pattern to the offscreen target
+        ctx.setTarget(target);
+        patternPass.setUniform('u_resolution', [target.width, target.height]);
+        patternPass.draw();
+        
+        // Render to canvas, using the target as a texture
+        ctx.setTarget(null);
+        
+        // Bind the texture to unit 0
+        const glCtx = ctx.gl;
+        glCtx.activeTexture(glCtx.TEXTURE0);
+        glCtx.bindTexture(glCtx.TEXTURE_2D, target.texture);
+        
+        displayPass.setUniform('u_resolution', [canvas.width, canvas.height]);
+        displayPass.setUniform('u_texture', 0);
+        displayPass.draw();
+        
+        // Update info
+        info.textContent = `Frame: ${ctx.frame} | Time: ${ctx.time.toFixed(2)}s | Target: ${target.width}x${target.height}`;
+        
+        requestAnimationFrame(render);
+      }
+      
+      render();
+    }
+    
+    main().catch(err => {
+      console.error(err);
+      document.getElementById('info').textContent = `Error: ${err.message}`;
+    });
+  </script>
+</body>
+</html>

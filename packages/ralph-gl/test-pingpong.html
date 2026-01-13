@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PingPong Test - ralph-gl</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #111;
+      color: #fff;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    p {
+      margin-bottom: 20px;
+      color: #888;
+    }
+    canvas {
+      border: 1px solid #333;
+      border-radius: 4px;
+    }
+    #info {
+      margin-top: 20px;
+      color: #666;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>PingPong Test</h1>
+  <p>Feedback effect using ping-pong buffers (move mouse over canvas)</p>
+  <canvas id="canvas" width="512" height="512"></canvas>
+  <div id="info">Loading...</div>
+
+  <script type="module">
+    import { gl } from './dist/index.mjs';
+
+    async function main() {
+      const canvas = document.getElementById('canvas');
+      const info = document.getElementById('info');
+      
+      // Track mouse position
+      let mouseX = 0.5;
+      let mouseY = 0.5;
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = (e.clientX - rect.left) / rect.width;
+        mouseY = 1.0 - (e.clientY - rect.top) / rect.height; // Flip Y
+      });
+      
+      // Initialize context
+      const ctx = await gl.init(canvas);
+      ctx.width = canvas.width;
+      ctx.height = canvas.height;
+      
+      // Create ping-pong buffers
+      const pingPong = ctx.pingPong(512, 512, { format: 'rgba8' });
+      
+      // Pass that adds new content and reads previous frame
+      const feedbackPass = ctx.pass(`#version 300 es
+        precision highp float;
+        
+        uniform vec2 u_resolution;
+        uniform float u_time;
+        uniform sampler2D u_previous;
+        uniform vec2 u_mouse;
+        
+        out vec4 fragColor;
+        
+        void main() {
+          vec2 uv = gl_FragCoord.xy / u_resolution;
+          
+          // Sample previous frame with slight offset for motion blur effect
+          vec2 center = vec2(0.5);
+          vec2 offset = (uv - center) * 0.002;
+          vec4 prev = texture(u_previous, uv - offset);
+          
+          // Fade previous frame
+          prev *= 0.98;
+          
+          // Draw a circle at mouse position
+          float dist = length(uv - u_mouse);
+          float circle = smoothstep(0.05, 0.02, dist);
+          
+          // Animated color
+          vec3 circleColor = 0.5 + 0.5 * cos(u_time + vec3(0.0, 2.0, 4.0));
+          
+          // Combine
+          vec3 col = prev.rgb + circle * circleColor;
+          
+          fragColor = vec4(col, 1.0);
+        }
+      `);
+      
+      // Pass that displays the result
+      const displayPass = ctx.pass(`#version 300 es
+        precision highp float;
+        
+        uniform vec2 u_resolution;
+        uniform sampler2D u_texture;
+        
+        out vec4 fragColor;
+        
+        void main() {
+          vec2 uv = gl_FragCoord.xy / u_resolution;
+          uv.y = 1.0 - uv.y; // Flip Y for display
+          
+          vec4 tex = texture(u_texture, uv);
+          fragColor = tex;
+        }
+      `);
+      
+      let startTime = performance.now();
+      let lastTime = startTime;
+      
+      function render() {
+        const now = performance.now();
+        ctx.time = (now - startTime) / 1000;
+        ctx.deltaTime = (now - lastTime) / 1000;
+        lastTime = now;
+        ctx.frame++;
+        
+        const glCtx = ctx.gl;
+        
+        // Render feedback to write target, reading from read target
+        ctx.setTarget(pingPong.write);
+        
+        // Bind previous frame texture
+        glCtx.activeTexture(glCtx.TEXTURE0);
+        glCtx.bindTexture(glCtx.TEXTURE_2D, pingPong.read.texture);
+        
+        feedbackPass.setUniform('u_resolution', [pingPong.write.width, pingPong.write.height]);
+        feedbackPass.setUniform('u_previous', 0);
+        feedbackPass.setUniform('u_mouse', [mouseX, mouseY]);
+        feedbackPass.draw();
+        
+        // Swap buffers
+        pingPong.swap();
+        
+        // Display result on screen
+        ctx.setTarget(null);
+        
+        glCtx.activeTexture(glCtx.TEXTURE0);
+        glCtx.bindTexture(glCtx.TEXTURE_2D, pingPong.read.texture);
+        
+        displayPass.setUniform('u_resolution', [canvas.width, canvas.height]);
+        displayPass.setUniform('u_texture', 0);
+        displayPass.draw();
+        
+        // Update info
+        info.textContent = `Frame: ${ctx.frame} | Time: ${ctx.time.toFixed(2)}s | Mouse: (${mouseX.toFixed(2)}, ${mouseY.toFixed(2)})`;
+        
+        requestAnimationFrame(render);
+      }
+      
+      render();
+    }
+    
+    main().catch(err => {
+      console.error(err);
+      document.getElementById('info').textContent = `Error: ${err.message}`;
+    });
+  </script>
+</body>
+</html>

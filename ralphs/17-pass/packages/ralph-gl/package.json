@@ -1,0 +1,28 @@
+{
+  "name": "@ralph/ralph-gl",
+  "version": "0.1.0",
+  "description": "WebGL 2.0 rendering library",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "happy-dom": "^15.11.7",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.9"
+  },
+  "files": [
+    "dist",
+    "src"
+  ]
+}
