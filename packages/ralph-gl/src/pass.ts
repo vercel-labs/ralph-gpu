@@ -46,6 +46,9 @@ export class Pass {
   
   /** Blend mode configuration */
   private blend: BlendMode | BlendConfig | undefined;
+  
+  /** Texture unit counter */
+  private textureUnit: number = 0;
 
   /**
    * Create a new Pass
@@ -75,6 +78,13 @@ export class Pass {
     this.vao = gl.createVertexArray();
     if (!this.vao) {
       throw new Error('Failed to create VAO');
+    }
+    
+    // Initialize uniforms from options
+    if (options.uniforms) {
+      for (const [name, uniform] of Object.entries(options.uniforms)) {
+        this.uniforms.set(name, uniform.value);
+      }
     }
   }
 
@@ -181,6 +191,9 @@ export class Pass {
     const gl = this.ctx.gl;
     if (!gl || !this.program) return;
     
+    // Reset texture unit counter
+    this.textureUnit = 0;
+    
     // Apply global uniforms
     const resolutionLoc = this.getUniformLocation('u_resolution');
     if (resolutionLoc) {
@@ -207,7 +220,14 @@ export class Pass {
       const location = this.getUniformLocation(name);
       if (!location) continue;
       
-      if (typeof value === 'number') {
+      // Check if it's a RenderTarget (texture)
+      if (value && typeof value === 'object' && 'texture' in value) {
+        const target = value as any; // RenderTarget type
+        gl.activeTexture(gl.TEXTURE0 + this.textureUnit);
+        gl.bindTexture(gl.TEXTURE_2D, target.texture);
+        gl.uniform1i(location, this.textureUnit);
+        this.textureUnit++;
+      } else if (typeof value === 'number') {
         gl.uniform1f(location, value);
       } else if (Array.isArray(value)) {
         switch (value.length) {

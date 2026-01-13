@@ -60,6 +60,10 @@ export class GLContext {
     this.canvas = canvas
     this._options = options ?? {}
     
+    // Enable required extensions for float textures
+    gl.getExtension('EXT_color_buffer_float')
+    gl.getExtension('OES_texture_float_linear')
+    
     // Set device pixel ratio
     this.dpr = options?.dpr ?? (typeof window !== 'undefined' ? window.devicePixelRatio : 1)
     
