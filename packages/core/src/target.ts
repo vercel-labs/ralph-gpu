@@ -2,7 +2,7 @@
  * Render target management
  */
 
-import type { RenderTargetOptions, FilterMode, WrapMode, TextureFormat } from "./types";
+import type { RenderTargetOptions, FilterMode, WrapMode, TextureFormat, RenderTargetUsage } from "./types";
 
 /**
  * Maps our texture format strings to GPUTextureFormat
@@ -31,6 +31,7 @@ export class RenderTarget {
   private _format: TextureFormat;
   private _filter: FilterMode;
   private _wrap: WrapMode;
+  private _usage: RenderTargetUsage;
 
   constructor(
     device: GPUDevice,
@@ -44,6 +45,7 @@ export class RenderTarget {
     this._format = options.format || "rgba8unorm";
     this._filter = options.filter || "linear";
     this._wrap = options.wrap || "clamp";
+    this._usage = options.usage || "render";
 
     // Create texture and view
     this.createTexture();
@@ -51,13 +53,21 @@ export class RenderTarget {
   }
 
   private createTexture(): void {
+    // Determine usage flags based on usage mode
+    let usage = GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC;
+    
+    if (this._usage === "render" || this._usage === "both") {
+      usage |= GPUTextureUsage.RENDER_ATTACHMENT;
+    }
+    
+    if (this._usage === "storage" || this._usage === "both") {
+      usage |= GPUTextureUsage.STORAGE_BINDING;
+    }
+    
     this._texture = this.device.createTexture({
       size: { width: this._width, height: this._height },
       format: getGPUTextureFormat(this._format),
-      usage:
-        GPUTextureUsage.RENDER_ATTACHMENT |
-        GPUTextureUsage.TEXTURE_BINDING |
-        GPUTextureUsage.COPY_SRC,
+      usage,
     });
     this._view = this._texture.createView();
   }
@@ -114,6 +124,13 @@ export class RenderTarget {
    */
   get format(): TextureFormat {
     return this._format;
+  }
+
+  /**
+   * Get the usage mode
+   */
+  get usage(): RenderTargetUsage {
+    return this._usage;
   }
 
   /**

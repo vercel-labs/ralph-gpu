@@ -38,10 +38,12 @@ frame();
 - **Auto-injected uniforms** — `resolution`, `time`, `deltaTime`, `frame`, `aspect` available in all shaders
 - **Ping-pong buffers** — First-class support for iterative effects (fluid sim, blur, etc.)
 - **Three.js-style uniforms** — `{ value: X }` pattern for reactive updates
-- **Compute shaders** — GPU-accelerated parallel computation
+- **Compute shaders** — GPU-accelerated parallel computation with full texture support
+- **Storage textures** — Write to textures in compute shaders for advanced effects
+- **Custom samplers** — Explicit control over texture filtering and wrapping modes
 - **Storage buffers** — For particles, simulations, and custom data
 - **Blend modes** — Presets (`additive`, `alpha`, `multiply`) + custom configs
-- **Render targets** — Offscreen rendering with configurable format, filter, wrap
+- **Render targets** — Offscreen rendering with configurable format, filter, wrap, and storage usage
 
 ## Installation
 
@@ -163,6 +165,38 @@ const uniforms = {
 // In WGSL, samplers are automatically matched by naming convention:
 // inputTex → inputSampler or inputTexSampler
 ```
+
+#### Creating Custom Samplers
+
+Use `ctx.createSampler()` for explicit control over texture filtering and wrapping:
+
+```typescript
+// Linear filtering with clamp-to-edge
+const linearClamp = ctx.createSampler({
+  magFilter: "linear",
+  minFilter: "linear",
+  addressModeU: "clamp-to-edge",
+  addressModeV: "clamp-to-edge",
+});
+
+// Nearest filtering with repeat
+const nearestRepeat = ctx.createSampler({
+  magFilter: "nearest",
+  minFilter: "nearest",
+  addressModeU: "repeat",
+  addressModeV: "repeat",
+});
+
+// Reuse across multiple textures
+const uniforms = {
+  texture1: { value: tex1.texture },
+  sampler1: { value: linearClamp },
+  texture2: { value: tex2.texture },
+  sampler2: { value: nearestRepeat },
+};
+```
+
+Samplers can be reused across multiple shaders for consistency and performance.
 
 ## Usage with React
 
@@ -309,6 +343,8 @@ velocity.swap();
 
 ## Compute Shaders
 
+### Basic Compute with Storage Buffers
+
 ```typescript
 const particleCompute = ctx.compute(/* wgsl */ `
   struct Particle { pos: vec2f, vel: vec2f }
@@ -324,6 +360,85 @@ const particleCompute = ctx.compute(/* wgsl */ `
 // Dispatch compute work
 particleCompute.storage("particles", particleBuffer);
 particleCompute.dispatch(numParticles / 64);
+```
+
+### Compute with Texture Sampling
+
+Compute shaders can sample from textures (e.g., reading from an SDF texture):
+
+```typescript
+const compute = ctx.compute(/* wgsl */ `
+  @group(1) @binding(0) var<uniform> u: MyUniforms;
+  @group(1) @binding(1) var<storage, read_write> data: array<f32>;
+  @group(1) @binding(2) var myTexture: texture_2d<f32>;
+  @group(1) @binding(3) var mySampler: sampler;
+  
+  @compute @workgroup_size(64)
+  fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let uv = vec2f(f32(id.x) / 512.0, f32(id.y) / 512.0);
+    let texValue = textureSampleLevel(myTexture, mySampler, uv, 0.0);
+    data[id.x] = texValue.r;
+  }
+`, {
+  uniforms: {
+    myTexture: { value: renderTarget }, // RenderTarget auto-extracts texture + sampler
+  },
+});
+
+compute.storage("data", dataBuffer);
+compute.dispatch(512);
+```
+
+### Compute with Storage Textures (Write Operations)
+
+For writing to textures in compute shaders, use storage textures:
+
+```typescript
+// Create a render target with storage usage
+const outputTarget = ctx.target(512, 512, {
+  format: "rgba16float",
+  usage: "storage", // Enable write operations
+});
+
+const compute = ctx.compute(/* wgsl */ `
+  @group(1) @binding(0) var input: texture_2d<f32>;
+  @group(1) @binding(1) var inputSampler: sampler;
+  @group(1) @binding(2) var output: texture_storage_2d<rgba16float, write>;
+  
+  @compute @workgroup_size(8, 8)
+  fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let uv = vec2f(id.xy) / 512.0;
+    let color = textureSampleLevel(input, inputSampler, uv, 0.0);
+    textureStore(output, id.xy, color * 2.0); // Write to storage texture
+  }
+`, {
+  uniforms: {
+    input: { value: inputTarget },
+    output: { value: outputTarget },
+  },
+});
+
+compute.dispatch(512 / 8, 512 / 8);
+```
+
+### Texture Loading Without Sampler
+
+Use `textureLoad()` for direct pixel access without sampling:
+
+```typescript
+const compute = ctx.compute(/* wgsl */ `
+  @group(1) @binding(0) var dataTexture: texture_2d<f32>;
+  
+  @compute @workgroup_size(64)
+  fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let value = textureLoad(dataTexture, vec2i(id.xy), 0).r;
+    // No sampler needed for textureLoad
+  }
+`, {
+  uniforms: {
+    dataTexture: { value: target.texture },
+  },
+});
 ```
 
 ## Materials (Custom Geometry)
@@ -442,6 +557,7 @@ ctx.target(width?, height?, options?)      // → RenderTarget (auto-sizes to ca
 ctx.pingPong(width?, height?, options?)    // → PingPongTarget (auto-sizes to canvas if omitted)
 ctx.mrt(outputs, width?, height?)          // → MultiRenderTarget (auto-sizes to canvas if omitted)
 ctx.storage(byteSize)                      // → StorageBuffer
+ctx.createSampler(descriptor?)             // → Sampler (texture sampler with custom filtering/wrapping)
 
 ctx.setTarget(target | null)               // Set render target
 ctx.setViewport(x?, y?, w?, h?)            // Set viewport
@@ -487,9 +603,24 @@ target.sampler                             // GPUSampler
 target.view                                // GPUTextureView
 target.width / target.height               // Dimensions
 target.format                              // Texture format
+target.usage                               // Usage mode ("render" | "storage" | "both")
 target.resize(width, height)               // Resize
 target.readPixels(x?, y?, w?, h?)          // → Promise<Uint8Array | Float32Array>
 target.dispose()                           // Cleanup
+```
+
+**Render Target Options:**
+
+```typescript
+{
+  format?: "rgba8unorm" | "rgba16float" | "r16float" | "rg16float" | "r32float", // Default: "rgba8unorm"
+  filter?: "linear" | "nearest",         // Default: "linear"
+  wrap?: "clamp" | "repeat" | "mirror",  // Default: "clamp"
+  usage?: "render" | "storage" | "both", // Default: "render"
+  // "render": For rendering and sampling
+  // "storage": For compute shader write operations (texture_storage_2d)
+  // "both": For both rendering and storage operations
+}
 ```
 
 ### Ping-Pong
@@ -508,6 +639,31 @@ pingPong.dispose(); // Cleanup
 storage.gpuBuffer; // GPUBuffer
 storage.write(data); // Write TypedArray
 storage.dispose(); // Cleanup
+```
+
+### Sampler
+
+```typescript
+sampler.gpuSampler; // GPUSampler
+sampler.descriptor; // SamplerDescriptor (readonly)
+sampler.dispose(); // Cleanup (currently no-op, kept for API consistency)
+```
+
+**Sampler Options:**
+
+```typescript
+{
+  magFilter?: "linear" | "nearest",      // Default: "linear"
+  minFilter?: "linear" | "nearest",      // Default: "linear"
+  mipmapFilter?: "linear" | "nearest",   // Default: "linear"
+  addressModeU?: "clamp-to-edge" | "repeat" | "mirror-repeat", // Default: "clamp-to-edge"
+  addressModeV?: "clamp-to-edge" | "repeat" | "mirror-repeat", // Default: "clamp-to-edge"
+  addressModeW?: "clamp-to-edge" | "repeat" | "mirror-repeat", // Default: "clamp-to-edge"
+  lodMinClamp?: number,                  // Default: 0
+  lodMaxClamp?: number,                  // Default: 32
+  compare?: "never" | "less" | "equal" | "less-equal" | "greater" | "not-equal" | "greater-equal" | "always",
+  maxAnisotropy?: number,                // Default: 1
+}
 ```
 
 ## Errors

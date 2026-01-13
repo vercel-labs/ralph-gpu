@@ -3,6 +3,7 @@
  */
 
 import type { StorageBuffer } from "./storage";
+import type { Sampler } from "./sampler";
 
 /**
  * Texture format options
@@ -61,12 +62,24 @@ export interface BlendConfig {
 }
 
 /**
+ * Render target usage mode
+ */
+export type RenderTargetUsage = "render" | "storage" | "both";
+
+/**
  * Render target options
  */
 export interface RenderTargetOptions {
   format?: TextureFormat;
   filter?: FilterMode;
   wrap?: WrapMode;
+  /** 
+   * Texture usage mode
+   * - "render": For rendering and sampling (default)
+   * - "storage": For compute shader write operations
+   * - "both": For both rendering and storage operations
+   */
+  usage?: RenderTargetUsage;
 }
 
 /**
@@ -109,8 +122,10 @@ export type SimpleUniformValue =
   | [number, number] 
   | [number, number, number] 
   | [number, number, number, number]
-  | { texture: GPUTexture; sampler?: GPUSampler }
-  | GPUTexture;
+  | { texture: GPUTexture; sampler?: GPUSampler | Sampler }
+  | GPUTexture
+  | GPUSampler
+  | Sampler;
 
 /**
  * Simple uniforms object - for auto-generation mode

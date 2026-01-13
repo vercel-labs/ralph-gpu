@@ -10,6 +10,7 @@ import {
   updateUniformBuffer,
   collectTextureBindings,
   parseBindGroup1Bindings,
+  validateBindings,
 } from "./uniforms";
 import type { StorageBuffer } from "./storage";
 
@@ -103,6 +104,19 @@ ${this.wgsl}
 
       // Parse bindings from WGSL to match layout: 'auto'
       const bindings = parseBindGroup1Bindings(this.wgsl);
+      
+      // Validate bindings and provide helpful error message if there's a mismatch
+      const validationError = validateBindings(
+        "compute",
+        bindings,
+        this._uniforms,
+        this.storageBuffers
+      );
+      if (validationError) {
+        console.error(validationError);
+        // Continue anyway - WebGPU will provide its own error if bindings are actually wrong
+      }
+      
       const bindGroupEntries: GPUBindGroupEntry[] = [];
 
       // Add uniform buffer if present and used
@@ -125,6 +139,7 @@ ${this.wgsl}
           });
 
           // Add sampler binding if present
+          // Note: sampler is optional - textureLoad() doesn't require one
           if (sampler) {
             // Try to find sampler binding by name convention
             let samplerBinding = bindings.samplers.get(`${name}Sampler`);
@@ -134,16 +149,23 @@ ${this.wgsl}
             if (samplerBinding === undefined && name.endsWith("Tex")) {
               samplerBinding = bindings.samplers.get(`${name.slice(0, -3)}Sampler`);
             }
+            if (samplerBinding === undefined && name.endsWith("Texture")) {
+              samplerBinding = bindings.samplers.get(`${name.slice(0, -7)}Sampler`);
+            }
             
             if (samplerBinding !== undefined) {
               bindGroupEntries.push({
                 binding: samplerBinding,
                 resource: sampler,
               });
-            } else {
-              console.warn(`Could not find sampler binding for texture '${name}'. Expected '${name}Sampler', '${name}_sampler', or similar.`);
+            }
+            // Only warn if shader actually declares the sampler binding
+            else if (bindings.samplers.size > 0) {
+              console.warn(`[ralph-gpu] Sampler provided for texture '${name}' but could not find matching sampler binding in shader. Expected '${name}Sampler', '${name}_sampler', or similar.`);
             }
           }
+        } else {
+          console.warn(`[ralph-gpu] Texture '${name}' provided in uniforms but not found in shader bindings.`);
         }
       }
 
@@ -154,6 +176,19 @@ ${this.wgsl}
           bindGroupEntries.push({
             binding: storageBinding,
             resource: { buffer: buffer.gpuBuffer },
+          });
+        }
+      }
+
+      // Add storage textures (for write operations)
+      // Storage textures use the same collection as regular textures but bind differently
+      for (const [name, { texture }] of textures) {
+        const storageBinding = bindings.storageTextures.get(name);
+        if (storageBinding !== undefined) {
+          // Storage textures don't use samplers
+          bindGroupEntries.push({
+            binding: storageBinding,
+            resource: texture.createView(),
           });
         }
       }

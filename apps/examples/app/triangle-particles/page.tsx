@@ -9,6 +9,7 @@ import {
   ComputeShader,
   StorageBuffer,
   Pass,
+  Sampler,
 } from "ralph-gpu";
 
 // ============================================================================
@@ -204,6 +205,9 @@ export default function Page() {
 
     // Render targets
     let renderTarget: ReturnType<GPUContext["target"]>;
+
+    // Custom sampler for blur pass
+    let blurSampler: Sampler;
 
     // Ping-pong state
     let pingPong = 0;
@@ -531,6 +535,15 @@ export default function Page() {
       // Create render target for postprocessing (auto-sized to canvas)
       renderTarget = ctx.target();
 
+      // Create custom sampler for blur postprocessing
+      // Using linear filtering with clamp-to-edge for smooth blur sampling
+      blurSampler = ctx.createSampler({
+        magFilter: "nearest",
+        minFilter: "nearest",
+        addressModeU: "clamp-to-edge",
+        addressModeV: "clamp-to-edge",
+      });
+
       // Create debug pass for visualizing the SDF
       const debugShaderCode = /* wgsl */ `
         struct DebugUniforms {
@@ -668,7 +681,9 @@ export default function Page() {
       `;
 
       const blurUniforms = {
-        inputTex: { value: renderTarget }, // Pass full RenderTarget (includes texture + sampler)
+        // Use the new sampler API - pass texture and sampler separately
+        inputTex: { value: renderTarget.texture }, // Pass just the texture
+        inputSampler: { value: blurSampler }, // Pass custom sampler
         maxBlurSize: { value: BLUR_MAX_SIZE },
         samples: { value: BLUR_MAX_SAMPLES },
         angle: { value: 0 }, // Will be updated in render loop

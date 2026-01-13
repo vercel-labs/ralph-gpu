@@ -27,16 +27,17 @@ npm install -D @webgpu/types
 
 ## Core Concepts
 
-| Concept    | Description                                            |
-| ---------- | ------------------------------------------------------ |
-| `gpu`      | Module entry point for initialization                  |
-| `ctx`      | GPU context — manages state and rendering              |
-| `pass`     | Fullscreen shader (fragment only, uses internal quad)  |
-| `material` | Shader with custom vertex code (particles, geometry)   |
-| `target`   | Render target (offscreen texture)                      |
-| `pingPong` | Pair of render targets for iterative effects           |
-| `compute`  | Compute shader for GPU-parallel computation            |
-| `storage`  | Storage buffer for large data (particles, simulations) |
+| Concept    | Description                                             |
+| ---------- | ------------------------------------------------------- |
+| `gpu`      | Module entry point for initialization                   |
+| `ctx`      | GPU context — manages state and rendering               |
+| `pass`     | Fullscreen shader (fragment only, uses internal quad)   |
+| `material` | Shader with custom vertex code (particles, geometry)    |
+| `target`   | Render target (offscreen texture)                       |
+| `pingPong` | Pair of render targets for iterative effects            |
+| `compute`  | Compute shader for GPU-parallel computation             |
+| `storage`  | Storage buffer for large data (particles, simulations)  |
+| `sampler`  | Custom texture sampler with explicit filtering/wrapping |
 
 ## Auto-Injected Globals
 
@@ -70,7 +71,7 @@ let ar = globals.aspect;                      // Aspect ratio
 "use client";
 
 import { useEffect, useRef } from "react";
-import { gpu, GPUContext, Pass } from "ralph-gpu";
+import { gpu, GPUContext, Pass, Sampler } from "ralph-gpu";
 
 export default function ShaderComponent() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -553,6 +554,8 @@ let life = lifetimes[iid];
 
 ### 7. Compute Shaders
 
+#### Basic Compute with Storage Buffers
+
 For GPU-parallel computation:
 
 ```tsx
@@ -595,6 +598,95 @@ computeShader.storage("particles", particleBuffer);
 
 // In render loop
 computeShader.dispatch(Math.ceil(particleCount / 64));
+```
+
+#### Compute Shaders with Texture Sampling
+
+Compute shaders can now sample from textures (e.g., reading from an SDF or noise texture):
+
+```tsx
+const compute = ctx.compute(
+  /* wgsl */ `
+  @group(1) @binding(0) var<uniform> u: MyUniforms;
+  @group(1) @binding(1) var<storage, read_write> data: array<f32>;
+  @group(1) @binding(2) var myTexture: texture_2d<f32>;
+  @group(1) @binding(3) var mySampler: sampler;
+  
+  @compute @workgroup_size(64)
+  fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let uv = vec2f(f32(id.x) / 512.0, f32(id.y) / 512.0);
+    // Sample texture in compute shader!
+    let texValue = textureSampleLevel(myTexture, mySampler, uv, 0.0);
+    data[id.x] = texValue.r;
+  }
+`,
+  {
+    uniforms: {
+      myTexture: { value: renderTarget }, // Pass RenderTarget
+    },
+  }
+);
+
+compute.storage("data", dataBuffer);
+compute.dispatch(512);
+```
+
+#### Compute with Storage Textures (Write Operations)
+
+For writing to textures from compute shaders:
+
+```tsx
+// Create render target with storage usage
+const outputTarget = ctx.target(512, 512, {
+  format: "rgba16float",
+  usage: "storage", // Enable write operations
+});
+
+const compute = ctx.compute(
+  /* wgsl */ `
+  @group(1) @binding(0) var input: texture_2d<f32>;
+  @group(1) @binding(1) var inputSampler: sampler;
+  @group(1) @binding(2) var output: texture_storage_2d<rgba16float, write>;
+  
+  @compute @workgroup_size(8, 8)
+  fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let uv = vec2f(id.xy) / 512.0;
+    let color = textureSampleLevel(input, inputSampler, uv, 0.0);
+    textureStore(output, id.xy, color * 2.0); // Write to storage texture
+  }
+`,
+  {
+    uniforms: {
+      input: { value: inputTarget },
+      output: { value: outputTarget },
+    },
+  }
+);
+
+compute.dispatch(512 / 8, 512 / 8);
+```
+
+#### Texture Loading Without Sampler
+
+Use `textureLoad()` for direct pixel access without sampling:
+
+```tsx
+const compute = ctx.compute(
+  /* wgsl */ `
+  @group(1) @binding(0) var dataTexture: texture_2d<f32>;
+  
+  @compute @workgroup_size(64)
+  fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    // No sampler needed for textureLoad
+    let value = textureLoad(dataTexture, vec2i(id.xy), 0).r;
+  }
+`,
+  {
+    uniforms: {
+      dataTexture: { value: target.texture }, // Just texture, no sampler
+    },
+  }
+);
 ```
 
 ### 8. Complete Particle System with Compute Physics
@@ -997,7 +1089,9 @@ try {
 }
 ```
 
-## Texture Formats
+## Texture Formats and Usage
+
+### Texture Formats
 
 | Format        | Description                 | Use Case                      |
 | ------------- | --------------------------- | ----------------------------- |
@@ -1006,6 +1100,36 @@ try {
 | `r16float`    | Single channel 16-bit float | Pressure, divergence          |
 | `rg16float`   | Two channel 16-bit float    | Velocity fields               |
 | `r32float`    | Single channel 32-bit float | High precision                |
+
+### RenderTarget Usage Modes
+
+Control how render targets can be used:
+
+```tsx
+// Default: For rendering and sampling only
+const renderTarget = ctx.target(512, 512, {
+  format: "rgba16float",
+  usage: "render", // Default
+});
+
+// For compute shader write operations (storage textures)
+const storageTarget = ctx.target(512, 512, {
+  format: "rgba16float",
+  usage: "storage", // Enables texture_storage_2d
+});
+
+// For both rendering and compute writes
+const dualTarget = ctx.target(512, 512, {
+  format: "rgba16float",
+  usage: "both", // Maximum flexibility
+});
+```
+
+**Usage Modes:**
+
+- `"render"` (default): RENDER_ATTACHMENT + TEXTURE_BINDING + COPY_SRC
+- `"storage"`: STORAGE_BINDING + TEXTURE_BINDING + COPY_SRC
+- `"both"`: All usage flags combined
 
 ## Common WGSL Patterns
 
@@ -1029,6 +1153,104 @@ const uniforms = {
   inputTex: { value: someRenderTarget },
 };
 ```
+
+### Custom Samplers
+
+Create reusable samplers with explicit filtering and wrapping control using `ctx.createSampler()`:
+
+```tsx
+// Linear filtering with clamp-to-edge (ideal for blur/postprocessing)
+const linearClamp = ctx.createSampler({
+  magFilter: "linear",
+  minFilter: "linear",
+  addressModeU: "clamp-to-edge",
+  addressModeV: "clamp-to-edge",
+});
+
+// Nearest filtering with repeat (ideal for pixel art/tiling)
+const nearestRepeat = ctx.createSampler({
+  magFilter: "nearest",
+  minFilter: "nearest",
+  addressModeU: "repeat",
+  addressModeV: "repeat",
+});
+
+// Mirror repeat (ideal for seamless tiling)
+const mirrorSampler = ctx.createSampler({
+  addressModeU: "mirror-repeat",
+  addressModeV: "mirror-repeat",
+});
+
+// Reuse across multiple shaders and textures
+const uniforms = {
+  texture1: { value: tex1.texture },
+  sampler1: { value: linearClamp },
+  texture2: { value: tex2.texture },
+  sampler2: { value: nearestRepeat },
+};
+
+const pass = ctx.pass(shader, { uniforms });
+```
+
+**Sampler Options:**
+
+```tsx
+{
+  magFilter?: "linear" | "nearest",
+  minFilter?: "linear" | "nearest",
+  mipmapFilter?: "linear" | "nearest",
+  addressModeU?: "clamp-to-edge" | "repeat" | "mirror-repeat",
+  addressModeV?: "clamp-to-edge" | "repeat" | "mirror-repeat",
+  addressModeW?: "clamp-to-edge" | "repeat" | "mirror-repeat",
+  lodMinClamp?: number,  // Default: 0
+  lodMaxClamp?: number,  // Default: 32
+  compare?: "never" | "less" | "equal" | "less-equal" | "greater" | "not-equal" | "greater-equal" | "always",
+  maxAnisotropy?: number,  // Default: 1
+}
+```
+
+**Benefits of Custom Samplers:**
+
+- **Reusability**: Create once, use across multiple textures and shaders
+- **Performance**: Avoid recreating samplers with the same settings
+- **Explicit Control**: Choose exact filtering and wrapping behavior
+- **Consistency**: Ensure the same sampling behavior across effects
+
+### Texture Binding Patterns
+
+Ralph-GPU supports multiple flexible ways to pass textures to shaders:
+
+```tsx
+// Pattern 1: RenderTarget (convenience - auto-extracts texture + creates default sampler)
+const uniforms1 = {
+  myTexture: { value: renderTarget }, // Easiest - includes texture + sampler
+};
+
+// Pattern 2: Separate texture + sampler (explicit control)
+const customSampler = ctx.createSampler({ magFilter: "nearest" });
+const uniforms2 = {
+  myTexture: { value: renderTarget.texture }, // Just the texture
+  mySampler: { value: customSampler }, // Custom sampler
+};
+
+// Pattern 3: Raw GPUTexture (user provides sampler separately)
+const uniforms3 = {
+  myTexture: { value: gpuTexture },
+  mySampler: { value: customSampler },
+};
+
+// Pattern 4: Texture without sampler (for textureLoad in WGSL)
+const uniforms4 = {
+  dataTexture: { value: renderTarget.texture }, // No sampler needed
+};
+```
+
+**Sampler Naming Convention:**
+The system automatically matches samplers to textures using conventions:
+
+- `myTexture` → looks for `myTextureSampler`
+- `inputTex` → looks for `inputSampler` or `inputTexSampler`
+- `someTexture` → looks for `someSampler` or `someTextureSampler`
 
 ### SDF Primitives
 
@@ -1086,6 +1308,18 @@ fn opSmoothUnion(d1: f32, d2: f32, k: f32) -> f32 {
     // Pad vec3f data to 16 bytes: [x, y, z, 0.0]
     const buffer = ctx.storage(vertexCount * 16); // NOT vertexCount * 12
     ```
+15. **Create custom samplers** for explicit texture filtering control:
+    ```tsx
+    const sampler = ctx.createSampler({
+      magFilter: "linear",
+      minFilter: "linear",
+    });
+    ```
+16. **Use storage textures** for compute shader write operations:
+    ```tsx
+    const target = ctx.target(512, 512, { usage: "storage" });
+    ```
+17. **Reuse samplers** across multiple textures and shaders for better performance
 
 ## API Quick Reference
 
@@ -1102,6 +1336,7 @@ ctx.target(width, height, options?)        // → RenderTarget
 ctx.pingPong(width, height, options?)      // → PingPongTarget
 ctx.storage(byteSize)                      // → StorageBuffer
 ctx.particles(count, options)              // → Particles (instanced quads)
+ctx.createSampler(descriptor?)             // → Sampler (custom texture sampler)
 
 ctx.setTarget(target | null)               // Set render target
 ctx.clear(target?, color?)                 // Clear target

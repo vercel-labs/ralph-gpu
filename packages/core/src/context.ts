@@ -24,6 +24,7 @@ import { PingPongTarget } from "./ping-pong";
 import { createMultiRenderTarget, MultiRenderTarget } from "./mrt";
 import { StorageBuffer } from "./storage";
 import { Particles } from "./particles";
+import { Sampler, SamplerDescriptor } from "./sampler";
 import {
   createGlobalsBuffer,
   updateGlobalsBuffer,
@@ -56,6 +57,7 @@ export class GPUContext {
   private _autoResize: boolean;
   private debug: boolean;
   private resizeObserver: ResizeObserver | null = null;
+  private samplers: Set<Sampler> = new Set();
 
   constructor(
     device: GPUDevice,
@@ -420,6 +422,41 @@ export class GPUContext {
   }
 
   /**
+   * Create a texture sampler with explicit filtering and wrapping modes
+   * 
+   * Samplers can be reused across multiple textures for consistency and performance.
+   * 
+   * ```typescript
+   * const linearClamp = ctx.createSampler({
+   *   magFilter: "linear",
+   *   minFilter: "linear",
+   *   addressModeU: "clamp-to-edge",
+   *   addressModeV: "clamp-to-edge",
+   * });
+   * 
+   * const nearestRepeat = ctx.createSampler({
+   *   magFilter: "nearest",
+   *   minFilter: "nearest",
+   *   addressModeU: "repeat",
+   *   addressModeV: "repeat",
+   * });
+   * 
+   * // Use in uniforms
+   * const uniforms = {
+   *   texture1: { value: tex1.texture },
+   *   sampler1: { value: linearClamp },
+   *   texture2: { value: tex2.texture },
+   *   sampler2: { value: nearestRepeat },
+   * };
+   * ```
+   */
+  createSampler(descriptor: SamplerDescriptor = {}): Sampler {
+    const sampler = new Sampler(this.device, descriptor);
+    this.samplers.add(sampler);
+    return sampler;
+  }
+
+  /**
    * Set the render target
    */
   setTarget(target: RenderTarget | MultiRenderTarget | null): void {
@@ -675,6 +712,11 @@ export class GPUContext {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
     }
+    // Dispose all samplers
+    for (const sampler of this.samplers) {
+      sampler.dispose();
+    }
+    this.samplers.clear();
     this.globalsBuffer.destroy();
     // Unconfigure the canvas context before destroying the device
     // This is required to allow re-initialization with a new device

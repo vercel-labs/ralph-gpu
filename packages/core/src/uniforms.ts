@@ -4,6 +4,7 @@
 
 import type { Uniforms, GlobalUniforms, BlendMode, BlendConfig } from "./types";
 import { RenderTarget } from "./target";
+import { Sampler } from "./sampler";
 
 /**
  * Global uniforms structure size (in bytes)
@@ -319,12 +320,16 @@ export function collectTextureBindings(uniforms: Uniforms): Map<string, TextureB
   const textures = new Map<string, TextureBinding>();
   const samplers = new Map<string, GPUSampler>();
   
-  // First pass: collect all samplers
+  // First pass: collect all samplers (both Sampler instances and raw GPUSamplers)
   for (const [key, uniform] of Object.entries(uniforms)) {
     const value = uniform.value;
     if (value && typeof value === "object" && !(value instanceof Float32Array) && !Array.isArray(value)) {
+      // Check if it's a Sampler instance
+      if (value instanceof Sampler) {
+        samplers.set(key, value.gpuSampler);
+      }
       // Check if it's a GPUSampler (has compare method)
-      if ("compare" in value || ("addressModeU" in value && "magFilter" in value)) {
+      else if ("compare" in value || ("addressModeU" in value && "magFilter" in value)) {
         samplers.set(key, value as GPUSampler);
       }
     }
@@ -367,6 +372,7 @@ export interface WGSLBindings {
   textures: Map<string, number>;
   samplers: Map<string, number>;
   storage: Map<string, number>;
+  storageTextures: Map<string, number>;
 }
 
 /**
@@ -379,6 +385,7 @@ export function parseBindGroupBindings(wgsl: string, group: number = 1): WGSLBin
     textures: new Map(),
     samplers: new Map(),
     storage: new Map(),
+    storageTextures: new Map(),
   };
 
   // Regex to match group N bindings
@@ -398,8 +405,11 @@ export function parseBindGroupBindings(wgsl: string, group: number = 1): WGSLBin
     } else if (varModifier && (varModifier.startsWith('storage') || varModifier === 'storage, read')) {
       // Storage buffer
       bindings.storage.set(name, binding);
+    } else if (type.includes('texture_storage')) {
+      // Storage texture (for compute write operations)
+      bindings.storageTextures.set(name, binding);
     } else if (type.includes('texture_')) {
-      // Texture
+      // Regular texture (for sampling)
       bindings.textures.set(name, binding);
     } else if (type.includes('sampler')) {
       // Sampler
@@ -433,9 +443,10 @@ export type SimpleUniformValue =
   | [number, number, number] 
   | [number, number, number, number]
   | Float32Array
-  | { texture: GPUTexture; sampler?: GPUSampler }  // RenderTarget-like
+  | { texture: GPUTexture; sampler?: GPUSampler | Sampler }  // RenderTarget-like
   | GPUTexture
-  | GPUSampler;
+  | GPUSampler
+  | Sampler;
 
 export interface SimpleUniforms {
   [key: string]: SimpleUniformValue;
@@ -472,7 +483,11 @@ export function inferWGSLType(value: SimpleUniformValue): string | null {
  */
 export function isTextureValue(value: SimpleUniformValue): boolean {
   if (value && typeof value === "object" && !(value instanceof Float32Array)) {
-    // Check if it's a GPUSampler first (exclude it)
+    // Check if it's a Sampler instance first (exclude it)
+    if (value instanceof Sampler) {
+      return false;
+    }
+    // Check if it's a GPUSampler (exclude it)
     if ("compare" in value || ("addressModeU" in value && "magFilter" in value)) {
       return false;
     }
@@ -515,6 +530,7 @@ export function generateUniformsWGSL(simpleUniforms: SimpleUniforms): GeneratedB
     textures: new Map(),
     samplers: new Map(),
     storage: new Map(),
+    storageTextures: new Map(),
   };
   const scalarFields: { name: string; type: string }[] = [];
   const scalarUniformNames: string[] = [];
@@ -637,11 +653,15 @@ export function collectSimpleTextureBindings(simpleUniforms: SimpleUniforms): Ma
   const textures = new Map<string, TextureBinding>();
   const samplers = new Map<string, GPUSampler>();
   
-  // First pass: collect all samplers
+  // First pass: collect all samplers (both Sampler instances and raw GPUSamplers)
   for (const [key, value] of Object.entries(simpleUniforms)) {
     if (value && typeof value === "object" && !(value instanceof Float32Array)) {
+      // Check if it's a Sampler instance
+      if (value instanceof Sampler) {
+        samplers.set(key, value.gpuSampler);
+      }
       // Check if it's a GPUSampler (has compare method or sampler properties)
-      if ("compare" in value || ("addressModeU" in value && "magFilter" in value)) {
+      else if ("compare" in value || ("addressModeU" in value && "magFilter" in value)) {
         samplers.set(key, value as GPUSampler);
       }
     }
@@ -667,4 +687,130 @@ export function collectSimpleTextureBindings(simpleUniforms: SimpleUniforms): Ma
   }
   
   return textures;
+}
+
+/**
+ * Validate bindings and generate helpful error message if there's a mismatch
+ * @param shaderType - Type of shader ("compute", "fragment", "vertex")
+ * @param bindings - Parsed WGSL bindings
+ * @param providedUniforms - Uniforms provided by user
+ * @param providedStorage - Storage buffers provided by user
+ * @returns Error message if validation fails, null otherwise
+ */
+export function validateBindings(
+  shaderType: string,
+  bindings: WGSLBindings,
+  providedUniforms: Uniforms,
+  providedStorage: Map<string, any>
+): string | null {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  // Check for missing textures
+  for (const [name, binding] of bindings.textures) {
+    if (!providedUniforms[name]) {
+      errors.push(`  - binding ${binding}: texture_2d<f32> '${name}' ✗ MISSING`);
+    } else {
+      // Check if value is actually a texture
+      const value = providedUniforms[name].value;
+      const isTexture = (value && typeof value === "object" && 
+        (("createView" in value) || ("texture" in value)));
+      
+      if (!isTexture) {
+        errors.push(`  - binding ${binding}: texture_2d<f32> '${name}' ✗ NOT A TEXTURE`);
+      } else {
+        // Texture is present and correct
+        // Check for sampler too
+      }
+    }
+  }
+  
+  // Check for missing storage textures
+  for (const [name, binding] of bindings.storageTextures) {
+    if (!providedUniforms[name]) {
+      errors.push(`  - binding ${binding}: texture_storage_2d '${name}' ✗ MISSING`);
+    }
+  }
+  
+  // Check for missing storage buffers
+  for (const [name, binding] of bindings.storage) {
+    if (!providedStorage.has(name)) {
+      errors.push(`  - binding ${binding}: storage buffer '${name}' ✗ MISSING`);
+    }
+  }
+  
+  // Check for missing samplers (only if shader declares them)
+  for (const [name, binding] of bindings.samplers) {
+    if (!providedUniforms[name]) {
+      warnings.push(`  - binding ${binding}: sampler '${name}' ⚠ MISSING (may be auto-generated)`);
+    }
+  }
+  
+  if (errors.length === 0 && warnings.length === 0) {
+    return null;
+  }
+  
+  // Build error message
+  const lines: string[] = [];
+  lines.push(`\n${shaderType.charAt(0).toUpperCase() + shaderType.slice(1)} shader binding mismatch:\n`);
+  
+  if (errors.length > 0) {
+    lines.push("Shader declares at group(1):");
+    lines.push(...errors);
+    lines.push("");
+  }
+  
+  if (warnings.length > 0) {
+    lines.push("Warnings:");
+    lines.push(...warnings);
+    lines.push("");
+  }
+  
+  lines.push("Provided uniforms:");
+  const uniformKeys = Object.keys(providedUniforms);
+  if (uniformKeys.length > 0) {
+    for (const key of uniformKeys) {
+      const value = providedUniforms[key].value;
+      const type = typeof value === "number" ? "number" :
+                  Array.isArray(value) ? `vec${value.length}` :
+                  value && typeof value === "object" && "createView" in value ? "texture" :
+                  value && typeof value === "object" && "texture" in value ? "texture" :
+                  "unknown";
+      lines.push(`  - ${key}: ${type}`);
+    }
+  } else {
+    lines.push("  (none)");
+  }
+  lines.push("");
+  
+  if (providedStorage.size > 0) {
+    lines.push("Provided storage buffers:");
+    for (const [name] of providedStorage) {
+      lines.push(`  - ${name}`);
+    }
+    lines.push("");
+  }
+  
+  // Add fix suggestions
+  if (errors.length > 0) {
+    lines.push("Fix suggestions:");
+    for (const [name] of bindings.textures) {
+      if (!providedUniforms[name]) {
+        lines.push(`  Add texture to uniforms:`);
+        lines.push(`    ${name}: { value: yourRenderTarget }`);
+        lines.push(`  or`);
+        lines.push(`    ${name}: { value: yourRenderTarget.texture }`);
+        break; // Only show one example
+      }
+    }
+    for (const [name] of bindings.storage) {
+      if (!providedStorage.has(name)) {
+        lines.push(`  Bind storage buffer:`);
+        lines.push(`    compute.storage("${name}", yourStorageBuffer)`);
+        break; // Only show one example
+      }
+    }
+  }
+  
+  return errors.length > 0 ? lines.join("\n") : null;
 }

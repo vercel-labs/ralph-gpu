@@ -226,7 +226,18 @@ export class Material {
     // Add textures and samplers
     const textures = collectTextureBindings(this._uniforms);
     for (const [name, { texture, sampler }] of textures) {
-      // Find texture binding
+      // Check for storage texture first (for write operations)
+      const storageBinding = bindings.storageTextures.get(name);
+      if (storageBinding !== undefined) {
+        // Storage textures don't use samplers
+        bindGroupEntries.push({
+          binding: storageBinding,
+          resource: texture.createView(),
+        });
+        continue;
+      }
+      
+      // Find regular texture binding
       const textureBinding = bindings.textures.get(name);
       if (textureBinding !== undefined) {
         bindGroupEntries.push({
@@ -234,7 +245,7 @@ export class Material {
           resource: texture.createView(),
         });
 
-        // Add sampler binding if present
+        // Add sampler binding if present (optional for textureLoad)
         if (sampler) {
           // Try to find sampler binding by name convention
           let samplerBinding = bindings.samplers.get(`${name}Sampler`);
@@ -244,14 +255,19 @@ export class Material {
           if (samplerBinding === undefined && name.endsWith("Tex")) {
             samplerBinding = bindings.samplers.get(`${name.slice(0, -3)}Sampler`);
           }
+          if (samplerBinding === undefined && name.endsWith("Texture")) {
+            samplerBinding = bindings.samplers.get(`${name.slice(0, -7)}Sampler`);
+          }
           
           if (samplerBinding !== undefined) {
             bindGroupEntries.push({
               binding: samplerBinding,
               resource: sampler,
             });
-          } else {
-            console.warn(`Could not find sampler binding for texture '${name}'. Expected '${name}Sampler', '${name}_sampler', or similar.`);
+          }
+          // Only warn if shader actually declares the sampler binding
+          else if (bindings.samplers.size > 0) {
+            console.warn(`[ralph-gpu] Sampler provided for texture '${name}' but could not find matching sampler binding in shader.`);
           }
         }
       }
