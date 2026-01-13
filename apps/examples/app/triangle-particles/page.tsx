@@ -36,6 +36,7 @@ const SDF_UPDATE_INTERVAL = 1.; // Update SDF texture once per second
 // Rendering
 const POINT_SIZE = 0.3;
 const FADE_DURATION = MAX_LIFETIME * .4; // How long the fade-out takes
+const PARTICLE_OFFSET_Y = -0.95; // Y offset for particle rendering
 
 // Postprocessing blur
 const BLUR_MAX_SAMPLES = 16;
@@ -346,6 +347,7 @@ export default function Page() {
           velocityDamping: f32,
           velocityScale: f32,
           maxLifetime: f32,
+          offsetY: f32,
         }
         @group(1) @binding(0) var<uniform> u: ComputeUniforms;
         @group(1) @binding(1) var sdfTexture: texture_2d<f32>;
@@ -378,7 +380,9 @@ export default function Page() {
 
         // Sample SDF from pre-rendered texture
         fn sampleSdf(worldPos: vec2f) -> f32 {
-          let uv = worldToUV(worldPos);
+          // Adjust for SDF texture coordinate space (subtract same offset used when rendering SDF)
+          let adjustedPos = worldPos + vec2f(0.0, u.offsetY);
+          let uv = worldToUV(adjustedPos);
           // Read SDF directly from r16float texture (no unpacking needed!)
           let sdf = textureSampleLevel(sdfTexture, sdfSampler, uv, 0.0).r;
           return sdf;
@@ -450,6 +454,7 @@ export default function Page() {
         velocityDamping: { value: VELOCITY_DAMPING },
         velocityScale: { value: VELOCITY_SCALE },
         maxLifetime: { value: MAX_LIFETIME },
+        offsetY: { value: PARTICLE_OFFSET_Y },
       };
 
       const computeUniformsAtoB = {
@@ -586,7 +591,7 @@ export default function Page() {
       `;
 
       const renderUniforms = {
-        offsetY: { value: -0.95 },
+        offsetY: { value: PARTICLE_OFFSET_Y },
         pointSize: { value: POINT_SIZE },
         fadeStart: { value: MAX_LIFETIME - FADE_DURATION },
         fadeEnd: { value: MAX_LIFETIME },
@@ -622,6 +627,7 @@ export default function Page() {
           time: f32,
           triangleRadius: f32,
           focused: f32,
+          offsetY: f32,
         }
         @group(1) @binding(0) var<uniform> u: SdfUniforms;
 
@@ -633,7 +639,8 @@ export default function Page() {
           let uv = pos.xy / globals.resolution;
           // Map pixel coordinate to normalized device coordinates (NDC): [-1,1] with y up
           let centered = uv * vec2f(2.0, -2.0) + vec2f(-1.0, 1.0);
-          let worldPos = centered * vec2f(globals.aspect * 5.0, 5.0);
+          // Apply offsetY to match particle rendering coordinate space
+          let worldPos = centered * vec2f(globals.aspect * 5.0, 5.0) - vec2f(0.0, u.offsetY);
 
           // Sample the animated SDF
           let sdf = animatedSdf(worldPos, u.triangleRadius, u.time);
@@ -647,6 +654,7 @@ export default function Page() {
         time: { value: 0.0 },
         triangleRadius: { value: TRIANGLE_RADIUS },
         focused: { value: 0.0 },
+        offsetY: { value: PARTICLE_OFFSET_Y },
       };
 
       sdfPass = ctx.pass(sdfShaderCode, {
@@ -939,7 +947,6 @@ export default function Page() {
           sdfUniforms.focused.value = focusedRef.current;
           
           ctx.setTarget(sdfTarget);
-          ctx.clear(sdfTarget, [0, 0, 0, 1]);
           sdfPass.draw();
           
           lastSdfUpdateTime = totalTime;
@@ -975,28 +982,32 @@ export default function Page() {
         if (debugSdfRef.current) {
           // SDF Debug mode: render the SDF visualization directly to canvas
           ctx.setTarget(null);
-          ctx.clear(null, [0, 0, 0, 1]);
           debugPass.draw();
         } else if (debugSdfTextureRef.current) {
-          // SDF Texture Debug mode: visualize the precomputed SDF texture
+          // SDF Texture Debug mode: visualize the precomputed SDF texture with particles on top
           ctx.setTarget(null);
-          ctx.clear(null, [0, 0, 0, 1]);
+          ctx.clear()
+          ctx.autoClear = false;
+          
+          // Step 1: Draw SDF debug visualization
           sdfTextureDebugPass.draw();
+          
+          // Step 2: Draw particles on top (without clearing!)
+          particleMaterial.draw();
+
+          ctx.autoClear = true;
         } else if (debugBlurRef.current) {
           // Blur Debug mode: visualize blur size calculation
           ctx.setTarget(null);
-          ctx.clear(null, [0, 0, 0, 1]);
           blurDebugPass.draw();
         } else {
           // Normal mode: render particles to target, then apply blur
           // Step 1: Render particles to render target
           ctx.setTarget(renderTarget);
-          ctx.clear(renderTarget, [0, 0, 0, 1]);
           particleMaterial.draw();
 
           // Step 2: Apply blur postprocessing to canvas
           ctx.setTarget(null);
-          ctx.clear(null, [0, 0, 0, 1]);
           blurPass.draw();
         }
 
