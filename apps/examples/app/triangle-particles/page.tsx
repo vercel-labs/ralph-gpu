@@ -1039,9 +1039,6 @@ export default function Page() {
       disposed = true;
       cancelAnimationFrame(animationId);
       if (resizeObserver) {
-        if (canvasRef.current) {
-          resizeObserver.unobserve(canvasRef.current);
-        }
         resizeObserver.disconnect();
       }
       ctx?.dispose();
