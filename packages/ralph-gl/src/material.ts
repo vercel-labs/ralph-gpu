@@ -53,7 +53,15 @@ export class Material<U extends Uniforms = Uniforms> {
   constructor(ctx: GLContext, vertexGLSL: string, fragmentGLSL: string, options?: MaterialOptions<U>) {
     this._ctx = ctx
     this._gl = ctx.gl
-    this._blend = options?.blend
+    
+    // Handle transparent sugar syntax (Three.js style)
+    if (options?.blend !== undefined) {
+      this._blend = options.blend
+    } else if (options?.transparent === true) {
+      this._blend = 'alpha'
+    } else {
+      this._blend = options?.blend
+    }
     
     // Compile shaders and create program
     this._program = this._createProgram(vertexGLSL, fragmentGLSL)

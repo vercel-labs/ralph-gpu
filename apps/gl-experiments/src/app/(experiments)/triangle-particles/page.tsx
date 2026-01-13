@@ -5,7 +5,7 @@ import { GUI } from 'lil-gui'
 import { gl, GLContext } from 'ralph-gl'
 
 // Particle system constants
-const NUM_PARTICLES = 12000
+const NUM_PARTICLES = 12100
 const MAX_LIFETIME = 20
 const TRIANGLE_RADIUS = 3
 const VELOCITY_SCALE = 0.04
@@ -14,16 +14,17 @@ const INITIAL_VELOCITY_JITTER = 0.4
 const SDF_EPSILON = 0.0001
 const FORCE_STRENGTH = 0.13
 const VELOCITY_DAMPING = 0.99
-const POINT_SIZE = 0.3
+const POINT_SIZE = 0.5
 const FADE_DURATION = MAX_LIFETIME * 0.4
 
 // Blur postprocessing
-const BLUR_MAX_SAMPLES = 32
+const BLUR_MAX_SAMPLES = 8
 const BLUR_MAX_SIZE = 0.02
 
 // Calculate texture size to fit all particles
 // Each pixel stores one particle's data
 const TEXTURE_SIZE = Math.ceil(Math.sqrt(NUM_PARTICLES))
+
 
 // SDF functions (ported from WGSL to GLSL)
 const SDF_FUNCTIONS = `
@@ -340,7 +341,6 @@ uniform float u_fadeStart;
 uniform float u_fadeEnd;
 uniform float u_triangleRadius;
 
-out vec2 v_uv;
 out float v_life;
 out float v_alpha;
 out float v_sdfDist;
@@ -380,29 +380,18 @@ void main() {
   // Calculate SDF distance for bump effect
   float sdf = triangleSdf(pos, u_triangleRadius);
   
-  // Quad vertices
-  vec2 corners[6] = vec2[6](
-    vec2(-1.0, -1.0), vec2(1.0, -1.0), vec2(-1.0, 1.0),
-    vec2(-1.0, 1.0), vec2(1.0, -1.0), vec2(1.0, 1.0)
-  );
-  
-  int vertexId = gl_VertexID % 6;
-  vec2 corner = corners[vertexId];
-  
   // Calculate aspect ratio
   float aspect = u_resolution.x / u_resolution.y;
   
-  // Calculate particle size in clip space
-  float particleSize = u_pointSize * 0.01;
-  vec2 offset = corner * vec2(particleSize / aspect, particleSize);
-  
   // Transform to clip space
-  vec2 clipPos = pos / vec2(aspect * 5.0, 5.0) + offset;
+  vec2 clipPos = pos / vec2(aspect * 5.0, 5.0);
   
   gl_Position = vec4(clipPos, 0.0, 1.0);
   
+  // Set point size (in pixels)
+  gl_PointSize = u_pointSize * 10.0;
+  
   // Pass data to fragment shader
-  v_uv = corner * 0.5 + 0.5;
   v_life = life;
   v_sdfDist = abs(sdf);
   
@@ -414,7 +403,6 @@ void main() {
         const fragmentShader = `#version 300 es
 precision highp float;
 
-in vec2 v_uv;
 in float v_life;
 in float v_alpha;
 in float v_sdfDist;
@@ -425,10 +413,11 @@ uniform float u_bumpIntensity;
 uniform float u_bumpProgress;
 
 void main() {
-  // Create circular particles
-  vec2 center = vec2(0.5);
-  float dist = length(v_uv - center);
+  // Use gl_PointCoord for circular particles (0,0 to 1,1)
+  vec2 coord = gl_PointCoord - 0.5;
+  float dist = length(coord);
   
+  // Discard pixels outside circle
   if (dist > 0.5) {
     discard;
   }
@@ -451,9 +440,10 @@ void main() {
 `
 
         const material = ctx.material(vertexShader, fragmentShader, {
-          vertexCount: 6,
+          vertexCount: 1,  // 1 vertex per particle (point primitive)
           instances: NUM_PARTICLES,
-          blend: 'additive',
+          topology: 'points',  // Use native point primitives
+          transparent: true,
           uniforms: {
             u_posVel: { value: posVelPingPong.read.texture },
             u_lifetime: { value: lifetimePingPong.read.texture },

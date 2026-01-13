@@ -59,7 +59,10 @@ export interface PassOptions<U extends Uniforms = Uniforms> {
   /** Initial uniform values */
   uniforms?: U
   
-  /** Blend mode preset or custom config */
+  /** Enable alpha transparency (sugar for blend: 'alpha') */
+  transparent?: boolean
+  
+  /** Blend mode preset or custom config (overrides transparent) */
   blend?: BlendMode | BlendConfig
   
   /** Output texture format (default: 'rgba8') */
@@ -82,7 +85,10 @@ export interface MaterialOptions<U extends Uniforms = Uniforms> {
   /** Primitive topology (default: 'triangles') */
   topology?: Topology
   
-  /** Blend mode preset or custom config */
+  /** Enable alpha transparency (sugar for blend: 'alpha') */
+  transparent?: boolean
+  
+  /** Blend mode preset or custom config (overrides transparent) */
   blend?: BlendMode | BlendConfig
 }
 

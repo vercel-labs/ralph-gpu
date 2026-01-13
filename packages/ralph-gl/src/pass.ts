@@ -62,7 +62,15 @@ export class Pass<U extends Uniforms = Uniforms> {
     options: PassOptions<U> = {}
   ) {
     this.ctx = ctx;
-    this.blend = options.blend;
+    
+    // Handle transparent sugar syntax (Three.js style)
+    if (options.blend !== undefined) {
+      this.blend = options.blend;
+    } else if (options.transparent === true) {
+      this.blend = 'alpha';
+    } else {
+      this.blend = options.blend;
+    }
     
     if (!ctx.gl) {
       throw new Error('GLContext not initialized. Call init() first.');
