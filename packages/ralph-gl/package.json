@@ -16,7 +16,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "rm -rf dist tsconfig.tsbuildinfo && webpack --mode production && tsc --emitDeclarationOnly && node scripts/bundle-size.js",
+    "build-gl": "rm -rf dist tsconfig.tsbuildinfo && webpack --mode production && tsc --emitDeclarationOnly && node scripts/bundle-size.js",
     "build:size": "rm -rf dist tsconfig.tsbuildinfo && webpack --mode production && tsc --emitDeclarationOnly && node scripts/bundle-size.js --update-readme",
     "size": "node scripts/bundle-size.js",
     "size:update": "node scripts/bundle-size.js --update-readme",
