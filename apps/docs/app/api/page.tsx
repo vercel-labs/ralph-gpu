@@ -50,7 +50,10 @@ ctx.mrt(outputs, width, height)          // → MultiRenderTarget
 ctx.storage(byteSize)                    // → StorageBuffer
 
 // Create particle system (instanced quads)
-ctx.particles(count, options)            // → Particles`;
+ctx.particles(count, options)            // → Particles
+
+// Create custom texture sampler
+ctx.createSampler(descriptor?)           // → Sampler`;
 
 const contextStateCode = `// Render target management
 ctx.setTarget(target)      // Set render target (pass null for screen)
@@ -160,15 +163,22 @@ sim.uniforms
 sim.dispose()`;
 
 const targetOptionsCode = `interface TargetOptions {
-  format?: "rgba8unorm" | "rgba16float" | "r16float" | "rg16float";
+  format?: "rgba8unorm" | "rgba16float" | "r16float" | "rg16float" | "r32float";
   filter?: "linear" | "nearest";
   wrap?: "clamp" | "repeat" | "mirror";
+  usage?: "render" | "storage" | "both";  // NEW: Control texture usage
 }
 
 const buffer = ctx.target(512, 512, {
   format: "rgba16float",  // HDR
   filter: "linear",       // Smooth sampling
   wrap: "clamp",          // Clamp to edge
+});
+
+// Storage texture for compute shader writes
+const storageTarget = ctx.target(512, 512, {
+  format: "rgba16float",
+  usage: "storage",       // Enable textureStore() in compute shaders
 });`;
 
 const targetPropertiesCode = `target.texture    // GPUTexture - use in uniforms
@@ -177,6 +187,7 @@ target.view       // GPUTextureView
 target.width      // Width in pixels
 target.height     // Height in pixels
 target.format     // Texture format string
+target.usage      // Usage mode: "render" | "storage" | "both"
 
 // Methods
 target.resize(width, height)           // Resize the target
@@ -262,6 +273,116 @@ particles.draw();
 // Access underlying resources
 particles.storageBuffer     // → StorageBuffer
 particles.underlyingMaterial // → Material`;
+
+const samplerCode = `// Create custom samplers for explicit texture filtering control
+const linearClamp = ctx.createSampler({
+  magFilter: "linear",
+  minFilter: "linear",
+  addressModeU: "clamp-to-edge",
+  addressModeV: "clamp-to-edge",
+});
+
+const nearestRepeat = ctx.createSampler({
+  magFilter: "nearest",
+  minFilter: "nearest",
+  addressModeU: "repeat",
+  addressModeV: "repeat",
+});
+
+// Reuse across multiple textures and shaders
+const uniforms = {
+  texture1: { value: tex1.texture },
+  sampler1: { value: linearClamp },
+  texture2: { value: tex2.texture },
+  sampler2: { value: nearestRepeat },
+};`;
+
+const samplerOptionsCode = `interface SamplerDescriptor {
+  magFilter?: "linear" | "nearest";           // Default: "linear"
+  minFilter?: "linear" | "nearest";           // Default: "linear"
+  mipmapFilter?: "linear" | "nearest";        // Default: "linear"
+  addressModeU?: "clamp-to-edge" | "repeat" | "mirror-repeat";  // Default: "clamp-to-edge"
+  addressModeV?: "clamp-to-edge" | "repeat" | "mirror-repeat";  // Default: "clamp-to-edge"
+  addressModeW?: "clamp-to-edge" | "repeat" | "mirror-repeat";  // Default: "clamp-to-edge"
+  lodMinClamp?: number;                       // Default: 0
+  lodMaxClamp?: number;                       // Default: 32
+  compare?: "never" | "less" | "equal" | "less-equal" | "greater" | "not-equal" | "greater-equal" | "always";
+  maxAnisotropy?: number;                     // Default: 1
+}`;
+
+const samplerPropertiesCode = `sampler.gpuSampler    // GPUSampler - use in uniforms
+sampler.descriptor    // SamplerDescriptor (readonly)
+
+// Cleanup
+sampler.dispose()     // No-op currently (kept for API consistency)`;
+
+const textureBindingsCode = `// Pattern 1: RenderTarget (convenience - auto-extracts texture + sampler)
+const uniforms1 = {
+  myTexture: { value: renderTarget },  // Easiest
+};
+
+// Pattern 2: Separate texture + custom sampler (explicit control)
+const customSampler = ctx.createSampler({ magFilter: "nearest" });
+const uniforms2 = {
+  myTexture: { value: renderTarget.texture },
+  mySampler: { value: customSampler },
+};
+
+// Pattern 3: Texture without sampler (for textureLoad in WGSL)
+const uniforms3 = {
+  dataTexture: { value: renderTarget.texture },  // No sampler needed
+};
+
+// In WGSL:
+@group(1) @binding(0) var myTexture: texture_2d<f32>;
+@group(1) @binding(1) var mySampler: sampler;  // Auto-matched by naming convention`;
+
+const computeTexturesCode = `// Compute shader with texture sampling
+const compute = ctx.compute(\`
+  @group(1) @binding(0) var inputTex: texture_2d<f32>;
+  @group(1) @binding(1) var inputSampler: sampler;
+  @group(1) @binding(2) var<storage, read_write> output: array<f32>;
+  
+  @compute @workgroup_size(64)
+  fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let uv = vec2f(f32(id.x) / 512.0, f32(id.y) / 512.0);
+    let color = textureSampleLevel(inputTex, inputSampler, uv, 0.0);
+    output[id.x] = color.r;
+  }
+\`, {
+  uniforms: {
+    inputTex: { value: renderTarget },
+  },
+});
+
+compute.storage("output", dataBuffer);
+compute.dispatch(512);`;
+
+const storageTexturesCode = `// Storage texture for compute shader writes
+const outputTarget = ctx.target(512, 512, {
+  format: "rgba16float",
+  usage: "storage",  // Enable textureStore()
+});
+
+const compute = ctx.compute(\`
+  @group(1) @binding(0) var input: texture_2d<f32>;
+  @group(1) @binding(1) var inputSampler: sampler;
+  @group(1) @binding(2) var output: texture_storage_2d<rgba16float, write>;
+  
+  @compute @workgroup_size(8, 8)
+  fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let uv = vec2f(id.xy) / 512.0;
+    let color = textureSampleLevel(input, inputSampler, uv, 0.0);
+    textureStore(output, id.xy, color * 2.0);  // Write to storage texture
+  }
+\`, {
+  uniforms: {
+    input: { value: inputTarget },
+    output: { value: outputTarget },
+  },
+});
+
+compute.dispatch(512 / 8, 512 / 8);`;
 
 const blendModesCode = `// Preset blend modes
 ctx.pass(shader, { blend: "alpha" })      // Standard transparency
@@ -374,9 +495,11 @@ export default function ApiPage() {
           <li><a href="#pingpong" className="text-primary-400 hover:text-primary-300">PingPongTarget</a></li>
           <li><a href="#storage" className="text-primary-400 hover:text-primary-300">StorageBuffer</a></li>
           <li><a href="#particles" className="text-primary-400 hover:text-primary-300">Particles</a></li>
+          <li><a href="#sampler" className="text-primary-400 hover:text-primary-300">Sampler</a></li>
           <li><a href="#blend" className="text-primary-400 hover:text-primary-300">Blend Modes</a></li>
           <li><a href="#globals" className="text-primary-400 hover:text-primary-300">Auto-Injected Globals</a></li>
           <li><a href="#uniforms" className="text-primary-400 hover:text-primary-300">Uniform Types</a></li>
+          <li><a href="#textures" className="text-primary-400 hover:text-primary-300">Texture Bindings</a></li>
           <li><a href="#errors" className="text-primary-400 hover:text-primary-300">Errors</a></li>
         </ul>
       </nav>
@@ -471,12 +594,17 @@ export default function ApiPage() {
           ComputeShader
         </h2>
         <p className="text-gray-300 mb-4">
-          A compute shader for GPU-parallel computation. Doesn&apos;t render anything — just processes data.
+          A compute shader for GPU-parallel computation. Supports storage buffers, texture sampling, and storage texture writes.
         </p>
         <CodeBlock code={computeCode} language="typescript" />
 
-        <div className="mt-4 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-200">
-          <strong>Workgroups:</strong> The dispatch count should be <code>totalItems / workgroupSize</code>. If your shader has <code>@workgroup_size(64)</code> and you have 1000 particles, dispatch <code>Math.ceil(1000/64)</code> = 16 workgroups.
+        <div className="mt-4 space-y-4">
+          <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-200">
+            <strong>Workgroups:</strong> The dispatch count should be <code>totalItems / workgroupSize</code>. If your shader has <code>@workgroup_size(64)</code> and you have 1000 particles, dispatch <code>Math.ceil(1000/64)</code> = 16 workgroups.
+          </div>
+          <div className="p-4 rounded-lg bg-primary-500/10 border border-primary-500/20 text-primary-200">
+            <strong>New:</strong> Compute shaders now support texture sampling and storage texture writes. See <a href="#textures" className="underline hover:text-primary-100">Texture Bindings</a> for details.
+          </div>
         </div>
       </section>
 
@@ -504,9 +632,18 @@ export default function ApiPage() {
               <li><code>rgba16float</code> — HDR, negative values</li>
               <li><code>r16float</code> — Single channel float</li>
               <li><code>rg16float</code> — Two channel float</li>
+              <li><code>r32float</code> — High precision single channel</li>
             </ul>
           </div>
           <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
+            <h4 className="font-semibold text-gray-100 mb-2">Usage Modes</h4>
+            <ul className="text-gray-400 text-sm space-y-1">
+              <li><code>render</code> — Render to & sample (default)</li>
+              <li><code>storage</code> — Compute shader writes</li>
+              <li><code>both</code> — All operations</li>
+            </ul>
+          </div>
+          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800 sm:col-span-2">
             <h4 className="font-semibold text-gray-100 mb-2">Read Pixels</h4>
             <p className="text-gray-400 text-sm">
               Returns <code>Uint8Array</code> for 8-bit formats, <code>Float32Array</code> for float formats. This is a GPU→CPU transfer and may be slow.
@@ -587,6 +724,38 @@ export default function ApiPage() {
           <div className="p-4 rounded-lg bg-primary-500/10 border border-primary-500/20 text-primary-200">
             <strong>Why not point-list?</strong> WebGPU&apos;s <code>point-list</code> topology renders points as exactly 1 pixel with no size control. 
             The Particles helper uses instanced quads (2 triangles per particle) to support variable sizes.
+          </div>
+        </div>
+      </section>
+
+      {/* Sampler */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center gap-3" id="sampler">
+          <span className="px-2 py-1 bg-primary-500/20 rounded text-primary-400 font-mono text-sm">class</span>
+          Sampler
+        </h2>
+        <p className="text-gray-300 mb-4">
+          A texture sampler with explicit control over filtering and wrapping modes. Samplers can be reused across multiple textures and shaders for consistency and performance.
+        </p>
+        <CodeBlock code={samplerCode} language="typescript" />
+
+        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Sampler Options</h3>
+        <CodeBlock code={samplerOptionsCode} language="typescript" />
+
+        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Properties & Methods</h3>
+        <CodeBlock code={samplerPropertiesCode} language="typescript" />
+
+        <div className="mt-4 space-y-4">
+          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
+            <h4 className="font-semibold text-gray-100 mb-2">Common Patterns</h4>
+            <ul className="text-gray-400 text-sm space-y-2">
+              <li>• <strong>Linear Clamp</strong> — Blur, postprocessing, smooth sampling at edges</li>
+              <li>• <strong>Nearest Repeat</strong> — Pixel art, tiling textures, retro effects</li>
+              <li>• <strong>Mirror Repeat</strong> — Seamless tiling without visible seams</li>
+            </ul>
+          </div>
+          <div className="p-4 rounded-lg bg-primary-500/10 border border-primary-500/20 text-primary-200">
+            <strong>Performance tip:</strong> Create samplers once during initialization and reuse them across multiple textures and shaders instead of recreating them every frame.
           </div>
         </div>
       </section>
@@ -672,6 +841,59 @@ export default function ApiPage() {
 
         <div className="mt-4 p-4 rounded-lg bg-primary-500/10 border border-primary-500/20 text-primary-200">
           <strong>Reactive updates:</strong> When you change a uniform&apos;s <code>.value</code>, the change is automatically uploaded to the GPU before the next draw call. No manual update needed.
+        </div>
+      </section>
+
+      {/* Texture Bindings */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-bold text-gray-100 mb-4" id="textures">
+          Texture Bindings
+        </h2>
+        <p className="text-gray-300 mb-4">
+          ralph-gpu supports flexible ways to pass textures and samplers to shaders.
+        </p>
+
+        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Binding Patterns</h3>
+        <CodeBlock code={textureBindingsCode} language="typescript" />
+
+        <div className="mt-4 space-y-4">
+          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
+            <h4 className="font-semibold text-gray-100 mb-2">Sampler Naming Convention</h4>
+            <p className="text-gray-400 text-sm mb-2">
+              The system automatically matches samplers to textures:
+            </p>
+            <ul className="text-gray-400 text-sm space-y-1">
+              <li>• <code>myTexture</code> → looks for <code>myTextureSampler</code></li>
+              <li>• <code>inputTex</code> → looks for <code>inputSampler</code> or <code>inputTexSampler</code></li>
+              <li>• <code>someTexture</code> → looks for <code>someSampler</code> or <code>someTextureSampler</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <h3 className="text-lg font-semibold text-gray-100 mt-8 mb-3">Compute Shaders with Textures</h3>
+        <p className="text-gray-300 mb-4">
+          Compute shaders can now sample from textures for advanced GPU-accelerated effects.
+        </p>
+        <CodeBlock code={computeTexturesCode} language="typescript" />
+
+        <h3 className="text-lg font-semibold text-gray-100 mt-8 mb-3">Storage Textures (Write Operations)</h3>
+        <p className="text-gray-300 mb-4">
+          Use storage textures to write directly to textures from compute shaders.
+        </p>
+        <CodeBlock code={storageTexturesCode} language="typescript" />
+
+        <div className="mt-4 space-y-4">
+          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
+            <h4 className="font-semibold text-gray-100 mb-2">Usage Modes</h4>
+            <ul className="text-gray-400 text-sm space-y-1">
+              <li>• <code>"render"</code> (default) — For rendering and sampling</li>
+              <li>• <code>"storage"</code> — For compute shader write operations</li>
+              <li>• <code>"both"</code> — For both rendering and storage operations</li>
+            </ul>
+          </div>
+          <div className="p-4 rounded-lg bg-primary-500/10 border border-primary-500/20 text-primary-200">
+            <strong>Note:</strong> Storage textures don&apos;t require samplers — use <code>textureStore()</code> directly with pixel coordinates.
+          </div>
         </div>
       </section>
 

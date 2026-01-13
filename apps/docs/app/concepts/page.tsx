@@ -169,7 +169,7 @@ export default function ConceptsPage() {
         </p>
         
         <div className="p-6 rounded-lg bg-neutral-900 border border-neutral-800 mb-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-center">
             <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-800">
               <div className="text-blue-400 font-mono text-lg mb-2">ctx</div>
               <div className="text-neutral-400 text-sm">GPU Context</div>
@@ -193,6 +193,14 @@ export default function ConceptsPage() {
             <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-800">
               <div className="text-blue-400 font-mono text-lg mb-2">compute</div>
               <div className="text-neutral-400 text-sm">GPU Compute</div>
+            </div>
+            <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-800">
+              <div className="text-blue-400 font-mono text-lg mb-2">storage</div>
+              <div className="text-neutral-400 text-sm">Storage Buffer</div>
+            </div>
+            <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-800">
+              <div className="text-blue-400 font-mono text-lg mb-2">sampler</div>
+              <div className="text-neutral-400 text-sm">Texture Sampler</div>
             </div>
           </div>
         </div>

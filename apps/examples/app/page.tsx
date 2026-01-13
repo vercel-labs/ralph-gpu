@@ -84,6 +84,21 @@ export default function Home() {
           <h2>Alien Planet →</h2>
           <p>Stylized alien landscape with atmosphere</p>
         </Link>
+
+        <Link href="/triangle-particles" className={styles.card}>
+          <h2>Triangle Particles →</h2>
+          <p>SDF-driven particle system with postprocessing blur</p>
+        </Link>
+
+        <Link href="/texture-sampling" className={styles.card}>
+          <h2>Texture Sampling →</h2>
+          <p>Custom samplers with different filter and wrap modes</p>
+        </Link>
+
+        <Link href="/storage-texture" className={styles.card}>
+          <h2>Storage Texture →</h2>
+          <p>Compute shader writes using textureStore()</p>
+        </Link>
       </div>
     </main>
   );

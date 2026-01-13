@@ -130,7 +130,18 @@ ${this.wgsl}
       // Add textures and samplers
       const textures = collectTextureBindings(this._uniforms);
       for (const [name, { texture, sampler }] of textures) {
-        // Find texture binding
+        // Check for storage texture first (for write operations)
+        const storageBinding = bindings.storageTextures.get(name);
+        if (storageBinding !== undefined) {
+          // Storage textures don't use samplers
+          bindGroupEntries.push({
+            binding: storageBinding,
+            resource: texture.createView(),
+          });
+          continue; // Successfully bound as storage texture
+        }
+        
+        // Find regular texture binding
         const textureBinding = bindings.textures.get(name);
         if (textureBinding !== undefined) {
           bindGroupEntries.push({
@@ -165,6 +176,7 @@ ${this.wgsl}
             }
           }
         } else {
+          // Only warn if not bound as storage texture
           console.warn(`[ralph-gpu] Texture '${name}' provided in uniforms but not found in shader bindings.`);
         }
       }
