@@ -168,15 +168,15 @@ async function main() {
   const startTime = Date.now();
 
   const agent = new LoopAgent({
-    model: "google/gemini-3-flash",
+    model: "google/gemini-3-flash", // use this one or "anthropic/claude-sonnet-4.5" if gemini didnt solve the isuse the first time
     trace: true,  // Always enable traces
     task: TASK,
     rules: [brainRule, trackProgressRule, minimalChangesRule],
     debug: DEBUG,
     limits: {
-      maxIterations: 60,
+      maxIterations: 30,
       maxCost: 15.0,
-      timeout: "45m",
+      timeout: "60m",
     },
     onUpdate: (status) => {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -264,7 +264,7 @@ Include relevant rules in your LoopAgent configuration:
 1. **Setup environment**:
 
    ```bash
-   cd ralphs/29-feature-name
+   cd ralphs/[number]-feature-name
    cp ../28-previous-task/.env .env
    ```
 
