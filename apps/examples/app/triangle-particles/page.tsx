@@ -40,7 +40,11 @@ const PARTICLE_OFFSET_Y = -0.95; // Y offset for particle rendering
 
 // Postprocessing blur
 const BLUR_MAX_SAMPLES = 16;
-const BLUR_MAX_SIZE = 0.02; // Maximum blur radius in NDC
+const BLUR_MAX_SIZE = 0.01; // Maximum blur radius in NDC
+
+// Debug options
+const DEBUG_SDF_TEXTURE_DEFAULT = false; // Show SDF texture visualization by default
+const DEBUG_BLUR_DEFAULT = false; // Show blur size visualization by default
 
 // ============================================================================
 // Shared WGSL Code - SDF and Blur Functions
@@ -108,7 +112,7 @@ const BLUR_CALCULATION_WGSL = /* wgsl */ `
   // One side has no blur, other side has radial blur
   fn calculateBlurSize(uv: vec2f, maxBlurSize: f32, angleRadians: f32) -> f32 {
     // Calculate distance from center (circular component)
-    let centerDist = length(uv - 0.5) * sqrt(2.0);
+    let centerDist = length(uv - 0.5) * sqrt(2.0) * 2.;
     
     // Convert UV to centered coordinates
     let centered = uv - 0.5;
@@ -167,19 +171,19 @@ export default function Page() {
   const bumpIntensityRef = useRef(0);
   const bumpProgressRef = useRef(0);
   const debugSdfRef = useRef(false);
-  const debugSdfTextureRef = useRef(true);
-  const debugBlurRef = useRef(false);
+  const debugSdfTextureRef = useRef(DEBUG_SDF_TEXTURE_DEFAULT);
+  const debugBlurRef = useRef(DEBUG_BLUR_DEFAULT);
   const blurAngleRef = useRef(26);
 
   // Leva controls
   useControls({
     debugSdfTexture: {
-      value: true,
+      value: DEBUG_SDF_TEXTURE_DEFAULT,
       label: "Debug SDF Texture",
       onChange: (v) => { debugSdfTextureRef.current = v; },
     },
     debugBlur: {
-      value: false,
+      value: DEBUG_BLUR_DEFAULT,
       label: "Debug Blur Size",
       onChange: (v) => { debugBlurRef.current = v; },
     },
@@ -499,6 +503,8 @@ export default function Page() {
           triangleRadius: f32,
           bumpIntensity: f32,
           bumpProgress: f32,
+          maxBlurSize: f32,
+          blurAngle: f32,
         }
         @group(1) @binding(0) var<uniform> u: RenderUniforms;
         @group(1) @binding(1) var<storage, read> positions: array<vec2f>;
@@ -510,6 +516,8 @@ export default function Page() {
           @location(1) @interpolate(flat) life: f32,
           @location(2) @interpolate(flat) sdfDist: f32,
         }
+
+        ${BLUR_CALCULATION_WGSL}
 
         // Triangle SDF
         fn triangleSdf(p: vec2f, r: f32) -> f32 {
@@ -550,17 +558,27 @@ export default function Page() {
           // Get vertex position for this quad corner
           let quadPos = quad[vid];
           
-          // Calculate particle size in clip space
+          // Calculate blur size at this particle's screen position
           let aspect = globals.aspect;
-          let particleSize = u.pointSize * 0.01; // Scale down to clip space
+          let worldPos = pos2d + vec2f(0.0, u.offsetY);
+          let clipPos = worldPos / vec2f(aspect * 5.0, 5.0);
+          let screenUV = clipPos * vec2f(0.5, -0.5) + 0.5;
+          
+          // Get normalized blur amount (0 to 1)
+          let blurFactor = getBlurNormalized(screenUV, u.maxBlurSize, u.blurAngle);
+          
+          // Scale particle from 1x to 2x based on blur
+          let sizeMultiplier = 1.0 + blurFactor;
+          
+          // Calculate particle size in clip space with blur scaling
+          let particleSize = u.pointSize * 0.01 * sizeMultiplier;
           let localPos = quadPos * vec2f(particleSize / aspect, particleSize);
 
-          // Apply offset and convert to clip space
-          let worldPos = pos2d + vec2f(0.0, u.offsetY);
-          let clipPos = worldPos / vec2f(aspect * 5.0, 5.0) + localPos;
+          // Final clip position
+          let finalClipPos = clipPos + localPos;
 
           var out: VertexOutput;
-          out.pos = vec4f(clipPos, 0.0, 1.0);
+          out.pos = vec4f(finalClipPos, 0.0, 1.0);
           out.uv = quadPos * 0.5 + 0.5; // Convert -1..1 to 0..1
           out.life = life;
           out.sdfDist = abs(sdf);
@@ -600,6 +618,8 @@ export default function Page() {
         triangleRadius: { value: TRIANGLE_RADIUS },
         bumpIntensity: { value: 0.0 },
         bumpProgress: { value: 0.0 },
+        maxBlurSize: { value: BLUR_MAX_SIZE },
+        blurAngle: { value: 0 }, // Will be updated in render loop
       };
 
       particleMaterial = ctx.material(particleShaderCode, {
@@ -879,17 +899,11 @@ export default function Page() {
           // Color scheme: Blue (no blur) → Red (max blur)
           var color = vec3f(normalized, 0.0, 1.0 - normalized);
           
-          // Add grid lines to show blur size contours
-          let gridFreq = 10.0;
-          let grid = fract(normalized * gridFreq);
-          let gridLine = smoothstep(0.05, 0.1, grid) * smoothstep(0.95, 0.9, grid);
-          color = mix(vec3f(1.0), color, gridLine);
-          
-          // Add a scale bar at the bottom
-          if (uv.y > 0.9) {
-            let barPos = uv.x;
-            color = vec3f(barPos, 0.0, 1.0 - barPos);
-          }
+          // Add white lines at 0 and 1 boundaries
+          let edgeThickness = 0.01;
+          let edge0 = smoothstep(edgeThickness, 0.0, normalized);
+          let edge1 = smoothstep(1.0 - edgeThickness, 1.0, normalized);
+          color = mix(color, vec3f(1.0), max(edge0, edge1));
           
           return vec4f(color, 1.0);
         }
@@ -980,6 +994,7 @@ export default function Page() {
         const angleRadians = (blurAngleRef.current * Math.PI) / 180;
         blurUniforms.angle.value = angleRadians;
         blurDebugUniforms.angle.value = angleRadians;
+        renderUniforms.blurAngle.value = angleRadians;
 
         if (debugSdfRef.current) {
           // SDF Debug mode: render the SDF visualization directly to canvas
