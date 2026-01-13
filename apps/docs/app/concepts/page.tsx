@@ -343,7 +343,7 @@ export default function ConceptsPage() {
           Custom Uniforms
         </h2>
         <p className="text-neutral-300 mb-4">
-          Pass custom data to your shaders using the three.js-style <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-sm">{`{ value: X }`}</code> pattern. Changes to <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-sm">.value</code> are automatically uploaded to the GPU.
+          Pass custom data to your shaders using the <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-sm">{`{ value: X }`}</code> pattern. Changes to <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-sm">.value</code> are automatically uploaded to the GPU.
         </p>
         <CodeBlock code={uniformsCode} language="typescript" />
       </section>

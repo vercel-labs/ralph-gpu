@@ -1,12 +1,12 @@
 # ralph-gpu
 
 <p align="center">
-  <strong>~7kB gzipped</strong> · WebGPU shader library for creative coding
+  <strong>~8kB gzipped</strong> · WebGPU shader library for creative coding
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/gzip-7.1kB-blue" alt="Bundle size: ~6kB gzipped" />
-  <img src="https://img.shields.io/badge/brotli-6.4kB-purple" alt="Brotli: ~5.4kB" />
+  <img src="https://img.shields.io/badge/gzip-8.3kB-blue" alt="Bundle size: ~8.3kB gzipped" />
+  <img src="https://img.shields.io/badge/brotli-7.4kB-purple" alt="Brotli: ~7.4kB" />
   <img src="https://img.shields.io/badge/WebGPU-ready-green" alt="WebGPU Ready" />
 </p>
 
@@ -37,7 +37,7 @@ frame();
 - **Simple API** — Write shaders, draw them. That's it.
 - **Auto-injected uniforms** — `resolution`, `time`, `deltaTime`, `frame`, `aspect` available in all shaders
 - **Ping-pong buffers** — First-class support for iterative effects (fluid sim, blur, etc.)
-- **Three.js-style uniforms** — `{ value: X }` pattern for reactive updates
+- **Reactive uniforms** — `{ value: X }` pattern for automatic GPU updates
 - **Compute shaders** — GPU-accelerated parallel computation with full texture support
 - **Storage textures** — Write to textures in compute shaders for advanced effects
 - **Custom samplers** — Explicit control over texture filtering and wrapping modes
@@ -312,11 +312,14 @@ scenePass.draw();
 const displayUniforms = {
   inputTex: { value: buffer }, // Full RenderTarget (includes texture + sampler)
   // OR
-  inputTex: { value: buffer.texture }, // Just the GPUTexture
+  inputTex: { value: buffer.texture }, // Stable texture reference
   inputSampler: { value: mySampler }, // Explicit sampler (optional)
 };
 ctx.setTarget(null); // Back to screen
 displayPass.draw();
+
+// Resize stability - texture references remain valid!
+buffer.resize(1024, 1024); // ✅ No need to update displayUniforms.inputTex
 ```
 
 ## Ping-Pong Buffers
@@ -598,16 +601,19 @@ compute.dispose()                          // Cleanup
 ### Render Target
 
 ```typescript
-target.texture                             // GPUTexture
+target.texture                             // TextureReference (stable across resizes - use for uniforms)
+target.gpuTexture                          // GPUTexture (direct access - becomes invalid after resize)
 target.sampler                             // GPUSampler
-target.view                                // GPUTextureView
+target.view                                // GPUTextureView (auto-updated on resize)
 target.width / target.height               // Dimensions
 target.format                              // Texture format
 target.usage                               // Usage mode ("render" | "storage" | "both")
-target.resize(width, height)               // Resize
+target.resize(width, height)               // Resize (texture references remain valid!)
 target.readPixels(x?, y?, w?, h?)          // → Promise<Uint8Array | Float32Array>
 target.dispose()                           // Cleanup
 ```
+
+**Resize Stability**: Texture references stay valid after resize. Use `.texture` for uniforms (recommended) and `.gpuTexture` only when you need direct GPU texture access.
 
 **Render Target Options:**
 
@@ -666,7 +672,28 @@ sampler.dispose(); // Cleanup (currently no-op, kept for API consistency)
 }
 ```
 
-## Errors
+## Exports
+
+### Classes
+
+```typescript
+import {
+  gpu,              // Main entry point
+  GPUContext,       // GPU context class
+  Pass,             // Fullscreen pass
+  Material,         // Custom vertex shader
+  ComputeShader,    // Compute shader
+  RenderTarget,     // Render target
+  TextureReference, // Stable texture reference (used internally by RenderTarget)
+  PingPongTarget,   // Ping-pong buffer
+  MultiRenderTarget,// Multiple render targets
+  StorageBuffer,    // Storage buffer
+  Particles,        // Particle system helper
+  Sampler,          // Texture sampler
+} from "ralph-gpu";
+```
+
+### Errors
 
 ```typescript
 import {
@@ -692,10 +719,10 @@ try {
 
 | Format | Raw | Gzip | Brotli |
 |--------|-----|------|--------|
-| index.js | 27.61 kB | 7.30 kB | 6.53 kB |
-| index.mjs | 27.10 kB | 7.11 kB | 6.35 kB |
+| index.js | 32.95 kB | 8.51 kB | 7.56 kB |
+| index.mjs | 32.44 kB | 8.34 kB | 7.41 kB |
 
-> 📦 **~7.1 kB** gzipped (ESM)
+> 📦 **~8.3 kB** gzipped (ESM)
 
 ## Browser Support
 

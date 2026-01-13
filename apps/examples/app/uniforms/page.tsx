@@ -30,7 +30,7 @@ export default function UniformsPage() {
           return;
         }
 
-        // Define uniforms object (Three.js style)
+        // Define uniforms object with reactive values
         const waveUniforms = {
           amplitude: { value: 0.2 },
           frequency: { value: 10.0 },
@@ -87,7 +87,7 @@ export default function UniformsPage() {
     <div style={{ padding: '2rem', height: '100vh' }}>
       <h1 style={{ marginBottom: '1rem' }}>Uniforms Example</h1>
       <p style={{ marginBottom: '1rem' }}>
-        Animated wave using custom uniforms with Three.js-style {`{ value: X }`} pattern.
+        Animated wave using custom uniforms with reactive {`{ value: X }`} pattern.
       </p>
       <canvas 
         ref={canvasRef}

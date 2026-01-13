@@ -20,8 +20,8 @@ function getGPUTextureFormat(format: TextureFormat): GPUTextureFormat {
 
 /**
  * Stable texture reference that survives resize operations.
- * Similar to Three.js's approach where the texture object remains the same
- * but the underlying GPU resource can be swapped out.
+ * The texture object reference remains the same while the underlying
+ * GPU resource can be swapped out during resize.
  */
 export class TextureReference {
   private _gpuTexture: GPUTexture;

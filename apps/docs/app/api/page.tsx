@@ -100,7 +100,7 @@ const pass = ctx.pass(shaderCode, {
 // Update values
 pass.set("intensity", 0.8);
 
-// 2. Manual Mode (Three.js style)
+// 2. Manual Mode (explicit bindings)
 // Requires manual @group(1) declarations in WGSL.
 const pass = ctx.pass(shaderCode, {
   uniforms: {
@@ -181,18 +181,22 @@ const storageTarget = ctx.target(512, 512, {
   usage: "storage",       // Enable textureStore() in compute shaders
 });`;
 
-const targetPropertiesCode = `target.texture    // GPUTexture - use in uniforms
+const targetPropertiesCode = `target.texture    // TextureReference - stable reference (use in uniforms)
+target.gpuTexture // GPUTexture - direct access (becomes invalid after resize)
 target.sampler    // GPUSampler
-target.view       // GPUTextureView
+target.view       // GPUTextureView (auto-updated on resize)
 target.width      // Width in pixels
 target.height     // Height in pixels
 target.format     // Texture format string
 target.usage      // Usage mode: "render" | "storage" | "both"
 
 // Methods
-target.resize(width, height)           // Resize the target
+target.resize(width, height)           // Resize (texture refs remain valid!)
 target.readPixels(x?, y?, w?, h?)      // → Promise<Uint8Array | Float32Array>
-target.dispose()                       // Cleanup resources`;
+target.dispose()                       // Cleanup resources
+
+// Note: Use .texture for uniforms (stable reference)
+// Only use .gpuTexture when you need direct GPU texture access`;
 
 const pingPongCode = `const velocity = ctx.pingPong(128, 128, { format: "rg16float" });
 

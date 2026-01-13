@@ -57,7 +57,7 @@ const features = [
     ),
   },
   {
-    title: 'Three.js-Style Uniforms',
+    title: 'Reactive Uniforms',
     description: 'Use the familiar { value: X } pattern for reactive uniform updates.',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

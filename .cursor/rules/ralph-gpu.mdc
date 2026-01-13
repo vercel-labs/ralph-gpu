@@ -1,15 +1,11 @@
 ---
 description: Complete guide for using ralph-gpu - a minimal WebGPU shader library for creative coding and real-time graphics.
-globs:
-  - "**/*.tsx"
-  - "**/*.ts"
-  - "**/*.wgsl"
 alwaysApply: false
 ---
 
 # ralph-gpu Usage Guide
 
-ralph-gpu is a ~6kB gzipped WebGPU shader library for creative coding and real-time graphics. This rule provides comprehensive guidance on using the library effectively.
+ralph-gpu is a WebGPU shader library for creative coding and real-time graphics. This rule provides comprehensive guidance on using the library effectively.
 
 ## Installation
 
@@ -71,7 +67,7 @@ let ar = globals.aspect;                      // Aspect ratio
 "use client";
 
 import { useEffect, useRef } from "react";
-import { gpu, GPUContext, Pass, Sampler } from "ralph-gpu";
+import { gpu, GPUContext, Pass, Sampler, RenderTarget } from "ralph-gpu";
 
 export default function ShaderComponent() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -168,7 +164,7 @@ const wave = ctx.pass(
 wave.set("intensity", 0.8);
 ```
 
-#### Manual Mode (Three.js style)
+#### Manual Mode (Explicit Bindings)
 
 Define uniforms with `{ value: X }` wrapper for reactive updates. Requires manual `@group(1)` declarations in WGSL.
 
@@ -200,7 +196,7 @@ wave.draw();
 
 ````
 
-### 3. Custom Uniforms (Three.js Style)
+### 3. Custom Uniforms (Reactive Pattern)
 
 Define uniforms with `{ value: X }` wrapper for reactive updates:
 
@@ -1131,6 +1127,31 @@ const dualTarget = ctx.target(512, 512, {
 - `"storage"`: STORAGE_BINDING + TEXTURE_BINDING + COPY_SRC
 - `"both"`: All usage flags combined
 
+### RenderTarget Resize Stability
+
+**Important**: Texture references remain valid after resize! Similar to modern GPU APIs, you don't need to manually update uniform references when resizing.
+
+```tsx
+const sdfTarget = ctx.target(400, 400, { format: "r16float" });
+
+// Set once in uniforms
+const uniforms = {
+  sdfTexture: { value: sdfTarget.texture }, // Stable reference
+};
+
+// Resize later - uniform reference stays valid automatically!
+sdfTarget.resize(800, 800); // ✅ No need to update uniforms
+
+// Under the hood: TextureReference wrapper keeps the same object
+// but updates the internal GPUTexture during resize
+```
+
+**API Properties:**
+
+- `.texture` → `TextureReference` (stable, use for uniforms)
+- `.gpuTexture` → `GPUTexture` (direct access, becomes invalid after resize)
+- `.view` → Auto-updated on resize
+
 ## Common WGSL Patterns
 
 ### UV Coordinates
@@ -1227,21 +1248,21 @@ const uniforms1 = {
 };
 
 // Pattern 2: Separate texture + sampler (explicit control)
+// Note: .texture returns TextureReference (stable across resizes)
 const customSampler = ctx.createSampler({ magFilter: "nearest" });
 const uniforms2 = {
-  myTexture: { value: renderTarget.texture }, // Just the texture
+  myTexture: { value: renderTarget.texture }, // Stable texture reference
   mySampler: { value: customSampler }, // Custom sampler
 };
 
-// Pattern 3: Raw GPUTexture (user provides sampler separately)
+// Pattern 3: Texture without sampler (for textureLoad in WGSL)
 const uniforms3 = {
-  myTexture: { value: gpuTexture },
-  mySampler: { value: customSampler },
+  dataTexture: { value: renderTarget.texture }, // No sampler needed
 };
 
-// Pattern 4: Texture without sampler (for textureLoad in WGSL)
+// Pattern 4: Direct GPU texture access (advanced - becomes invalid after resize)
 const uniforms4 = {
-  dataTexture: { value: renderTarget.texture }, // No sampler needed
+  directTexture: { value: renderTarget.gpuTexture }, // Direct GPUTexture
 };
 ```
 
@@ -1298,7 +1319,7 @@ fn opSmoothUnion(d1: f32, d2: f32, k: f32) -> f32 {
 6. **Use `ctx.autoClear = false`** when doing ping-pong operations
 7. **Update uniform references** before each ping-pong iteration
 8. **Use appropriate texture formats** - `rgba8unorm` for display, `*16float` for computation
-9. **Structure uniforms as { value: T }** for the Three.js-style reactive pattern
+9. **Structure uniforms as { value: T }** for the reactive uniform pattern
 10. **Use flat Float32Array for particle data** instead of structured arrays
 11. **Create circular particles** with fragment shader `discard` for pixels outside radius
 12. **Use `/* wgsl */`** template tag for syntax highlighting
@@ -1324,6 +1345,14 @@ fn opSmoothUnion(d1: f32, d2: f32, k: f32) -> f32 {
 ## API Quick Reference
 
 ```tsx
+// Exports
+import {
+  gpu, GPUContext, Pass, Material, ComputeShader,
+  RenderTarget, TextureReference, PingPongTarget, MultiRenderTarget,
+  StorageBuffer, Particles, Sampler,
+  WebGPUNotSupportedError, DeviceCreationError, ShaderCompileError
+} from "ralph-gpu";
+
 // Module
 gpu.isSupported()                          // → boolean
 gpu.init(canvas, { autoResize?, dpr?, debug? }) // → Promise<GPUContext>
@@ -1347,29 +1376,49 @@ ctx.dispose()                              // Cleanup all resources
 // Pass / Material
 pass.draw()                                // Draw to current target
 pass.storage(name, buffer)                 // Bind storage buffer
+pass.uniforms                              // Access uniforms (manual mode)
+pass.set(key, value)                       // Update uniform (simple mode)
 pass.dispose()                             // Cleanup
 
 // Compute
 compute.dispatch(x, y?, z?)                // Run compute shader
 compute.storage(name, buffer)              // Bind storage buffer
+compute.uniforms                           // Access uniforms
+compute.dispose()                          // Cleanup
 
 // Render Target
-target.texture                             // GPUTexture
-target.resize(width, height)               // Resize
+target.texture                             // TextureReference (stable - use for uniforms)
+target.gpuTexture                          // GPUTexture (direct - becomes invalid after resize)
+target.view                                // GPUTextureView (auto-updated on resize)
+target.sampler                             // GPUSampler
+target.width / target.height               // Dimensions
+target.format / target.usage               // Format and usage mode
+target.resize(width, height)               // Resize (refs stay valid!)
+target.readPixels(x?, y?, w?, h?)          // → Promise<Uint8Array | Float32Array>
 target.dispose()                           // Cleanup
 
 // Ping-Pong
 pingPong.read                              // Current state (RenderTarget)
 pingPong.write                             // Next state (RenderTarget)
 pingPong.swap()                            // Swap read/write
+pingPong.resize(width, height)             // Resize both
+pingPong.dispose()                         // Cleanup
 
 // Storage Buffer
 storage.write(data)                        // Write TypedArray
+storage.gpuBuffer                          // Underlying GPUBuffer
+storage.byteSize                           // Buffer size
 storage.dispose()                          // Cleanup
+
+// Sampler
+sampler.gpuSampler                         // Underlying GPUSampler
+sampler.descriptor                         // Descriptor (readonly)
+sampler.dispose()                          // Cleanup
 
 // Particles
 particles.write(data)                      // Write TypedArray to buffer
 particles.draw()                           // Draw all particles
-particles.storageBuffer                    // Get underlying StorageBuffer
-particles.underlyingMaterial               // Get underlying Material
+particles.storageBuffer                    // Underlying StorageBuffer
+particles.underlyingMaterial               // Underlying Material
+particles.dispose()                        // Cleanup
 ```

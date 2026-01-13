@@ -100,7 +100,7 @@ export interface GPUContextOptions {
 }
 
 /**
- * Uniform value wrapper (Three.js style) - for manual binding mode
+ * Uniform value wrapper with reactive updates - for manual binding mode
  */
 export interface UniformValue<T = any> {
   value: T;
