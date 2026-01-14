@@ -68,14 +68,14 @@ For each task in the checklist:
 
 ## Task Checklist
 
-- [ ] **Setup Playwright** - Install Playwright and create playwright.config.ts with WebGPU-enabled Chrome settings
-- [ ] **Test Harness** - Create HTML test page and bundle configuration for browser tests
-- [ ] **Test Utils** - Create browser test utilities (setupTest, readPixels, teardown, pixel comparison helpers)
-- [ ] **Context Tests** - Write browser tests for GPU context initialization and basic rendering
-- [ ] **Pass Tests** - Write browser tests for Pass (fragment shaders, uniforms, blending)
-- [ ] **Compute Tests** - Write browser tests for ComputeShader execution and output verification
-- [ ] **Storage Tests** - Write browser tests for StorageBuffer read/write operations
-- [ ] **Target Tests** - Write browser tests for RenderTarget creation, rendering, and readPixels
+- [x] **Setup Playwright** - Install Playwright and create playwright.config.ts with WebGPU-enabled Chrome settings
+- [x] **Test Harness** - Create HTML test page and bundle configuration for browser tests
+- [x] **Test Utils** - Create browser test utilities (setupTest, readPixels, teardown, pixel comparison helpers)
+- [x] **Context Tests** - Write browser tests for GPU context initialization and basic rendering
+- [x] **Pass Tests** - Write browser tests for Pass (fragment shaders, uniforms, blending)
+- [x] **Compute Tests** - Write browser tests for ComputeShader execution and output verification
+- [x] **Storage Tests** - Write browser tests for StorageBuffer read/write operations
+- [x] **Target Tests** - Write browser tests for RenderTarget creation, rendering, and readPixels
 - [ ] **Advanced Tests** - Write browser tests for PingPong, Sampler, Particles, and MRT features
 - [ ] **Update Scripts** - Update package.json with new test scripts and Vitest config to exclude browser tests
 
@@ -296,7 +296,8 @@ Update CI to run browser tests:
 
 ### Configuration & Setup
 
-_(Add notes about Playwright configuration, Chrome flags, etc.)_
+- Playwright config lives at `packages/core/playwright.config.ts` with Chromium args `--enable-unsafe-webgpu` and `--enable-features=Vulkan`.
+- Browser harness is served via `packages/core/tests/browser/index.html` and a webpack bundle from `tests/browser/webpack.config.js`.
 
 ### WebGPU-Specific Findings
 
@@ -304,7 +305,8 @@ _(Add notes about WebGPU behavior in headless mode, timing issues, etc.)_
 
 ### Test Patterns
 
-_(Add notes about effective test patterns, pixel comparison strategies, etc.)_
+- `tests/browser/test-utils.ts` provides `setupTest`, `readPixels`, `teardown`, and pixel comparison helpers for consistent readback.
+- `tests/browser/index.ts` exposes `window.RalphGPU` and `window.RalphTestUtils` for Playwright `page.evaluate`.
 
 ### Issues & Solutions
 
@@ -312,4 +314,4 @@ _(Document any problems encountered and how they were solved)_
 
 ### Decisions Made
 
-_(Record architectural decisions and their rationale)_
+- Ralph `.progress.md` files are updated only by ralphs; human progress tracking happens in this plan file.

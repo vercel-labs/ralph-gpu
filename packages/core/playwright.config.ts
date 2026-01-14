@@ -7,9 +7,9 @@ import { defineConfig, devices } from '@playwright/test';
  * npx playwright test --headed
  */
 export default defineConfig({
-  testDir: './tests',
-  // Only run files that end with .spec.ts to avoid running vitest tests
-  testMatch: /.*\.spec\.ts/,
+  testDir: './tests/browser',
+  // Only run files that end with .browser.test.ts
+  testMatch: /.*\.browser\.test\.ts/,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

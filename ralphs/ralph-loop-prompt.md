@@ -336,3 +336,4 @@ Include relevant rules in your LoopAgent configuration:
 - **Be specific in TASK**: Include exact file paths, working directories, code examples, and step-by-step navigation instructions
 - **Documentation**: Ask ralphs to update docs, tests, and cursor rules as needed
 - **Keep executing until completion**: Continue working through all tasks in your plan until the entire long-term goal is achieved. Don't stop after individual ralphs complete. Keep running sleeps commands to check progress.
+- **Progress tracking**: Never edit the .progress.md file yourself, instruct the ralph LLM to do it.
