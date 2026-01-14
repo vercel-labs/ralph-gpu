@@ -244,7 +244,7 @@ Include relevant rules in your LoopAgent configuration:
 
 - `brainRule` - Use `.brain/` folder for persistent knowledge
 - `trackProgressRule` - Track progress in `.progress.md`
-- `visualCheckRule` - Visually verify UI changes with browser (always run in headless mode)
+- `visualCheckRule` - **USE FOR UI TASKS**: Visually verify UI changes with browser (always run in headless mode)
 - `testFirstRule` - Run tests before and after changes
 - `minimalChangesRule` - Keep changes surgical and focused
 - `explorationRule` - Explore codebase before editing
@@ -252,13 +252,29 @@ Include relevant rules in your LoopAgent configuration:
 - `debugRule` - Systematic debugging approach
 - `completionRule` - **IMPORTANT**: Ensures agent calls `done()` when task is complete (prevents infinite loops)
 
-### Browser Automation Configuration
+### Browser Validation (IMPORTANT)
 
-**CRITICAL**: Always run browser automation in **headless mode** for better performance and reliability:
+**For any task that creates or modifies UI components, the ralph MUST validate with a real browser:**
 
-- When using browser tools, always specify headless mode in configuration
-- Include explicit instructions in TASK string to use headless browser
-- Example browser configuration: `headless: true`
+1. **Include `visualCheckRule`** in the rules array for UI tasks
+2. **Add browser validation steps** to the TASK acceptance criteria:
+   ```
+   ### Browser Validation (REQUIRED)
+   - [ ] Start dev server: `pnpm dev`
+   - [ ] Navigate to the page in browser
+   - [ ] Take screenshot to verify rendering
+   - [ ] Check browser console for errors
+   - [ ] Verify interactive elements work
+   ```
+3. **Run in headless mode** for reliability: `headless: true`
+
+**Examples of tasks that REQUIRE browser validation:**
+- Creating example pages (like `debug-profiler/page.tsx`)
+- Modifying UI components
+- Adding visual features or effects
+- Fixing rendering bugs
+
+**Do NOT skip browser validation** - `pnpm build` passing does NOT mean the UI actually works!
 
 ## Execution Workflow
 
@@ -307,6 +323,7 @@ Include relevant rules in your LoopAgent configuration:
 ## Best Practices
 
 - **COMMIT AFTER EVERY SUCCESSFUL RALPH**: Always `git add -A && git commit` immediately after a ralph completes successfully. Don't accumulate uncommitted changes across multiple ralphs.
+- **BROWSER VALIDATION FOR UI TASKS**: If the ralph creates or modifies any UI (pages, components, visual features), include `visualCheckRule` and add browser validation to acceptance criteria. Build passing ≠ UI working!
 - **Repository structure clarity**: Always include a visual diagram of the repo structure in the TASK string so the LLM understands where it is and how to navigate
 - **Progress tracking**: Ralph tracks progress in its own folder (`.progress.md`, `.brain/`)
 - **Don't pre-create state files**: Let the agent create `.brain/` and `.progress.md` - provide templates in TASK string
