@@ -30,9 +30,11 @@
     "dev": "webpack --mode development --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:browser": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@swc/core": "^1.9.3",
     "@types/node": "^22.10.2",
     "@vitest/ui": "^2.1.8",
