@@ -247,15 +247,33 @@ Unusual but valid usage patterns.
 - Access time via `context.globals.time`, `context.globals.frame`, `context.globals.deltaTime`
 
 ### Ralph 47: Resize Browser Tests ✅
+
 **Completed**: 2026-01-14 19:33
 **Cost**: ~$0.04 (very fast - 1 iteration)
 **Test file**: `resize.browser.test.ts`
 
 **Tests added**:
+
 1. Context resize works - verifies `context.resize(w, h)` changes dimensions
 2. Target resize works - verifies `target.resize(w, h)` changes dimensions
 
 **Key findings**:
+
 - `context.resize(width, height)` updates `context.width` and `context.height`
 - `target.resize(width, height)` updates `target.width` and `target.height`
 - Rendering continues to work correctly after resize
+
+### Ralph 48: Error Handling Browser Tests ✅
+**Completed**: 2026-01-14 19:45
+**Cost**: ~$0.57 (ralph) + manual fixes
+**Test file**: `error-handling.browser.test.ts`
+
+**Tests added**:
+1. Invalid WGSL does not crash (graceful handling)
+2. Valid WGSL does not throw
+
+**Key findings**:
+- The library handles invalid WGSL gracefully without crashing
+- WebGPU's `getCompilationInfo()` is async, so shader errors don't propagate as JS exceptions
+- Invalid shaders may render incorrectly but don't crash the app
+- This is a known limitation: shader errors are logged but not thrown
