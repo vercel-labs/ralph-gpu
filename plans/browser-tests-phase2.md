@@ -198,3 +198,27 @@ Unusual but valid usage patterns.
 - Use `test.describe` to group related tests
 - Keep tests fast - small canvas sizes, minimal iterations
 - Add comments explaining what each test verifies
+
+---
+
+## Progress Log
+
+### Ralph 45: Uniforms Browser Tests ✅
+**Completed**: 2026-01-14 19:30
+**Cost**: ~$1.50 (ralph) + manual fixes
+**Test file**: `uniforms.browser.test.ts`
+
+**Tests added**:
+1. Simple mode f32 uniform - passes value directly like `{ redValue: 0.75 }`
+2. Simple mode vec4f uniform - color array
+3. Uniform value update - uses `pass.set('name', value)` for simple mode
+
+**Key findings**:
+- Simple mode API: pass values directly, NOT wrapped in `uniforms: {}`
+- Example: `context.pass(shader, { myValue: 0.5 })` NOT `{ uniforms: { myValue: 0.5 } }`
+- To update uniforms in simple mode, use `pass.set('name', value)`
+- Direct `pass.uniforms.name.value = x` only works in manual mode
+
+**API distinction**:
+- **Simple mode**: `ctx.pass(shader, { value: 0.5 })` → shader uses `uniforms.value`
+- **Manual mode**: `ctx.pass(shader, { uniforms: { value: { value: 0.5 } } })` → shader has explicit `@group(1) @binding(0)`
