@@ -99,6 +99,12 @@ export class Profiler {
   private lastTickTime = 0;
   private tickHistory: number[] = []; // stores frame intervals
   private maxTickHistory = 120;
+  
+  // Per-tick (animation frame) stats
+  private tickDrawCalls = 0;
+  private tickComputeDispatches = 0;
+  private lastTickDrawCalls = 0;
+  private lastTickComputeDispatches = 0;
 
   // Event subscription cleanup
   private unsubscribe: (() => void) | null = null;
@@ -121,6 +127,14 @@ export class Profiler {
     // Track events during active frame
     if (this.currentFrameStartTime > 0) {
       this.currentFrameEvents.push(event);
+    }
+
+    // Count draw/compute calls per tick (animation frame)
+    // Only count "start" phase to avoid double-counting
+    if (event.type === "draw" && (event as DrawEvent).phase === "start") {
+      this.tickDrawCalls++;
+    } else if (event.type === "compute" && (event as ComputeEvent).phase === "start") {
+      this.tickComputeDispatches++;
     }
 
     // Handle frame events
@@ -173,13 +187,14 @@ export class Profiler {
     const duration = event.timestamp - this.currentFrameStartTime;
 
     // Count draw calls and compute dispatches from events
+    // Only count "start" phase to avoid double-counting (start + end events)
     let drawCalls = 0;
     let computeDispatches = 0;
 
     for (const evt of this.currentFrameEvents) {
-      if (evt.type === "draw") {
+      if (evt.type === "draw" && (evt as DrawEvent).phase === "start") {
         drawCalls++;
-      } else if (evt.type === "compute") {
+      } else if (evt.type === "compute" && (evt as ComputeEvent).phase === "start") {
         computeDispatches++;
       }
     }
@@ -320,7 +335,28 @@ export class Profiler {
       }
     }
     
+    // Save and reset per-tick stats
+    this.lastTickDrawCalls = this.tickDrawCalls;
+    this.lastTickComputeDispatches = this.tickComputeDispatches;
+    this.tickDrawCalls = 0;
+    this.tickComputeDispatches = 0;
+    
     this.lastTickTime = now;
+  }
+  
+  /**
+   * Get draw calls from the last animation frame (tick).
+   * This counts all draw calls between tick() calls, regardless of GPU frame boundaries.
+   */
+  getDrawCallsPerTick(): number {
+    return this.lastTickDrawCalls;
+  }
+  
+  /**
+   * Get compute dispatches from the last animation frame (tick).
+   */
+  getComputeDispatchesPerTick(): number {
+    return this.lastTickComputeDispatches;
   }
 
   /**
@@ -391,6 +427,10 @@ export class Profiler {
     this.lastFrameStartTime = 0;
     this.lastTickTime = 0;
     this.tickHistory = [];
+    this.tickDrawCalls = 0;
+    this.tickComputeDispatches = 0;
+    this.lastTickDrawCalls = 0;
+    this.lastTickComputeDispatches = 0;
     this.frameStats = {
       frameCount: 0,
       totalTime: 0,

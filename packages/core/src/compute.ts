@@ -326,6 +326,7 @@ ${this.wgsl}
     if (this.context) {
       const startEvent: ComputeEvent = {
         type: "compute",
+        phase: "start",
         timestamp: performance.now(),
         id: generateEventId(),
         workgroups: [x, y, z],
@@ -391,6 +392,7 @@ ${this.wgsl}
     if (this.context) {
       const endEvent: ComputeEvent = {
         type: "compute",
+        phase: "end",
         timestamp: performance.now(),
         id: generateEventId(),
         workgroups: [x, y, z],

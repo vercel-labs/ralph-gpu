@@ -17,12 +17,13 @@ export function generateEventId(): string {
 
 // Draw event
 export interface DrawEvent extends GPUEvent {
-  type: "draw"; // Changed to "draw" as per typical event naming convention, specific types like "draw:start" or "draw:end" can be handled by a sub-type or a separate event if needed
+  type: "draw";
+  phase: "start" | "end";  // Distinguish start vs end of draw call
   source: "pass" | "material" | "particles";
   label?: string;
-  vertexCount?: number; // Made optional as start/end events might not have all data
-  instanceCount?: number; // Made optional
-  topology?: GPUPrimitiveTopology; // Use WebGPU type
+  vertexCount?: number;
+  instanceCount?: number;
+  topology?: GPUPrimitiveTopology;
   target: "screen" | "texture";
   targetSize: [number, number];
 }
@@ -30,6 +31,7 @@ export interface DrawEvent extends GPUEvent {
 // Compute event
 export interface ComputeEvent extends GPUEvent {
   type: "compute";
+  phase: "start" | "end";  // Distinguish start vs end of dispatch
   label?: string;
   workgroups?: [number, number, number];
   workgroupSize?: [number, number, number];

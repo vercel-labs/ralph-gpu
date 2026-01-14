@@ -135,8 +135,8 @@ export default function DebugProfilerPage() {
               frameTime: frameStats,
               regions,
               eventCount: ctx?.getEventHistory().length ?? 0,
-              drawCalls: lastFrame?.drawCalls ?? 0,
-              computeDispatches: lastFrame?.computeDispatches ?? 0,
+              drawCalls: profiler.getDrawCallsPerTick(),
+              computeDispatches: profiler.getComputeDispatchesPerTick(),
             });
           }
 
@@ -268,9 +268,9 @@ export default function DebugProfilerPage() {
 function formatEvent(event: RalphGPUEvent): string {
   switch (event.type) {
     case 'draw':
-      return `source=${event.source} target=${event.target} verts=${event.vertexCount ?? '?'}`;
+      return `phase=${event.phase} source=${event.source} target=${event.target} verts=${event.vertexCount ?? '?'}`;
     case 'compute':
-      return `workgroups=${event.workgroups?.join('x') ?? '?'}`;
+      return `phase=${event.phase} workgroups=${event.workgroups?.join('x') ?? '?'}`;
     case 'frame':
       return `#${event.frameNumber} phase=${event.phase} dt=${event.deltaTime.toFixed(2)}ms`;
     case 'shader_compile':

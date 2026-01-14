@@ -122,9 +122,10 @@ const allEvents = ctx.getEventHistory();
 unsubscribe();
 unsubAll();`;
 
-const eventTypesCode = `// Draw event - emitted for each draw call
+const eventTypesCode = `// Draw event - emitted at start and end of each draw call
 interface DrawEvent {
   type: "draw";
+  phase: "start" | "end";  // Distinguish start vs end
   source: "pass" | "material" | "particles";
   label?: string;
   vertexCount?: number;
@@ -134,9 +135,10 @@ interface DrawEvent {
   targetSize: [number, number];
 }
 
-// Compute event - emitted for each compute dispatch
+// Compute event - emitted at start and end of each dispatch
 interface ComputeEvent {
   type: "compute";
+  phase: "start" | "end";  // Distinguish start vs end
   label?: string;
   workgroups?: [number, number, number];
   workgroupSize?: [number, number, number];

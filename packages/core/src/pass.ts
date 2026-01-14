@@ -281,9 +281,10 @@ ${this.fragmentWGSL}
       targetHeight = currentTarget.height;
     }
 
-    // Emit draw:start event
+    // Emit draw start event
     const startEvent: DrawEvent = {
       type: "draw",
+      phase: "start",
       timestamp: performance.now(),
       id: generateEventId(),
       source: "pass",
@@ -425,9 +426,10 @@ ${this.fragmentWGSL}
     passEncoder.draw(6, 1, 0, 0);
     passEncoder.end();
 
-    // Emit draw:end event
+    // Emit draw end event
     const endEvent: DrawEvent = {
       type: "draw",
+      phase: "end",
       timestamp: performance.now(),
       id: generateEventId(),
       source: "pass",

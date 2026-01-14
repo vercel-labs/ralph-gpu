@@ -179,13 +179,14 @@ export class Material {
     renderPassDescriptor: GPURenderPassDescriptor,
     format: GPUTextureFormat
   ): void {
-    // Emit draw:start event
+    // Emit draw start event
     const startEvent: DrawEvent = {
       type: "draw",
+      phase: "start",
       timestamp: performance.now(),
       id: generateEventId(),
       source: "material",
-      vertexCount: this.indexBuffer ? this.indexCount : this.vertexCount, // Use indexCount if indexed drawing
+      vertexCount: this.indexBuffer ? this.indexCount : this.vertexCount,
       instanceCount: this.instances,
       topology: this.topology,
       target: this.context.isRenderingToTexture() ? "texture" : "screen",
@@ -319,9 +320,10 @@ export class Material {
     
     passEncoder.end();
 
-    // Emit draw:end event
+    // Emit draw end event
     const endEvent: DrawEvent = {
       type: "draw",
+      phase: "end",
       timestamp: performance.now(),
       id: generateEventId(),
       source: "material",
