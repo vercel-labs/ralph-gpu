@@ -76,8 +76,8 @@ For each task in the checklist:
 - [x] **Compute Tests** - Write browser tests for ComputeShader execution and output verification
 - [x] **Storage Tests** - Write browser tests for StorageBuffer read/write operations
 - [x] **Target Tests** - Write browser tests for RenderTarget creation, rendering, and readPixels
-- [ ] **Advanced Tests** - Write browser tests for PingPong, Sampler, Particles, and MRT features
-- [ ] **Update Scripts** - Update package.json with new test scripts and Vitest config to exclude browser tests
+- [x] **Advanced Tests** - Write browser tests for PingPong, Sampler, Particles, and MRT features
+- [x] **Update Scripts** - Update package.json with new test scripts and Vitest config to exclude browser tests
 
 ## Current State
 
@@ -298,6 +298,7 @@ Update CI to run browser tests:
 
 - Playwright config lives at `packages/core/playwright.config.ts` with Chromium args `--enable-unsafe-webgpu` and `--enable-features=Vulkan`.
 - Browser harness is served via `packages/core/tests/browser/index.html` and a webpack bundle from `tests/browser/webpack.config.js`.
+- Core scripts now include `test:browser`, `test:browser:headed`, and `test:all`; Vitest excludes `**/*.browser.test.ts`.
 
 ### WebGPU-Specific Findings
 
@@ -310,7 +311,7 @@ _(Add notes about WebGPU behavior in headless mode, timing issues, etc.)_
 
 ### Issues & Solutions
 
-_(Document any problems encountered and how they were solved)_
+- MRT draw currently uses the first target view; tests render to target1 explicitly rather than relying on multi-attachment output.
 
 ### Decisions Made
 
