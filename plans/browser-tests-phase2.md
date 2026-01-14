@@ -228,17 +228,34 @@ Unusual but valid usage patterns.
 - **Manual mode**: `ctx.pass(shader, { uniforms: { value: { value: 0.5 } } })` → shader has explicit `@group(1) @binding(0)`
 
 ### Ralph 46: Time Controls Browser Tests ✅
+
 **Completed**: 2026-01-14 19:31
 **Cost**: ~$0.72
 **Test file**: `time-controls.browser.test.ts`
 
 **Tests added**:
+
 1. Time increments between frames - verifies `context.globals.time` increases
 2. Paused stops time - verifies time stays constant when `context.paused = true`
 3. Frame counter increments - verifies `context.globals.frame` goes 0, 1, 2, ...
 
 **Key findings**:
+
 - Time updates happen during frame execution (draw calls)
 - `context.paused = true` prevents time from advancing
 - Frame counter always increments, even when paused
 - Access time via `context.globals.time`, `context.globals.frame`, `context.globals.deltaTime`
+
+### Ralph 47: Resize Browser Tests ✅
+**Completed**: 2026-01-14 19:33
+**Cost**: ~$0.04 (very fast - 1 iteration)
+**Test file**: `resize.browser.test.ts`
+
+**Tests added**:
+1. Context resize works - verifies `context.resize(w, h)` changes dimensions
+2. Target resize works - verifies `target.resize(w, h)` changes dimensions
+
+**Key findings**:
+- `context.resize(width, height)` updates `context.width` and `context.height`
+- `target.resize(width, height)` updates `target.width` and `target.height`
+- Rendering continues to work correctly after resize
