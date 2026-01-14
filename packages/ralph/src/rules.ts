@@ -164,3 +164,37 @@ export const debugRule = `
 6. Remove debug logging
 7. Test that nothing else broke
 `;
+
+/**
+ * CRITICAL: Ensures the agent knows when and how to stop.
+ * This rule prevents infinite iteration loops.
+ */
+export const completionRule = `
+## CRITICAL: Task Completion
+
+**You MUST call the \`done\` tool when the task is complete. Do NOT keep iterating.**
+
+### When to call done():
+1. All acceptance criteria in the task are met
+2. The build/tests pass (if applicable)
+3. No errors remain to fix
+
+### How to call done():
+\`\`\`
+done({ summary: "Brief description of what was accomplished" })
+\`\`\`
+
+### Common mistakes to avoid:
+- ❌ Re-reading files you just wrote (you already know their contents)
+- ❌ Re-verifying things that already passed
+- ❌ Making unnecessary "improvements" after the task is done
+- ❌ Waiting for something without calling done()
+
+### If you're unsure if you're done:
+1. Check the acceptance criteria list
+2. Verify the build passes once
+3. If all criteria met → call done() immediately
+4. If something is missing → fix it, then call done()
+
+**The goal is to complete the task efficiently, not to iterate forever.**
+`;

@@ -34,6 +34,7 @@ export {
   explorationRule,
   gitCheckpointRule,
   debugRule,
+  completionRule,
 } from "./rules";
 
 // Types

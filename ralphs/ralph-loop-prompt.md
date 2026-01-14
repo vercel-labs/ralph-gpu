@@ -250,6 +250,7 @@ Include relevant rules in your LoopAgent configuration:
 - `explorationRule` - Explore codebase before editing
 - `gitCheckpointRule` - Commit after each change
 - `debugRule` - Systematic debugging approach
+- `completionRule` - **IMPORTANT**: Ensures agent calls `done()` when task is complete (prevents infinite loops)
 
 ### Browser Automation Configuration
 
