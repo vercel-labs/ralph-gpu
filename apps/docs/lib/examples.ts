@@ -2,7 +2,8 @@ export interface Example {
   slug: string;
   title: string;
   description: string;
-  shader: string;
+  shader: string;  // Keep for internal rendering
+  code: string;    // Full API code for display
   uniforms?: Record<string, { value: number | number[] }>;
   animated?: boolean;
 }
@@ -18,6 +19,28 @@ export const examples: Example[] = [
     let uv = pos.xy / globals.resolution;
     return vec4f(uv, 0.5, 1.0);
   }
+`,
+    code: `import { gpu } from 'ralph-gpu';
+
+// Initialize WebGPU context
+const canvas = document.getElementById('canvas');
+const ctx = await gpu.init(canvas);
+
+// Create a fragment shader pass
+const gradient = ctx.pass(\`
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let uv = pos.xy / globals.resolution;
+    return vec4f(uv, 0.5, 1.0);
+  }
+\`);
+
+// Render loop
+function frame() {
+  gradient.draw();
+  requestAnimationFrame(frame);
+}
+frame();
 `,
     animated: false,
   },
@@ -37,6 +60,41 @@ export const examples: Example[] = [
     let glow = 0.02 / d;
     return vec4f(u.color * glow, 1.0);
   }
+`,
+    code: `import { gpu } from 'ralph-gpu';
+
+// Initialize WebGPU context
+const canvas = document.getElementById('canvas');
+const ctx = await gpu.init(canvas);
+
+// Define parameters
+const params = {
+  amplitude: 0.3,
+  frequency: 8.0,
+  color: [0.2, 0.8, 1.0]
+};
+
+// Create a fragment shader pass with uniforms
+const wave = ctx.pass(\`
+  struct Params { amplitude: f32, frequency: f32, color: vec3f }
+  @group(1) @binding(0) var<uniform> u: Params;
+
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let uv = pos.xy / globals.resolution;
+    let w = sin(uv.x * u.frequency + globals.time * 2.0) * u.amplitude;
+    let d = abs(uv.y - 0.5 - w);
+    let glow = 0.02 / d;
+    return vec4f(u.color * glow, 1.0);
+  }
+\`, { uniforms: params });
+
+// Render loop
+function frame() {
+  wave.draw();
+  requestAnimationFrame(frame);
+}
+frame();
 `,
     uniforms: {
       amplitude: { value: 0.3 },
@@ -69,6 +127,42 @@ export const examples: Example[] = [
     let color = vec3f(r, g, b) * (pattern * 0.3 + 0.7);
     return vec4f(color, 1.0);
   }
+`,
+    code: `import { gpu } from 'ralph-gpu';
+
+// Initialize WebGPU context
+const canvas = document.getElementById('canvas');
+const ctx = await gpu.init(canvas);
+
+// Create a fragment shader pass
+const colorCycle = ctx.pass(\`
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let uv = pos.xy / globals.resolution;
+    let t = globals.time * 0.5;
+    
+    // Cycle through hues
+    let r = sin(t) * 0.5 + 0.5;
+    let g = sin(t + 2.094) * 0.5 + 0.5;
+    let b = sin(t + 4.188) * 0.5 + 0.5;
+    
+    // Create radial pattern
+    let center = uv - 0.5;
+    let dist = length(center);
+    let angle = atan2(center.y, center.x);
+    let pattern = sin(dist * 20.0 - globals.time * 3.0 + angle * 3.0);
+    
+    let color = vec3f(r, g, b) * (pattern * 0.3 + 0.7);
+    return vec4f(color, 1.0);
+  }
+\`);
+
+// Render loop
+function frame() {
+  colorCycle.draw();
+  requestAnimationFrame(frame);
+}
+frame();
 `,
     animated: true,
   },
@@ -110,6 +204,55 @@ fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
   return vec4f(col, 1.0);
 }
 `,
+    code: `import { gpu } from 'ralph-gpu';
+
+// Initialize WebGPU context
+const canvas = document.getElementById('canvas');
+const ctx = await gpu.init(canvas);
+
+// Create a raymarching pass
+const raymarch = ctx.pass(\`
+@fragment
+fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  let uv = (pos.xy - globals.resolution * 0.5) / min(globals.resolution.x, globals.resolution.y);
+  
+  // Camera
+  let ro = vec3f(0.0, 0.0, -3.0);
+  let rd = normalize(vec3f(uv, 1.0));
+  
+  // Raymarching
+  var t = 0.0;
+  for (var i = 0; i < 64; i++) {
+    let p = ro + rd * t;
+    let d = length(p) - 1.0; // sphere SDF
+    if (d < 0.001) { break; }
+    t += d;
+  }
+  
+  // Shading
+  let p = ro + rd * t;
+  let n = normalize(p);
+  let light = normalize(vec3f(1.0, 1.0, -1.0));
+  let diff = max(dot(n, light), 0.0);
+  
+  let col = vec3f(0.2, 0.5, 1.0) * (diff * 0.8 + 0.2);
+  
+  // If we missed everything, return background
+  if (t > 10.0) {
+    return vec4f(0.1, 0.1, 0.15, 1.0);
+  }
+  
+  return vec4f(col, 1.0);
+}
+\`);
+
+// Render loop
+function frame() {
+  raymarch.draw();
+  requestAnimationFrame(frame);
+}
+frame();
+`,
     animated: true,
   },
   {
@@ -147,6 +290,52 @@ fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
   return vec4f(vec3f(n), 1.0);
 }
 `,
+    code: `import { gpu } from 'ralph-gpu';
+
+// Initialize WebGPU context
+const canvas = document.getElementById('canvas');
+const ctx = await gpu.init(canvas);
+
+// Create a noise pass
+const noisePass = ctx.pass(\`
+// Include a simple hash function and noise
+fn hash(p: vec2f) -> f32 {
+  return fract(sin(dot(p, vec2f(127.1, 311.7))) * 43758.5453);
+}
+
+fn noise(p: vec2f) -> f32 {
+  let i = floor(p);
+  let f = fract(p);
+  let u = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(hash(i), hash(i + vec2f(1.0, 0.0)), u.x),
+    mix(hash(i + vec2f(0.0, 1.0)), hash(i + vec2f(1.0, 1.0)), u.x),
+    u.y
+  );
+}
+
+@fragment
+fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  let uv = pos.xy / globals.resolution;
+  var n = 0.0;
+  var amp = 0.5;
+  var freq = 4.0;
+  for (var i = 0; i < 5; i++) {
+    n += amp * noise(uv * freq + globals.time * 0.5);
+    amp *= 0.5;
+    freq *= 2.0;
+  }
+  return vec4f(vec3f(n), 1.0);
+}
+\`);
+
+// Render loop
+function frame() {
+  noisePass.draw();
+  requestAnimationFrame(frame);
+}
+frame();
+`,
     animated: true,
   },
   {
@@ -175,6 +364,44 @@ fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
   
   return vec4f(col, 1.0);
 }
+`,
+    code: `import { gpu } from 'ralph-gpu';
+
+// Initialize WebGPU context
+const canvas = document.getElementById('canvas');
+const ctx = await gpu.init(canvas);
+
+// Create a metaballs pass
+const metaballs = ctx.pass(\`
+@fragment
+fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  let uv = (pos.xy - globals.resolution * 0.5) / globals.resolution.y;
+  
+  // Ball positions (animated)
+  let t = globals.time;
+  let p1 = vec2f(sin(t) * 0.3, cos(t * 1.3) * 0.3);
+  let p2 = vec2f(sin(t * 0.7 + 2.0) * 0.3, cos(t) * 0.3);
+  let p3 = vec2f(sin(t * 1.2 + 4.0) * 0.3, cos(t * 0.8 + 1.0) * 0.3);
+  
+  // Metaball field
+  let r = 0.1;
+  let field = r / length(uv - p1) + r / length(uv - p2) + r / length(uv - p3);
+  
+  // Threshold and color
+  let threshold = 1.0;
+  let c = smoothstep(threshold, threshold + 0.1, field);
+  let col = mix(vec3f(0.1, 0.1, 0.2), vec3f(0.2, 0.8, 1.0), c);
+  
+  return vec4f(col, 1.0);
+}
+\`);
+
+// Render loop
+function frame() {
+  metaballs.draw();
+  requestAnimationFrame(frame);
+}
+frame();
 `,
     animated: true,
   },
@@ -217,6 +444,57 @@ fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
   
   return vec4f(col, 1.0);
 }
+`,
+    code: `import { gpu } from 'ralph-gpu';
+
+// Initialize WebGPU context
+const canvas = document.getElementById('canvas');
+const ctx = await gpu.init(canvas);
+
+// Create a fractal pass
+const fractal = ctx.pass(\`
+@fragment
+fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  let uv = (pos.xy - globals.resolution * 0.5) / globals.resolution.y;
+  
+  // Zoom and pan
+  let zoom = pow(0.5, sin(globals.time * 0.2) * 5.0 + 5.0);
+  let c = uv * zoom * 2.0 - vec2f(0.5, 0.0);
+  
+  var z = vec2f(0.0);
+  var iter = 0;
+  let max_iter = 100;
+  
+  for (var i = 0; i < max_iter; i++) {
+    // z = z^2 + c
+    z = vec2f(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + c;
+    if (length(z) > 2.0) {
+      break;
+    }
+    iter = i;
+  }
+  
+  if (iter == max_iter - 1) {
+    return vec4f(0.0, 0.0, 0.0, 1.0);
+  }
+  
+  let t = f32(iter) / f32(max_iter);
+  let col = vec3f(
+    0.5 + 0.5 * sin(3.0 + t * 10.0 + 0.0),
+    0.5 + 0.5 * sin(3.0 + t * 10.0 + 0.6),
+    0.5 + 0.5 * sin(3.0 + t * 10.0 + 1.0)
+  );
+  
+  return vec4f(col, 1.0);
+}
+\`);
+
+// Render loop
+function frame() {
+  fractal.draw();
+  requestAnimationFrame(frame);
+}
+frame();
 `,
     animated: true,
   },

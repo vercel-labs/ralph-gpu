@@ -12,7 +12,7 @@ interface ShaderPlaygroundProps {
 }
 
 export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
-  const [code, setCode] = useState(initialExample.shader);
+  const [code, setCode] = useState(initialExample.code);
   const [activeCode, setActiveCode] = useState(initialExample.shader);
   const [error, setError] = useState<string | null>(null);
   const [platform, setPlatform] = useState<'mac' | 'other'>('other');
@@ -26,7 +26,16 @@ export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
   }, []);
 
   const handleRun = useCallback(() => {
-    setActiveCode(code);
+    // Extract the shader from the full API code for rendering
+    // We look for ctx.pass(`...`)
+    const match = code.match(/ctx\.pass\(`([\s\S]*?)`\)/);
+    if (match && match[1]) {
+      setActiveCode(match[1]);
+    } else {
+      // Fallback: if we can't find the template literal, just use the whole code
+      // though it will likely fail if it's TS code.
+      setActiveCode(code);
+    }
     setError(null);
   }, [code]);
 
@@ -40,7 +49,9 @@ export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
     <div className="flex flex-col h-full min-h-[500px] border border-slate-800 rounded-xl overflow-hidden bg-slate-900 shadow-2xl">
       <div className="flex items-center justify-between px-4 py-2 bg-slate-950 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Shader Editor</span>
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+            Full API Editor
+          </span>
         </div>
         <button 
           onClick={handleRun}
@@ -60,7 +71,7 @@ export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
             code={code} 
             onChange={setCode} 
             onRun={handleRun}
-            language="wgsl"
+            language="typescript"
           />
         </div>
 

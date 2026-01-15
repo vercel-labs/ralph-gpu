@@ -1,0 +1,114 @@
+
+> 65-full-api-examples@1.0.0 start /Users/matiasgf/repos/experiments/ralph-gpu/ralphs/65-full-api-examples
+> tsx index.ts
+
+🚀 Starting full API examples agent...
+
+
+┌─ Iteration 0 ────────────────────────────────────────
+  🔧 [18:53:55] bash
+     ▸ command: cat /Users/matiasgf/repos/experiments/ralph-gpu/ralphs/65-full-api-examples/.progress.md 2>/dev/n...
+     ✓ exit 0, 1 lines (20ms)
+  🔧 [18:53:58] bash
+     ▸ command: ls -R ../../apps/docs/lib/examples.ts ../../apps/docs/components/ShaderPlayground.tsx
+     ✓ exit 0, 2 lines (12ms)
+  📄 [18:53:59] readFile
+     ▸ path: ../../apps/docs/lib/examples.ts
+     ✓ 232 lines (2ms)
+  📄 [18:54:01] readFile
+     ▸ path: ../../apps/docs/components/ShaderPlayground.tsx
+     ✓ 94 lines (2ms)
+  📄 [18:54:06] readFile
+     ▸ path: ../../apps/docs/components/ExampleCanvas.tsx
+     ✓ 128 lines (1ms)
+  ✏️ [18:54:20] writeFile
+     ▸ path: /Users/matiasgf/repos/experiments/ralph-gpu/ralphs/65-full-api-examples/.progress.md
+     ✓ {success} (3ms)
+  ✏️ [18:54:44] writeFile
+     ▸ path: ../../apps/docs/lib/examples.ts
+     ✓ {success} (3ms)
+  📄 [18:54:57] readFile
+     ▸ path: ../../apps/docs/components/MonacoEditor.tsx
+     ✓ 63 lines (1ms)
+  ✏️ [18:55:06] writeFile
+     ▸ path: ../../apps/docs/components/ShaderPlayground.tsx
+     ✓ {success} (3ms)
+  🔧 [18:55:08] bash
+     ▸ command: cd ../../ && pnpm build --filter docs
+     ✓ exit 0, 81 lines (7833ms)
+└─ Iteration 0 completed: 10 tools, 15,431 tokens, $0.0468 (83.7s)
+[83.7s] Iteration 0 | State: running | Cost: $0.0468
+
+┌─ Iteration 1 ────────────────────────────────────────
+  🔧 [18:55:19] bash
+     ▸ command: cat /Users/matiasgf/repos/experiments/ralph-gpu/ralphs/65-full-api-examples/.progress.md 2>/dev/n...
+     ✓ exit 0, 12 lines (14ms)
+  📄 [18:55:21] readFile
+     ▸ path: ../../apps/docs/lib/examples.ts
+     ✓ 339 lines (2ms)
+  📄 [18:55:23] readFile
+     ▸ path: ../../apps/docs/components/ShaderPlayground.tsx
+     ✓ 109 lines (4ms)
+  📄 [18:55:33] readFile
+     ▸ path: ../../apps/docs/components/ExampleCanvas.tsx
+     ✓ 128 lines (2ms)
+  🔧 [18:56:30] bash
+     ▸ command: grep -r "Example" ../../apps/docs | grep ".ts"
+     ✓ exit 0, 95 lines (2823ms)
+  ✏️ [18:57:05] writeFile
+     ▸ path: ../../apps/docs/lib/examples.ts
+     ✓ {success} (2ms)
+  📄 [18:57:11] readFile
+     ▸ path: ../../apps/docs/components/ShaderPlayground.tsx
+     ✓ 109 lines (2ms)
+  ✏️ [18:57:23] writeFile
+     ▸ path: ../../apps/docs/components/ShaderPlayground.tsx
+     ✓ {success} (1ms)
+  🔧 [18:57:26] bash
+     ▸ command: cd ../../ && pnpm build --filter docs
+     ✓ exit 0, 81 lines (7619ms)
+  ▶️ [18:57:43] startProcess
+     ▸ command: pnpm dev --filter docs
+     ✓ {name, pid, status} (30003ms)
+└─ Iteration 1 completed: 10 tools, 349,336 tokens, $1.0485 (177.5s)
+[261.2s] Iteration 1 | State: running | Cost: $1.0953
+
+┌─ Iteration 2 ────────────────────────────────────────
+  🔹 [18:58:18] navigate
+     ▸ url: http://localhost:3001/examples/wave
+     ✗ Error: Browser "main" not found. Call openBrowser first. (1ms)
+  🔹 [18:58:20] listBrowsers
+     ✓ {browsers}
+  🌐 [18:58:22] openBrowser
+     ▸ url: http://localhost:3001/examples/wave
+     📷 Screenshot: 53.1KB (JPEG q60)
+     ✓ {type, value} (3504ms)
+  📸 [18:58:28] screenshot
+     ✗ Error: Browser "wave-example" not found. Call openBrowser first. (1ms)
+  📸 [18:58:30] screenshot
+     📷 Screenshot: 52.9KB (JPEG q60)
+     ✓ {type, value} (45ms)
+  🔹 [18:58:34] navigate
+     ▸ url: http://localhost:3001/examples/raymarching
+     📷 Screenshot: 52.6KB (JPEG q60)
+     ✓ {type, value} (1018ms)
+  ✏️ [18:58:40] writeFile
+     ▸ path: /Users/matiasgf/repos/experiments/ralph-gpu/ralphs/65-full-api-examples/.progress.md
+     ✓ {success} (3ms)
+  🏁 [18:58:46] done
+     ✓ {completed}
+└─ Iteration 2 completed: 8 tools, 151,269 tokens, $0.4572 (37.2s)
+
+✅ Agent completed: completed
+   Summary: The ralph-gpu API examples in the documentation have been refactored to show the full TypeScript API instead of just the WGSL shader code.
+
+Key changes:
+1.  **Updated `Example` interface**: Added a...
+
+📊 Trace file: .traces/trace-2026-01-15T21-53-52-553Z.ndjson
+
+📊 Results
+✅ Success: true
+🔄 Iterations: 2
+💰 Cost: $1.5525
+⏱️ Duration: 298.4s

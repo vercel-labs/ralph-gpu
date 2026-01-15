@@ -2,18 +2,18 @@
 name: Examples Gallery Improvements
 overview: Enhance the interactive examples gallery with full API showcase, minimal design, and preview images.
 todos:
-  - id: full-api-examples
-    content: Refactor examples to show full ralph-gpu API with index.tsx setup code, not just shaders
-    status: pending
-  - id: minimal-editor-design
-    content: Make editor design more minimal - remove footer blocks, maximize space for code and preview
-    status: pending
-  - id: button-shortcut-label
-    content: Add keyboard shortcut label to the Run button (show Cmd/Ctrl+Enter)
-    status: pending
   - id: fix-keyboard-shortcut
     content: Fix Cmd+Enter keyboard shortcut - currently only works once after manual button click
-    status: pending
+    status: completed
+  - id: minimal-editor-design
+    content: Make editor design more minimal - remove footer blocks, maximize space for code and preview
+    status: completed
+  - id: button-shortcut-label
+    content: Add keyboard shortcut label to the Run button (show Cmd/Ctrl+Enter)
+    status: completed
+  - id: full-api-examples
+    content: Refactor examples to show full ralph-gpu API with index.tsx setup code, not just shaders
+    status: in-progress
   - id: preview-images
     content: Create script to generate preview images for examples and display them on gallery page
     status: pending
