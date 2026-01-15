@@ -1,51 +1,67 @@
+'use client';
+
+import { useState, useCallback, useEffect } from 'react';
 import { getExampleBySlug } from '../../../lib/examples';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { MonacoEditor } from '../../../components/MonacoEditor';
+import { Preview } from '../../../components/Preview';
 
 export default function PlaygroundPage({ params }: { params: { slug: string } }) {
   const example = getExampleBySlug(params.slug);
+  if (!example) notFound();
 
-  if (!example) {
-    notFound();
-  }
+  const [code, setCode] = useState(example.shaderCode);
+  const [activeCode, setActiveCode] = useState(example.shaderCode);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleRun = useCallback(() => {
+    setActiveCode(code);
+    setError(null);
+  }, [code]);
+
+  const handleEditorChange = useCallback((value: string) => {
+    setCode(value);
+  }, []);
+
+  const handlePreviewError = useCallback((errorMessage: string | null) => {
+    setError(errorMessage);
+  }, []);
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#0a0a0f', 
-      color: '#f8f9fa',
-      padding: '2rem',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <Link href="/" style={{ 
-            color: '#94a3b8', 
-            textDecoration: 'none',
-            fontSize: '0.9rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            ← Back to Gallery
-          </Link>
-        </header>
+    <div className="flex flex-col h-screen bg-[#0a0a0f] text-white">
+      <header className="flex items-center justify-between p-4 border-b border-gray-800">
+        <Link href="/" className="text-gray-400 hover:text-white flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
+          Back to Gallery
+        </Link>
+        <h1 className="text-xl font-semibold">{example.title} Playground</h1>
+        <button
+          onClick={handleRun}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-sm font-medium"
+        >
+          Run (Cmd/Ctrl+Enter)
+        </button>
+      </header>
 
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{example.title}</h1>
-        <p style={{ color: '#94a3b8', fontSize: '1.1rem', marginBottom: '2rem' }}>{example.description}</p>
-        
-        <div style={{ 
-          backgroundColor: '#16161a', 
-          border: '1px solid #2a2a32', 
-          borderRadius: '12px',
-          padding: '4rem',
-          textAlign: 'center',
-          color: '#94a3b8'
-        }}>
-          <p>Interactive Playground for <strong>{example.slug}</strong> coming soon!</p>
-          <p style={{ fontSize: '0.9rem', marginTop: '1rem' }}>
-            This will be fully implemented in the next task.
-          </p>
+      <div className="flex-1 flex flex-col md:flex-row">
+        <div className="w-full md:w-1/2 h-1/2 md:h-full relative">
+          <MonacoEditor
+            value={code}
+            onChange={handleEditorChange}
+            onRun={handleRun}
+            language="typescript"
+          />
+        </div>
+        <div className="w-full md:w-1/2 h-1/2 md:h-full relative flex items-center justify-center">
+          {error && (
+            <div className="absolute z-10 p-4 m-4 bg-red-800 text-white rounded-md max-w-full overflow-auto text-sm" style={{ whiteSpace: 'pre-wrap' }}>
+              Shader Error: {error}
+            </div>
+          )}
+          <Preview shaderCode={activeCode} onError={handlePreviewError} />
         </div>
       </div>
     </div>

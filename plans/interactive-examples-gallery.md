@@ -13,16 +13,16 @@ todos:
     status: completed
   - id: playground-page
     content: Create playground page with split layout (editor + preview)
-    status: pending
+    status: completed
   - id: preview-component
     content: Build Preview component that compiles and runs shader code
-    status: pending
+    status: completed
   - id: file-tabs
     content: Implement file tabs UI for switching between files
     status: pending
   - id: run-logic
     content: Implement Run button and Cmd+Enter keyboard shortcut
-    status: pending
+    status: completed
   - id: thumbnail-script
     content: Create Playwright script to generate example thumbnails
     status: pending

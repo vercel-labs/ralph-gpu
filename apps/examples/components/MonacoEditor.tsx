@@ -6,7 +6,7 @@ import { useCallback, useRef } from "react";
 interface MonacoEditorProps {
   value: string;
   onChange: (value: string) => void;
-  language?: "typescript" | "html" | "javascript";
+  language?: "typescript" | "html" | "javascript" | "wgsl"; // Added 'wgsl'
   onRun?: () => void;
 }
 
