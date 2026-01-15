@@ -1,7 +1,7 @@
 'use client';
 
 import Editor, { OnMount } from '@monaco-editor/react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 
 interface MonacoEditorProps {
   code: string;
@@ -19,15 +19,21 @@ export function MonacoEditor({
   height = '100%',
 }: MonacoEditorProps) {
   const editorRef = useRef<any>(null);
+  const onRunRef = useRef(onRun);
+
+  // Keep ref updated with latest callback
+  useEffect(() => {
+    onRunRef.current = onRun;
+  }, [onRun]);
 
   const handleEditorMount: OnMount = useCallback((editor, monaco) => {
     editorRef.current = editor;
 
-    // Add Cmd/Ctrl+Enter shortcut
+    // Add Cmd/Ctrl+Enter shortcut - uses ref to always get latest callback
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-      onRun?.();
+      onRunRef.current?.();
     });
-  }, [onRun]);
+  }, []);
 
   const handleChange = useCallback((value: string | undefined) => {
     onChange?.(value ?? '');
@@ -49,7 +55,7 @@ export function MonacoEditor({
         automaticLayout: true,
         tabSize: 2,
         wordWrap: 'on',
-        padding: { top: 16, bottom: 16 },
+        padding: { top: 12, bottom: 12 },
       }}
     />
   );

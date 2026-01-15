@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { ExampleCanvas } from './ExampleCanvas';
 import { Example } from '@/lib/examples';
@@ -15,6 +15,15 @@ export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
   const [code, setCode] = useState(initialExample.shader);
   const [activeCode, setActiveCode] = useState(initialExample.shader);
   const [error, setError] = useState<string | null>(null);
+  const [platform, setPlatform] = useState<'mac' | 'other'>('other');
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined') {
+      if (navigator.platform.toLowerCase().includes('mac')) {
+        setPlatform('mac');
+      }
+    }
+  }, []);
 
   const handleRun = useCallback(() => {
     setActiveCode(code);
@@ -25,16 +34,13 @@ export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
     setError(err);
   }, []);
 
+  const runLabel = platform === 'mac' ? 'Run ⌘↵' : 'Run Ctrl+↵';
+
   return (
     <div className="flex flex-col h-full min-h-[500px] border border-slate-800 rounded-xl overflow-hidden bg-slate-900 shadow-2xl">
-      <div className="flex items-center justify-between px-4 py-3 bg-slate-950 border-b border-slate-800">
+      <div className="flex items-center justify-between px-4 py-2 bg-slate-950 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/40" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/40" />
-            <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/40" />
-          </div>
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-2">Shader Editor</span>
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Shader Editor</span>
         </div>
         <button 
           onClick={handleRun}
@@ -43,7 +49,7 @@ export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
           </svg>
-          Run Shader
+          {runLabel}
         </button>
       </div>
       
