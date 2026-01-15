@@ -1,4 +1,3 @@
-
 export type Category = "basics" | "techniques" | "simulations" | "advanced" | "features";
 
 export interface ExampleMeta {
@@ -11,141 +10,554 @@ export interface ExampleMeta {
 
 export const examples: ExampleMeta[] = [
   {
-    "slug": "basic",
-    "title": "Basic Triangle",
-    "description": "A basic WebGPU triangle rendered with a simple shader.",
-    "category": "basics",
-    "shaderCode": "@fragment\n          fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {\n            let uv = pos.xy / globals.resolution;\n            return vec4f(uv, sin(globals.time) * 0.5 + 0.5, 1.0);\n          }"
+    slug: "basic",
+    title: "Basic Gradient",
+    description: "A simple fragment shader showing a time-animated color gradient.",
+    category: "basics",
+    shaderCode: `
+@fragment
+fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  let uv = pos.xy / globals.resolution;
+  return vec4f(uv, sin(globals.time) * 0.5 + 0.5, 1.0);
+}
+`.trim(),
   },
   {
-    "slug": "uniforms",
-    "title": "Uniforms",
-    "description": "Using uniforms to pass data to the GPU.",
-    "category": "basics",
-    "shaderCode": ""
+    slug: "uniforms",
+    title: "Uniforms",
+    description: "Using custom uniforms to control shader parameters from JavaScript.",
+    category: "basics",
+    shaderCode: `
+struct MyUniforms {
+  amplitude: f32,
+  frequency: f32,
+  color: vec3f,
+}
+@group(1) @binding(0) var<uniform> u: MyUniforms;
+
+@fragment
+fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  let uv = pos.xy / globals.resolution;
+  let y = sin(uv.x * u.frequency + globals.time) * u.amplitude;
+  let c = smoothstep(0.0, 0.02, abs(uv.y - 0.5 - y));
+  return vec4f(u.color * (1.0 - c), 1.0);
+}
+`.trim(),
   },
   {
-    "slug": "geometry",
-    "title": "Geometry",
-    "description": "Rendering simple geometry with WebGPU.",
-    "category": "basics",
-    "shaderCode": ""
-  },
-  {
-    "slug": "lines",
-    "title": "Lines",
-    "description": "Rendering lines and curves.",
-    "category": "basics",
-    "shaderCode": "// Distance from point p to line segment a-b\n          fn sdSegment(p: vec2f, a: vec2f, b: vec2f) -> f32 {\n            let pa = p - a;\n            let ba = b - a;\n            let h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);\n            return length(pa - ba * h);\n          }\n\n          @fragment\n          fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {\n            let uv = pos.xy / globals.resolution;\n            let p = uv * 2.0 - 1.0;\n            let aspect = globals.resolution.x / globals.resolution.y;\n            let p_aspect = vec2f(p.x * aspect, p.y);\n            \n            var color = vec3f(0.0);\n            let lineWidth = 0.015;\n            let t = globals.time;\n            \n            // Line 1: Animated horizontal line (cyan)\n            let y1 = sin(t * 2.0) * 0.3 + 0.4;\n            let d1 = sdSegment(p_aspect, vec2f(-0.8, y1), vec2f(0.8, y1 + 0.1));\n            let line1 = smoothstep(lineWidth, lineWidth * 0.5, d1);\n            color = mix(color, vec3f(0.2, 0.8, 1.0), line1);\n            \n            // Line 2: Diagonal animated (orange)\n            let a2 = vec2f(-0.6, -0.2 + sin(t * 1.5) * 0.1);\n            let b2 = vec2f(0.6, 0.3 + sin(t * 1.5 + 1.0) * 0.1);\n            let d2 = sdSegment(p_aspect, a2, b2);\n            let line2 = smoothstep(lineWidth, lineWidth * 0.5, d2);\n            color = mix(color, vec3f(1.0, 0.5, 0.2), line2);\n            \n            // Line 3: Animated wave (green)\n            let waveY = sin(p.x * 6.28 + t * 3.0) * 0.15 - 0.5;\n            let d3 = abs(p.y - waveY);\n            let line3 = smoothstep(lineWidth, lineWidth * 0.5, d3);\n            color = mix(color, vec3f(0.3, 1.0, 0.5), line3);\n            \n            // Circle (magenta)\n            let circleCenter = vec2f(0.5, 0.0);\n            let circleRadius = 0.2;\n            let dCircle = abs(length(p_aspect - circleCenter) - circleRadius);\n            let circle = smoothstep(lineWidth, lineWidth * 0.5, dCircle);\n            color = mix(color, vec3f(1.0, 0.3, 0.8), circle);\n            \n            // Spiral (yellow)\n            let spiralCenter = vec2f(-0.5, -0.3);\n            let sp = p_aspect - spiralCenter;\n            let angle = atan2(sp.y, sp.x);\n            let radius = length(sp);\n            let spiralLine = abs(radius - (angle + 3.14159) * 0.05 - fract(t * 0.2) * 0.3);\n            let spiral = smoothstep(lineWidth * 0.7, lineWidth * 0.3, spiralLine);\n            color = mix(color, vec3f(1.0, 0.9, 0.3), spiral * step(radius, 0.35));\n            \n            return vec4f(color, 1.0);\n          }"
-  },
-  {
-    "slug": "render-target",
-    "title": "Render Target",
-    "description": "Using render targets for off-screen rendering.",
-    "category": "techniques",
-    "shaderCode": "@fragment\n          fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {\n            let uv = pos.xy / globals.resolution;\n            let d = length(uv - 0.5);\n            let circle = smoothstep(0.3, 0.25, d);\n            let color = mix(\n              vec3f(0.1, 0.2, 0.4),\n              vec3f(1.0, 0.6, 0.2),\n              circle\n            );\n            return vec4f(color, 1.0);\n          }"
-  },
-  {
-    "slug": "ping-pong",
-    "title": "Ping Pong",
-    "description": "Ping-pong technique for multiple passes.",
-    "category": "techniques",
-    "shaderCode": "@fragment\n          fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {\n            let uv = pos.xy / globals.resolution;\n            let d = length(uv - 0.5);\n            let initial = exp(-d * 8.0);\n            return vec4f(initial, 0.0, 0.0, 1.0);\n          }"
-  },
-  {
-    "slug": "particles",
-    "title": "Particles",
-    "description": "A simple particle system using compute shaders.",
-    "category": "techniques",
-    "shaderCode": ""
-  },
-  {
-    "slug": "compute",
-    "title": "Compute",
-    "description": "A basic compute shader example.",
-    "category": "techniques",
-    "shaderCode": "struct Particle {\n            position: vec2f,\n            velocity: vec2f,\n            life: f32,\n            age: f32,\n            size: f32,\n            padding: f32,\n          }\n\n          @group(1) @binding(0) var<storage, read_write> particles: array<Particle>;\n\n          @compute @workgroup_size(64, 1, 1)\n          fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {\n            let index = global_id.x;\n            if (index >= arrayLength(&particles)) { return; }\n            \n            var particle = particles[index];\n            \n            // Update position\n            particle.position += particle.velocity;\n            \n            // Bounce off edges with slight energy loss\n            if (particle.position.x > 0.95) {\n              particle.velocity.x *= -0.95;\n              particle.position.x = 0.95;\n            }\n            if (particle.position.x < -0.95) {\n              particle.velocity.x *= -0.95;\n              particle.position.x = -0.95;\n            }\n            if (particle.position.y > 0.95) {\n              particle.velocity.y *= -0.95;\n              particle.position.y = 0.95;\n            }\n            if (particle.position.y < -0.95) {\n              particle.velocity.y *= -0.95;\n              particle.position.y = -0.95;\n            }\n            \n            // Apply very gentle gravity\n            particle.velocity.y -= 0.0002;\n            \n            // Very slight friction\n            particle.velocity *= 0.9995;\n            \n            particles[index] = particle;\n          }"
-  },
-  {
-    "slug": "fluid",
-    "title": "Fluid Simulation",
-    "description": "Real-time fluid simulation using compute shaders.",
-    "category": "simulations",
-    "shaderCode": ""
-  },
-  {
-    "slug": "raymarching",
-    "title": "Raymarching",
-    "description": "Raymarching technique for 3D shapes.",
-    "category": "simulations",
-    "shaderCode": "// Constants\n          const MAX_STEPS: i32 = 100;\n          const MAX_DIST: f32 = 100.0;\n          const SURF_DIST: f32 = 0.001;\n          const PI: f32 = 3.14159265359;\n\n          // ========================================\n          // SDF Primitives\n          // ========================================\n          \n          fn sdSphere(p: vec3f, r: f32) -> f32 {\n            return length(p) - r;\n          }\n\n          fn sdBox(p: vec3f, b: vec3f) -> f32 {\n            let q = abs(p) - b;\n            return length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0);\n          }\n\n          fn sdTorus(p: vec3f, t: vec2f) -> f32 {\n            let q = vec2f(length(p.xz) - t.x, p.y);\n            return length(q) - t.y;\n          }\n\n          fn sdCapsule(p: vec3f, a: vec3f, b: vec3f, r: f32) -> f32 {\n            let pa = p - a;\n            let ba = b - a;\n            let h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);\n            return length(pa - ba * h) - r;\n          }\n\n          fn sdOctahedron(p: vec3f, s: f32) -> f32 {\n            let q = abs(p);\n            return (q.x + q.y + q.z - s) * 0.57735027;\n          }\n\n          // ========================================\n          // SDF Operations\n          // ========================================\n          \n          fn opUnion(d1: f32, d2: f32) -> f32 {\n            return min(d1, d2);\n          }\n\n          fn opSubtraction(d1: f32, d2: f32) -> f32 {\n            return max(-d1, d2);\n          }\n\n          fn opIntersection(d1: f32, d2: f32) -> f32 {\n            return max(d1, d2);\n          }\n\n          fn opSmoothUnion(d1: f32, d2: f32, k: f32) -> f32 {\n            let h = clamp(0.5 + 0.5 * (d2 - d1) / k, 0.0, 1.0);\n            return mix(d2, d1, h) - k * h * (1.0 - h);\n          }\n\n          fn opSmoothSubtraction(d1: f32, d2: f32, k: f32) -> f32 {\n            let h = clamp(0.5 - 0.5 * (d2 + d1) / k, 0.0, 1.0);\n            return mix(d2, -d1, h) + k * h * (1.0 - h);\n          }\n\n          fn opSmoothIntersection(d1: f32, d2: f32, k: f32) -> f32 {\n            let h = clamp(0.5 - 0.5 * (d2 - d1) / k, 0.0, 1.0);\n            return mix(d2, d1, h) + k * h * (1.0 - h);\n          }\n\n          // ========================================\n          // Rotation helpers\n          // ========================================\n          \n          fn rot2D(angle: f32) -> mat2x2f {\n            let c = cos(angle);\n            let s = sin(angle);\n            return mat2x2f(c, -s, s, c);\n          }\n\n          fn rotateX(p: vec3f, angle: f32) -> vec3f {\n            let c = cos(angle);\n            let s = sin(angle);\n            return vec3f(p.x, c * p.y - s * p.z, s * p.y + c * p.z);\n          }\n\n          fn rotateY(p: vec3f, angle: f32) -> vec3f {\n            let c = cos(angle);\n            let s = sin(angle);\n            return vec3f(c * p.x + s * p.z, p.y, -s * p.x + c * p.z);\n          }\n\n          fn rotateZ(p: vec3f, angle: f32) -> vec3f {\n            let c = cos(angle);\n            let s = sin(angle);\n            return vec3f(c * p.x - s * p.y, s * p.x + c * p.y, p.z);\n          }\n\n          // ========================================\n          // Scene Definition\n          // ========================================\n\n          struct SceneResult {\n            dist: f32,\n            materialId: f32,\n          }\n\n          fn map(p: vec3f) -> SceneResult {\n            let time = globals.time;\n            var result: SceneResult;\n            \n            // Animated central sphere that pulses\n            let spherePos = vec3f(0.0, sin(time * 2.0) * 0.3, 0.0);\n            let sphereRadius = 0.8 + sin(time * 3.0) * 0.1;\n            let sphere = sdSphere(p - spherePos, sphereRadius);\n            \n            // Rotating torus around the sphere\n            var torusP = p;\n            torusP = rotateY(torusP, time * 0.7);\n            torusP = rotateX(torusP, time * 0.5);\n            let torus = sdTorus(torusP, vec2f(1.5, 0.15));\n            \n            // Another torus at different angle\n            var torus2P = p;\n            torus2P = rotateZ(torus2P, time * 0.6);\n            torus2P = rotateX(torus2P, PI * 0.5 + time * 0.4);\n            let torus2 = sdTorus(torus2P, vec2f(1.5, 0.15));\n            \n            // Orbiting smaller spheres\n            let orbitRadius = 2.2;\n            let orbit1 = vec3f(\n              cos(time * 1.5) * orbitRadius,\n              sin(time * 2.0) * 0.5,\n              sin(time * 1.5) * orbitRadius\n            );\n            let orbit2 = vec3f(\n              cos(time * 1.2 + PI * 0.66) * orbitRadius,\n              sin(time * 1.8 + PI) * 0.5,\n              sin(time * 1.2 + PI * 0.66) * orbitRadius\n            );\n            let orbit3 = vec3f(\n              cos(time * 1.0 + PI * 1.33) * orbitRadius,\n              sin(time * 1.5 + PI * 0.5) * 0.5,\n              sin(time * 1.0 + PI * 1.33) * orbitRadius\n            );\n            \n            let orbitSphere1 = sdSphere(p - orbit1, 0.3);\n            let orbitSphere2 = sdSphere(p - orbit2, 0.3);\n            let orbitSphere3 = sdSphere(p - orbit3, 0.3);\n            \n            // Rotating box\n            var boxP = p - vec3f(0.0, -1.5, 0.0);\n            boxP = rotateY(boxP, time * 0.8);\n            boxP = rotateX(boxP, time * 0.3);\n            let box = sdBox(boxP, vec3f(0.4, 0.4, 0.4));\n            \n            // Octahedron floating above\n            var octP = p - vec3f(0.0, 1.8 + sin(time * 2.5) * 0.2, 0.0);\n            octP = rotateY(octP, time);\n            let oct = sdOctahedron(octP, 0.5);\n            \n            // Ground plane (very far below to not interfere)\n            let ground = p.y + 3.5;\n            \n            // Combine everything with smooth union for organic look\n            var d = sphere;\n            var matId = 1.0;\n            \n            // Smooth blend tori with sphere\n            d = opSmoothUnion(d, torus, 0.3);\n            d = opSmoothUnion(d, torus2, 0.3);\n            \n            // Add orbiting spheres (different material)\n            let orbitDist = min(min(orbitSphere1, orbitSphere2), orbitSphere3);\n            if (orbitDist < d) {\n              matId = 2.0;\n            }\n            d = opSmoothUnion(d, orbitDist, 0.2);\n            \n            // Add box\n            if (box < d) {\n              matId = 3.0;\n            }\n            d = opSmoothUnion(d, box, 0.15);\n            \n            // Add octahedron\n            if (oct < d) {\n              matId = 4.0;\n            }\n            d = opSmoothUnion(d, oct, 0.15);\n            \n            // Ground with different material\n            if (ground < d) {\n              matId = 0.0;\n            }\n            d = min(d, ground);\n            \n            result.dist = d;\n            result.materialId = matId;\n            return result;\n          }\n\n          // Simple map returning just distance for normals/shadows\n          fn mapDist(p: vec3f) -> f32 {\n            return map(p).dist;\n          }\n\n          // ========================================\n          // Normal Calculation\n          // ========================================\n          \n          fn calcNormal(p: vec3f) -> vec3f {\n            let e = vec2f(0.001, 0.0);\n            return normalize(vec3f(\n              mapDist(p + e.xyy) - mapDist(p - e.xyy),\n              mapDist(p + e.yxy) - mapDist(p - e.yxy),\n              mapDist(p + e.yyx) - mapDist(p - e.yyx)\n            ));\n          }\n\n          // ========================================\n          // Raymarching\n          // ========================================\n          \n          fn raymarch(ro: vec3f, rd: vec3f) -> SceneResult {\n            var t = 0.0;\n            var result: SceneResult;\n            result.dist = MAX_DIST;\n            result.materialId = -1.0;\n            \n            for (var i = 0; i < MAX_STEPS; i++) {\n              let p = ro + rd * t;\n              let res = map(p);\n              \n              if (res.dist < SURF_DIST) {\n                result.dist = t;\n                result.materialId = res.materialId;\n                break;\n              }\n              \n              if (t > MAX_DIST) {\n                break;\n              }\n              \n              t += res.dist;\n            }\n            \n            return result;\n          }\n\n          // ========================================\n          // Soft Shadows\n          // ========================================\n          \n          fn softShadow(ro: vec3f, rd: vec3f, mint: f32, maxt: f32, k: f32) -> f32 {\n            var res = 1.0;\n            var t = mint;\n            \n            for (var i = 0; i < 32; i++) {\n              if (t >= maxt) { break; }\n              let h = mapDist(ro + rd * t);\n              if (h < 0.001) {\n                return 0.0;\n              }\n              res = min(res, k * h / t);\n              t += h;\n            }\n            \n            return res;\n          }\n\n          // ========================================\n          // Ambient Occlusion\n          // ========================================\n          \n          fn calcAO(pos: vec3f, nor: vec3f) -> f32 {\n            var occ = 0.0;\n            var sca = 1.0;\n            \n            for (var i = 0; i < 5; i++) {\n              let h = 0.01 + 0.12 * f32(i) / 4.0;\n              let d = mapDist(pos + h * nor);\n              occ += (h - d) * sca;\n              sca *= 0.95;\n            }\n            \n            return clamp(1.0 - 3.0 * occ, 0.0, 1.0);\n          }\n\n          // ========================================\n          // Material Colors\n          // ========================================\n          \n          fn getMaterial(matId: f32, p: vec3f) -> vec3f {\n            let time = globals.time;\n            \n            if (matId < 0.5) {\n              // Ground - checkerboard\n              let checker = step(0.0, sin(p.x * 2.0) * sin(p.z * 2.0));\n              return mix(vec3f(0.1, 0.1, 0.12), vec3f(0.15, 0.15, 0.18), checker);\n            } else if (matId < 1.5) {\n              // Main sphere + tori - gradient based on position\n              let h = sin(p.y * 2.0 + time) * 0.5 + 0.5;\n              return mix(vec3f(0.8, 0.2, 0.4), vec3f(0.2, 0.4, 0.9), h);\n            } else if (matId < 2.5) {\n              // Orbiting spheres - emissive-like warm colors\n              return vec3f(1.0, 0.6, 0.2);\n            } else if (matId < 3.5) {\n              // Box - cool cyan\n              return vec3f(0.2, 0.8, 0.8);\n            } else {\n              // Octahedron - golden\n              return vec3f(0.95, 0.8, 0.3);\n            }\n          }\n\n          // ========================================\n          // Main Fragment Shader\n          // ========================================\n          \n          @fragment\n          fn main(@builtin(position) fragCoord: vec4f) -> @location(0) vec4f {\n            // Normalized coordinates (-1 to 1, aspect corrected)\n            // Flip Y to correct for WebGPU's top-left origin\n            var uv = (fragCoord.xy - 0.5 * globals.resolution) / globals.resolution.y;\n            uv.y = -uv.y;\n            \n            let time = globals.time;\n            \n            // Camera setup - orbit around scene\n            let camDist = 6.0;\n            let camAngle = time * 0.3;\n            let camHeight = 2.0 + sin(time * 0.5) * 0.5;\n            \n            let ro = vec3f(\n              cos(camAngle) * camDist,\n              camHeight,\n              sin(camAngle) * camDist\n            );\n            \n            // Look at center\n            let lookAt = vec3f(0.0, 0.0, 0.0);\n            let forward = normalize(lookAt - ro);\n            let right = normalize(cross(vec3f(0.0, 1.0, 0.0), forward));\n            let up = cross(forward, right);\n            \n            // Ray direction\n            let rd = normalize(forward + uv.x * right + uv.y * up);\n            \n            // Light positions\n            let lightPos1 = vec3f(5.0, 8.0, -5.0);\n            let lightPos2 = vec3f(-4.0, 3.0, 4.0);\n            let lightCol1 = vec3f(1.0, 0.95, 0.9);\n            let lightCol2 = vec3f(0.4, 0.5, 0.8);\n            \n            // Raymarch\n            let hit = raymarch(ro, rd);\n            \n            var col = vec3f(0.0);\n            \n            if (hit.dist < MAX_DIST) {\n              // Hit point\n              let p = ro + rd * hit.dist;\n              let n = calcNormal(p);\n              \n              // Material\n              let matCol = getMaterial(hit.materialId, p);\n              \n              // Ambient occlusion\n              let ao = calcAO(p, n);\n              \n              // Lighting\n              let l1Dir = normalize(lightPos1 - p);\n              let l2Dir = normalize(lightPos2 - p);\n              \n              // Diffuse\n              let diff1 = max(dot(n, l1Dir), 0.0);\n              let diff2 = max(dot(n, l2Dir), 0.0);\n              \n              // Specular (Blinn-Phong)\n              let viewDir = normalize(ro - p);\n              let h1 = normalize(l1Dir + viewDir);\n              let h2 = normalize(l2Dir + viewDir);\n              let spec1 = pow(max(dot(n, h1), 0.0), 32.0);\n              let spec2 = pow(max(dot(n, h2), 0.0), 32.0);\n              \n              // Soft shadows\n              let shadow1 = softShadow(p + n * 0.01, l1Dir, 0.02, 10.0, 16.0);\n              let shadow2 = softShadow(p + n * 0.01, l2Dir, 0.02, 10.0, 16.0);\n              \n              // Ambient\n              let ambient = vec3f(0.03, 0.04, 0.06);\n              \n              // Combine lighting\n              col = ambient * matCol;\n              col += matCol * lightCol1 * diff1 * shadow1;\n              col += matCol * lightCol2 * diff2 * shadow2;\n              col += lightCol1 * spec1 * shadow1 * 0.3;\n              col += lightCol2 * spec2 * shadow2 * 0.2;\n              \n              // Apply AO\n              col *= ao;\n              \n              // Fresnel rim light\n              let fresnel = pow(1.0 - max(dot(viewDir, n), 0.0), 3.0);\n              col += fresnel * vec3f(0.3, 0.4, 0.6) * 0.5;\n              \n              // Fog\n              let fogAmount = 1.0 - exp(-hit.dist * 0.04);\n              let fogColor = vec3f(0.02, 0.03, 0.05);\n              col = mix(col, fogColor, fogAmount);\n            } else {\n              // Background - subtle gradient\n              let bgGrad = rd.y * 0.5 + 0.5;\n              col = mix(vec3f(0.02, 0.02, 0.04), vec3f(0.05, 0.08, 0.15), bgGrad);\n              \n              // Add some subtle \"stars\"\n              let stars = fract(sin(dot(floor(rd * 500.0), vec3f(12.9898, 78.233, 45.543))) * 43758.5453);\n              if (stars > 0.998) {\n                col += vec3f(0.5) * (stars - 0.998) * 500.0;\n              }\n            }\n            \n            // Tone mapping\n            col = col / (col + vec3f(1.0));\n            \n            // Gamma correction\n            col = pow(col, vec3f(1.0 / 2.2));\n            \n            // Vignette\n            let vignette = 1.0 - 0.3 * length(uv);\n            col *= vignette;\n            \n            return vec4f(col, 1.0);\n          }"
-  },
-  {
-    "slug": "metaballs",
-    "title": "Metaballs",
-    "description": "Metaballs using raymarching.",
-    "category": "advanced",
-    "shaderCode": "// Constants\n          const MAX_STEPS: i32 = 100;\n          const MAX_DIST: f32 = 50.0;\n          const SURF_DIST: f32 = 0.001;\n          const PI: f32 = 3.14159265359;\n          const NUM_BALLS: i32 = 7;\n\n          // Smooth minimum (polynomial)\n          fn smin(a: f32, b: f32, k: f32) -> f32 {\n            let h = max(k - abs(a - b), 0.0) / k;\n            return min(a, b) - h * h * h * k * (1.0 / 6.0);\n          }\n\n          // Sphere SDF\n          fn sdSphere(p: vec3f, r: f32) -> f32 {\n            return length(p) - r;\n          }\n\n          // Get ball position at time\n          fn getBallPos(index: i32, time: f32) -> vec3f {\n            let t = time * 0.5;\n            let i = f32(index);\n            \n            // Each ball has unique orbital motion\n            let phase1 = i * 0.7 + t;\n            let phase2 = i * 1.3 + t * 0.8;\n            let phase3 = i * 0.5 + t * 1.2;\n            \n            let radius = 1.5 + sin(i * 2.0) * 0.5;\n            \n            return vec3f(\n              sin(phase1) * cos(phase2 * 0.5) * radius,\n              sin(phase2) * cos(phase3 * 0.7) * radius * 0.7,\n              cos(phase1) * sin(phase3) * radius\n            );\n          }\n\n          // Get ball radius at time\n          fn getBallRadius(index: i32, time: f32) -> f32 {\n            let i = f32(index);\n            let baseRadius = 0.4 + sin(i * 1.5) * 0.15;\n            let pulse = sin(time * 2.0 + i * 0.8) * 0.1;\n            return baseRadius + pulse;\n          }\n\n          // Scene map - returns distance and color blend info\n          struct SceneResult {\n            dist: f32,\n            blend: vec3f, // For color blending\n          }\n\n          fn map(p: vec3f) -> SceneResult {\n            let time = globals.time;\n            var result: SceneResult;\n            result.dist = MAX_DIST;\n            result.blend = vec3f(0.0);\n            \n            let blendK = 0.8; // Blend factor\n            \n            // Add all metaballs with smooth union\n            for (var i = 0; i < NUM_BALLS; i++) {\n              let ballPos = getBallPos(i, time);\n              let ballRadius = getBallRadius(i, time);\n              let d = sdSphere(p - ballPos, ballRadius);\n              \n              // Color influence (closer balls have more influence)\n              let influence = 1.0 / (1.0 + d * d);\n              let hue = f32(i) / f32(NUM_BALLS);\n              \n              // Convert hue to RGB for blending\n              let ballCol = vec3f(\n                sin(hue * 6.28 + 0.0) * 0.5 + 0.5,\n                sin(hue * 6.28 + 2.09) * 0.5 + 0.5,\n                sin(hue * 6.28 + 4.19) * 0.5 + 0.5\n              );\n              \n              result.blend += ballCol * influence;\n              result.dist = smin(result.dist, d, blendK);\n            }\n            \n            // Normalize blend colors\n            result.blend = normalize(result.blend + vec3f(0.001));\n            \n            return result;\n          }\n\n          // Simple distance map\n          fn mapDist(p: vec3f) -> f32 {\n            return map(p).dist;\n          }\n\n          // Normal calculation\n          fn calcNormal(p: vec3f) -> vec3f {\n            let e = vec2f(0.001, 0.0);\n            return normalize(vec3f(\n              mapDist(p + e.xyy) - mapDist(p - e.xyy),\n              mapDist(p + e.yxy) - mapDist(p - e.yxy),\n              mapDist(p + e.yyx) - mapDist(p - e.yyx)\n            ));\n          }\n\n          // Raymarching\n          fn raymarch(ro: vec3f, rd: vec3f) -> f32 {\n            var t: f32 = 0.0;\n            \n            for (var i = 0; i < MAX_STEPS; i++) {\n              let p = ro + rd * t;\n              let d = mapDist(p);\n              \n              if (d < SURF_DIST) {\n                return t;\n              }\n              \n              if (t > MAX_DIST) {\n                break;\n              }\n              \n              t += d;\n            }\n            \n            return MAX_DIST;\n          }\n\n          // Subsurface scattering approximation\n          fn subsurface(p: vec3f, n: vec3f, lightDir: vec3f) -> f32 {\n            // Sample behind the surface\n            let thickness = 0.5;\n            var scatter: f32 = 0.0;\n            \n            for (var i = 1; i <= 3; i++) {\n              let fi = f32(i);\n              let samplePos = p - n * fi * 0.1;\n              let d = mapDist(samplePos);\n              scatter += smoothstep(0.0, 1.0, d) / fi;\n            }\n            \n            // Directional component\n            let backlight = max(dot(-n, lightDir), 0.0);\n            \n            return scatter * backlight * 0.3;\n          }\n\n          // Soft shadow\n          fn softShadow(ro: vec3f, rd: vec3f, mint: f32, maxt: f32, k: f32) -> f32 {\n            var res: f32 = 1.0;\n            var t = mint;\n            \n            for (var i = 0; i < 24; i++) {\n              if (t >= maxt) { break; }\n              let h = mapDist(ro + rd * t);\n              if (h < 0.001) {\n                return 0.0;\n              }\n              res = min(res, k * h / t);\n              t += h;\n            }\n            \n            return clamp(res, 0.0, 1.0);\n          }\n\n          // Ambient occlusion\n          fn calcAO(pos: vec3f, nor: vec3f) -> f32 {\n            var occ: f32 = 0.0;\n            var sca: f32 = 1.0;\n            \n            for (var i = 0; i < 5; i++) {\n              let h = 0.01 + 0.1 * f32(i);\n              let d = mapDist(pos + h * nor);\n              occ += (h - d) * sca;\n              sca *= 0.8;\n            }\n            \n            return clamp(1.0 - 2.0 * occ, 0.0, 1.0);\n          }\n\n          // Iridescence based on view angle and normal\n          fn iridescence(viewDir: vec3f, normal: vec3f, time: f32) -> vec3f {\n            let NdotV = dot(normal, viewDir);\n            let t = NdotV * 3.0 + time * 0.5;\n            \n            return vec3f(\n              sin(t + 0.0) * 0.5 + 0.5,\n              sin(t + 2.1) * 0.5 + 0.5,\n              sin(t + 4.2) * 0.5 + 0.5\n            );\n          }\n\n          @fragment\n          fn main(@builtin(position) fragCoord: vec4f) -> @location(0) vec4f {\n            var uv = (fragCoord.xy - 0.5 * globals.resolution) / globals.resolution.y;\n            uv.y = -uv.y;\n            \n            let time = globals.time;\n            \n            // Camera orbiting the metaballs\n            let camDist = 5.0;\n            let camAngle = time * 0.3;\n            \n            let ro = vec3f(\n              cos(camAngle) * camDist,\n              sin(time * 0.2) * 1.0 + 1.5,\n              sin(camAngle) * camDist\n            );\n            \n            // Look at center\n            let lookAt = vec3f(0.0, 0.0, 0.0);\n            let forward = normalize(lookAt - ro);\n            let right = normalize(cross(vec3f(0.0, 1.0, 0.0), forward));\n            let up = cross(forward, right);\n            \n            // Ray direction\n            let rd = normalize(forward + uv.x * right + uv.y * up);\n            \n            // Light setup - moving light\n            let lightAngle = time * 0.5;\n            let lightPos = vec3f(\n              cos(lightAngle) * 4.0,\n              3.0 + sin(time * 0.7),\n              sin(lightAngle) * 4.0\n            );\n            \n            // Raymarch\n            let dist = raymarch(ro, rd);\n            \n            var col = vec3f(0.0);\n            \n            if (dist < MAX_DIST) {\n              let p = ro + rd * dist;\n              let n = calcNormal(p);\n              let sceneData = map(p);\n              \n              // Get base color from blend\n              let baseCol = sceneData.blend;\n              \n              // View and light directions\n              let viewDir = normalize(ro - p);\n              let lightDir = normalize(lightPos - p);\n              \n              // Fresnel\n              let fresnel = pow(1.0 - max(dot(viewDir, n), 0.0), 3.0);\n              \n              // Iridescent color shift\n              let iriCol = iridescence(viewDir, n, time);\n              \n              // Mix base color with iridescence based on fresnel\n              var matCol = mix(baseCol, iriCol, fresnel * 0.6);\n              \n              // Diffuse lighting\n              let diff = max(dot(n, lightDir), 0.0);\n              \n              // Specular (Blinn-Phong)\n              let halfDir = normalize(lightDir + viewDir);\n              let spec = pow(max(dot(n, halfDir), 0.0), 64.0);\n              \n              // Subsurface scattering\n              let sss = subsurface(p, n, lightDir);\n              \n              // Ambient occlusion\n              let ao = calcAO(p, n);\n              \n              // Soft shadows\n              let shadow = softShadow(p + n * 0.01, lightDir, 0.02, 10.0, 16.0);\n              \n              // Combine lighting\n              let ambient = vec3f(0.1, 0.12, 0.15);\n              let lightCol = vec3f(1.0, 0.95, 0.9);\n              \n              col = ambient * matCol * ao;\n              col += matCol * lightCol * diff * shadow;\n              col += matCol * sss; // Subsurface adds translucent glow\n              col += lightCol * spec * shadow * 0.7;\n              \n              // Rim light with iridescence\n              col += iriCol * fresnel * 0.4;\n              \n              // Inner glow effect\n              let glowAmount = 1.0 - smoothstep(0.0, 0.3, dist);\n              col += baseCol * glowAmount * 0.2;\n              \n              // Fog\n              let fogAmount = 1.0 - exp(-dist * 0.05);\n              let fogColor = vec3f(0.05, 0.07, 0.1);\n              col = mix(col, fogColor, fogAmount);\n              \n            } else {\n              // Background gradient\n              let bgGrad = rd.y * 0.5 + 0.5;\n              col = mix(vec3f(0.08, 0.1, 0.15), vec3f(0.02, 0.03, 0.06), bgGrad);\n              \n              // Subtle radial gradient for depth\n              let radialDist = length(uv);\n              col = mix(col, vec3f(0.15, 0.12, 0.2), (1.0 - radialDist) * 0.2);\n            }\n            \n            // Tone mapping (ACES)\n            col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);\n            \n            // Gamma correction\n            col = pow(col, vec3f(1.0 / 2.2));\n            \n            // Chromatic aberration at edges\n            let aberrationStrength = length(uv) * 0.01;\n            \n            // Vignette\n            let vignette = 1.0 - 0.3 * length(uv);\n            col *= vignette;\n            \n            return vec4f(col, 1.0);\n          }"
-  },
-  {
-    "slug": "morphing",
-    "title": "Morphing",
-    "description": "Smoothly morphing between different shapes.",
-    "category": "advanced",
-    "shaderCode": "// Constants\n          const MAX_STEPS: i32 = 100;\n          const MAX_DIST: f32 = 50.0;\n          const SURF_DIST: f32 = 0.001;\n          const PI: f32 = 3.14159265359;\n\n          // ========================================\n          // SDF Primitives\n          // ========================================\n          \n          fn sdSphere(p: vec3f, r: f32) -> f32 {\n            return length(p) - r;\n          }\n\n          fn sdBox(p: vec3f, b: vec3f) -> f32 {\n            let q = abs(p) - b;\n            return length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0);\n          }\n\n          fn sdTorus(p: vec3f, t: vec2f) -> f32 {\n            let q = vec2f(length(p.xz) - t.x, p.y);\n            return length(q) - t.y;\n          }\n\n          fn sdOctahedron(p: vec3f, s: f32) -> f32 {\n            let q = abs(p);\n            return (q.x + q.y + q.z - s) * 0.57735027;\n          }\n\n          fn sdCylinder(p: vec3f, h: f32, r: f32) -> f32 {\n            let d = abs(vec2f(length(p.xz), p.y)) - vec2f(r, h);\n            return min(max(d.x, d.y), 0.0) + length(max(d, vec2f(0.0)));\n          }\n\n          // ========================================\n          // Domain Distortions\n          // ========================================\n          \n          fn opTwist(p: vec3f, k: f32) -> vec3f {\n            let c = cos(k * p.y);\n            let s = sin(k * p.y);\n            let q = vec2f(c * p.x - s * p.z, s * p.x + c * p.z);\n            return vec3f(q.x, p.y, q.y);\n          }\n\n          fn opBend(p: vec3f, k: f32) -> vec3f {\n            let c = cos(k * p.x);\n            let s = sin(k * p.x);\n            let q = vec2f(c * p.y - s * p.z, s * p.y + c * p.z);\n            return vec3f(p.x, q.x, q.y);\n          }\n\n          fn opDisplace(p: vec3f, time: f32) -> f32 {\n            return sin(p.x * 5.0 + time) * sin(p.y * 5.0 + time * 1.3) * sin(p.z * 5.0 + time * 0.7) * 0.03;\n          }\n\n          // ========================================\n          // Morphing Scene\n          // ========================================\n\n          fn map(p: vec3f) -> f32 {\n            let time = globals.time;\n            \n            // Cycle through shapes every 3 seconds\n            let cycleTime = 3.0;\n            let totalCycle = cycleTime * 5.0; // 5 shapes\n            let t = time % totalCycle;\n            let shapeIndex = i32(t / cycleTime);\n            let morphT = fract(t / cycleTime); // 0 to 1 within each transition\n            \n            // Smooth easing function\n            let easedT = smoothstep(0.0, 1.0, morphT);\n            \n            // Apply twist/bend during transitions\n            let transitionIntensity = sin(morphT * PI); // peaks at 0.5\n            var distortedP = p;\n            \n            distortedP = opTwist(distortedP, transitionIntensity * 1.5);\n            distortedP = opBend(distortedP, transitionIntensity * 0.8);\n            \n            // SDFs for each shape (scaled to similar sizes)\n            let sphere = sdSphere(distortedP, 1.0);\n            let box = sdBox(distortedP, vec3f(0.8));\n            let torus = sdTorus(distortedP, vec2f(0.8, 0.3));\n            let octahedron = sdOctahedron(distortedP, 1.3);\n            let cylinder = sdCylinder(distortedP, 0.8, 0.6);\n            \n            // Morph between shapes\n            var d: f32;\n            \n            if (shapeIndex == 0) {\n              // Sphere → Box\n              d = mix(sphere, box, easedT);\n            } else if (shapeIndex == 1) {\n              // Box → Torus\n              d = mix(box, torus, easedT);\n            } else if (shapeIndex == 2) {\n              // Torus → Octahedron\n              d = mix(torus, octahedron, easedT);\n            } else if (shapeIndex == 3) {\n              // Octahedron → Cylinder\n              d = mix(octahedron, cylinder, easedT);\n            } else {\n              // Cylinder → Sphere\n              d = mix(cylinder, sphere, easedT);\n            }\n            \n            // Add displacement for organic feel during transitions\n            d += opDisplace(p, time) * transitionIntensity;\n            \n            return d;\n          }\n\n          // Normal calculation\n          fn calcNormal(p: vec3f) -> vec3f {\n            let e = vec2f(0.001, 0.0);\n            return normalize(vec3f(\n              map(p + e.xyy) - map(p - e.xyy),\n              map(p + e.yxy) - map(p - e.yxy),\n              map(p + e.yyx) - map(p - e.yyx)\n            ));\n          }\n\n          // Raymarching\n          fn raymarch(ro: vec3f, rd: vec3f) -> f32 {\n            var t: f32 = 0.0;\n            \n            for (var i = 0; i < MAX_STEPS; i++) {\n              let p = ro + rd * t;\n              let d = map(p);\n              \n              if (d < SURF_DIST) {\n                return t;\n              }\n              \n              if (t > MAX_DIST) {\n                break;\n              }\n              \n              t += d;\n            }\n            \n            return MAX_DIST;\n          }\n\n          // Calculate edge glow based on gradient changes\n          fn edgeGlow(p: vec3f, n: vec3f) -> f32 {\n            let e = 0.05;\n            let d1 = map(p + n * e);\n            let d2 = map(p - n * e);\n            let curvature = abs(d1 + d2 - 2.0 * map(p)) / (e * e);\n            return clamp(curvature * 0.5, 0.0, 1.0);\n          }\n\n          // Wireframe effect based on position\n          fn wireframe(p: vec3f, n: vec3f) -> f32 {\n            let scale = 10.0;\n            let thickness = 0.05;\n            \n            // Grid lines on each axis\n            let gridX = abs(fract(p.x * scale + 0.5) - 0.5);\n            let gridY = abs(fract(p.y * scale + 0.5) - 0.5);\n            let gridZ = abs(fract(p.z * scale + 0.5) - 0.5);\n            \n            // Weight by normal to show lines perpendicular to surface\n            let nx = abs(n.x);\n            let ny = abs(n.y);\n            let nz = abs(n.z);\n            \n            var wire = min(gridY, gridZ) * nx;\n            wire = min(wire, min(gridX, gridZ) * ny);\n            wire = min(wire, min(gridX, gridY) * nz);\n            \n            return 1.0 - smoothstep(0.0, thickness, wire);\n          }\n\n          // Soft shadow\n          fn softShadow(ro: vec3f, rd: vec3f, mint: f32, maxt: f32, k: f32) -> f32 {\n            var res: f32 = 1.0;\n            var t = mint;\n            \n            for (var i = 0; i < 24; i++) {\n              if (t >= maxt) { break; }\n              let h = map(ro + rd * t);\n              if (h < 0.001) {\n                return 0.0;\n              }\n              res = min(res, k * h / t);\n              t += h;\n            }\n            \n            return clamp(res, 0.0, 1.0);\n          }\n\n          // Ambient occlusion\n          fn calcAO(pos: vec3f, nor: vec3f) -> f32 {\n            var occ: f32 = 0.0;\n            var sca: f32 = 1.0;\n            \n            for (var i = 0; i < 5; i++) {\n              let h = 0.01 + 0.1 * f32(i);\n              let d = map(pos + h * nor);\n              occ += (h - d) * sca;\n              sca *= 0.8;\n            }\n            \n            return clamp(1.0 - 2.0 * occ, 0.0, 1.0);\n          }\n\n          // Get shape color based on current transition\n          fn getShapeColor(time: f32) -> vec3f {\n            let cycleTime = 3.0;\n            let totalCycle = cycleTime * 5.0;\n            let t = time % totalCycle;\n            let shapeIndex = i32(t / cycleTime);\n            let morphT = fract(t / cycleTime);\n            \n            // Colors for each shape\n            let sphereCol = vec3f(0.9, 0.3, 0.4);   // Red\n            let boxCol = vec3f(0.3, 0.7, 0.9);      // Cyan\n            let torusCol = vec3f(0.4, 0.9, 0.4);    // Green\n            let octaCol = vec3f(0.9, 0.6, 0.2);     // Orange\n            let cylCol = vec3f(0.7, 0.3, 0.9);      // Purple\n            \n            var col1: vec3f;\n            var col2: vec3f;\n            \n            if (shapeIndex == 0) {\n              col1 = sphereCol; col2 = boxCol;\n            } else if (shapeIndex == 1) {\n              col1 = boxCol; col2 = torusCol;\n            } else if (shapeIndex == 2) {\n              col1 = torusCol; col2 = octaCol;\n            } else if (shapeIndex == 3) {\n              col1 = octaCol; col2 = cylCol;\n            } else {\n              col1 = cylCol; col2 = sphereCol;\n            }\n            \n            return mix(col1, col2, smoothstep(0.0, 1.0, morphT));\n          }\n\n          @fragment\n          fn main(@builtin(position) fragCoord: vec4f) -> @location(0) vec4f {\n            var uv = (fragCoord.xy - 0.5 * globals.resolution) / globals.resolution.y;\n            uv.y = -uv.y;\n            \n            let time = globals.time;\n            \n            // Camera setup - slow orbit\n            let camDist = 4.0;\n            let camAngle = time * 0.2;\n            \n            let ro = vec3f(\n              cos(camAngle) * camDist,\n              sin(time * 0.15) * 1.0 + 0.5,\n              sin(camAngle) * camDist\n            );\n            \n            // Look at center\n            let lookAt = vec3f(0.0, 0.0, 0.0);\n            let forward = normalize(lookAt - ro);\n            let right = normalize(cross(vec3f(0.0, 1.0, 0.0), forward));\n            let up = cross(forward, right);\n            \n            // Ray direction\n            let rd = normalize(forward + uv.x * right + uv.y * up);\n            \n            // Light\n            let lightDir = normalize(vec3f(1.0, 1.0, -0.5));\n            let lightCol = vec3f(1.0, 0.98, 0.95);\n            \n            // Raymarch\n            let dist = raymarch(ro, rd);\n            \n            var col = vec3f(0.0);\n            \n            if (dist < MAX_DIST) {\n              let p = ro + rd * dist;\n              let n = calcNormal(p);\n              \n              // Base material color\n              let matCol = getShapeColor(time);\n              \n              // View direction\n              let viewDir = normalize(ro - p);\n              \n              // Diffuse\n              let diff = max(dot(n, lightDir), 0.0);\n              \n              // Specular\n              let halfDir = normalize(lightDir + viewDir);\n              let spec = pow(max(dot(n, halfDir), 0.0), 64.0);\n              \n              // Fresnel\n              let fresnel = pow(1.0 - max(dot(viewDir, n), 0.0), 3.0);\n              \n              // Edge glow\n              let edge = edgeGlow(p, n);\n              \n              // Wireframe overlay\n              let wire = wireframe(p, n);\n              \n              // Ambient occlusion\n              let ao = calcAO(p, n);\n              \n              // Soft shadow\n              let shadow = softShadow(p + n * 0.01, lightDir, 0.02, 10.0, 16.0);\n              \n              // Ambient\n              let ambient = vec3f(0.08, 0.1, 0.15);\n              \n              // Combine base lighting\n              col = ambient * matCol * ao;\n              col += matCol * lightCol * diff * shadow;\n              col += lightCol * spec * shadow * 0.6;\n              \n              // Add holographic rim\n              let rimCol = vec3f(0.5, 0.8, 1.0);\n              col += rimCol * fresnel * 0.5;\n              \n              // Add edge glow (bright at edges/corners)\n              let edgeCol = vec3f(1.0, 0.8, 0.4);\n              col += edgeCol * edge * 0.3;\n              \n              // Add wireframe overlay\n              let wireCol = mix(vec3f(0.2, 0.6, 1.0), vec3f(1.0, 0.4, 0.8), sin(time * 2.0) * 0.5 + 0.5);\n              col = mix(col, wireCol, wire * 0.4 * (0.5 + fresnel * 0.5));\n              \n              // Scanline effect for holographic look\n              let scanline = sin(p.y * 50.0 + time * 5.0) * 0.5 + 0.5;\n              col += wireCol * scanline * wire * 0.1;\n              \n              // Fog\n              let fogAmount = 1.0 - exp(-dist * 0.08);\n              let fogColor = vec3f(0.02, 0.04, 0.08);\n              col = mix(col, fogColor, fogAmount);\n              \n            } else {\n              // Background\n              let bgGrad = rd.y * 0.5 + 0.5;\n              col = mix(vec3f(0.05, 0.07, 0.12), vec3f(0.02, 0.03, 0.06), bgGrad);\n              \n              // Grid floor\n              if (rd.y < 0.0) {\n                let floorDist = -ro.y / rd.y;\n                let floorP = ro + rd * floorDist;\n                \n                if (floorDist < 50.0 && floorDist > 0.0) {\n                  let gridScale = 2.0;\n                  let gridX = abs(fract(floorP.x / gridScale + 0.5) - 0.5);\n                  let gridZ = abs(fract(floorP.z / gridScale + 0.5) - 0.5);\n                  let grid = min(gridX, gridZ);\n                  let gridLine = 1.0 - smoothstep(0.0, 0.02, grid);\n                  \n                  let gridFade = exp(-floorDist * 0.05);\n                  col += vec3f(0.1, 0.2, 0.4) * gridLine * gridFade * 0.5;\n                }\n              }\n            }\n            \n            // Tone mapping\n            col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);\n            \n            // Gamma correction\n            col = pow(col, vec3f(1.0 / 2.2));\n            \n            // Vignette\n            let vignette = 1.0 - 0.3 * length(uv);\n            col *= vignette;\n            \n            return vec4f(col, 1.0);\n          }"
-  },
-  {
-    "slug": "mandelbulb",
-    "title": "Mandelbulb",
-    "description": "The 3D Mandelbulb fractal.",
-    "category": "advanced",
-    "shaderCode": "// Constants\n          const MAX_STEPS: i32 = 128;\n          const MAX_DIST: f32 = 20.0;\n          const SURF_DIST: f32 = 0.0005;\n          const PI: f32 = 3.14159265359;\n          const POWER: f32 = 8.0;\n          const MAX_ITERATIONS: i32 = 8;\n          const BAILOUT: f32 = 2.0;\n\n          // Mandelbulb distance estimator with orbit trap data\n          struct MandelbulbResult {\n            dist: f32,\n            iterations: f32,\n            orbitTrap: vec3f,\n          }\n\n          fn mandelbulb(pos: vec3f) -> MandelbulbResult {\n            var z = pos;\n            var dr: f32 = 1.0;\n            var r: f32 = 0.0;\n            var iterations: f32 = 0.0;\n            var orbitTrap = vec3f(1e10);\n            \n            for (var i = 0; i < MAX_ITERATIONS; i++) {\n              r = length(z);\n              \n              if (r > BAILOUT) {\n                break;\n              }\n              \n              iterations = f32(i);\n              \n              // Orbit trap - track minimum distance to coordinate planes\n              orbitTrap = min(orbitTrap, abs(z));\n              \n              // Convert to spherical coordinates\n              let theta = acos(z.z / r);\n              let phi = atan2(z.y, z.x);\n              \n              // Scale the derivative\n              dr = pow(r, POWER - 1.0) * POWER * dr + 1.0;\n              \n              // Mandelbulb formula: z^n + c\n              let zr = pow(r, POWER);\n              let newTheta = theta * POWER;\n              let newPhi = phi * POWER;\n              \n              z = zr * vec3f(\n                sin(newTheta) * cos(newPhi),\n                sin(newTheta) * sin(newPhi),\n                cos(newTheta)\n              );\n              z += pos;\n            }\n            \n            var result: MandelbulbResult;\n            result.dist = 0.5 * log(r) * r / dr;\n            result.iterations = iterations;\n            result.orbitTrap = orbitTrap;\n            return result;\n          }\n\n          // Scene map\n          fn map(p: vec3f) -> MandelbulbResult {\n            return mandelbulb(p);\n          }\n\n          // Calculate normal using gradient\n          fn calcNormal(p: vec3f) -> vec3f {\n            let e = vec2f(0.0001, 0.0);\n            return normalize(vec3f(\n              mandelbulb(p + e.xyy).dist - mandelbulb(p - e.xyy).dist,\n              mandelbulb(p + e.yxy).dist - mandelbulb(p - e.yxy).dist,\n              mandelbulb(p + e.yyx).dist - mandelbulb(p - e.yyx).dist\n            ));\n          }\n\n          // Raymarching with iteration tracking\n          struct RayResult {\n            dist: f32,\n            steps: i32,\n            iterations: f32,\n            orbitTrap: vec3f,\n          }\n\n          fn raymarch(ro: vec3f, rd: vec3f) -> RayResult {\n            var t: f32 = 0.0;\n            var result: RayResult;\n            result.dist = MAX_DIST;\n            result.steps = 0;\n            result.iterations = 0.0;\n            result.orbitTrap = vec3f(1.0);\n            \n            for (var i = 0; i < MAX_STEPS; i++) {\n              let p = ro + rd * t;\n              let res = map(p);\n              \n              result.steps = i;\n              \n              if (res.dist < SURF_DIST) {\n                result.dist = t;\n                result.iterations = res.iterations;\n                result.orbitTrap = res.orbitTrap;\n                break;\n              }\n              \n              if (t > MAX_DIST) {\n                break;\n              }\n              \n              t += res.dist * 0.8; // Slight understepping for safety\n            }\n            \n            return result;\n          }\n\n          // Soft shadow\n          fn softShadow(ro: vec3f, rd: vec3f, mint: f32, maxt: f32, k: f32) -> f32 {\n            var res: f32 = 1.0;\n            var t = mint;\n            \n            for (var i = 0; i < 32; i++) {\n              if (t >= maxt) { break; }\n              let h = mandelbulb(ro + rd * t).dist;\n              if (h < 0.001) {\n                return 0.0;\n              }\n              res = min(res, k * h / t);\n              t += clamp(h, 0.02, 0.2);\n            }\n            \n            return clamp(res, 0.0, 1.0);\n          }\n\n          // Ambient occlusion\n          fn calcAO(pos: vec3f, nor: vec3f) -> f32 {\n            var occ: f32 = 0.0;\n            var sca: f32 = 1.0;\n            \n            for (var i = 0; i < 5; i++) {\n              let h = 0.01 + 0.08 * f32(i);\n              let d = mandelbulb(pos + h * nor).dist;\n              occ += (h - d) * sca;\n              sca *= 0.85;\n            }\n            \n            return clamp(1.0 - 2.0 * occ, 0.0, 1.0);\n          }\n\n          // Color palette function\n          fn palette(t: f32) -> vec3f {\n            let a = vec3f(0.5, 0.5, 0.5);\n            let b = vec3f(0.5, 0.5, 0.5);\n            let c = vec3f(1.0, 1.0, 1.0);\n            let d = vec3f(0.0, 0.33, 0.67);\n            return a + b * cos(6.28318 * (c * t + d));\n          }\n\n          @fragment\n          fn main(@builtin(position) fragCoord: vec4f) -> @location(0) vec4f {\n            var uv = (fragCoord.xy - 0.5 * globals.resolution) / globals.resolution.y;\n            uv.y = -uv.y;\n            \n            let time = globals.time * 0.2;\n            \n            // Camera orbit around the Mandelbulb\n            let camDist = 2.8 + sin(time * 0.5) * 0.3;\n            let camAngleY = time * 0.4;\n            let camAngleX = sin(time * 0.3) * 0.3 + 0.3;\n            \n            let ro = vec3f(\n              cos(camAngleY) * cos(camAngleX) * camDist,\n              sin(camAngleX) * camDist,\n              sin(camAngleY) * cos(camAngleX) * camDist\n            );\n            \n            // Look at center\n            let lookAt = vec3f(0.0, 0.0, 0.0);\n            let forward = normalize(lookAt - ro);\n            let right = normalize(cross(vec3f(0.0, 1.0, 0.0), forward));\n            let up = cross(forward, right);\n            \n            // Ray direction with slight fish-eye for drama\n            let rd = normalize(forward + uv.x * right + uv.y * up);\n            \n            // Light setup\n            let lightDir = normalize(vec3f(1.0, 0.8, -0.5));\n            let lightCol = vec3f(1.0, 0.95, 0.9);\n            \n            // Raymarch\n            let hit = raymarch(ro, rd);\n            \n            var col = vec3f(0.0);\n            \n            if (hit.dist < MAX_DIST) {\n              let p = ro + rd * hit.dist;\n              let n = calcNormal(p);\n              \n              // Base color from orbit trap\n              let trapCol = palette(length(hit.orbitTrap) * 2.0 + time * 0.5);\n              \n              // Iteration-based coloring\n              let iterCol = palette(hit.iterations / f32(MAX_ITERATIONS) + 0.3);\n              \n              // Mix colors\n              var matCol = mix(trapCol, iterCol, 0.5);\n              \n              // Ambient occlusion\n              let ao = calcAO(p, n);\n              \n              // Diffuse lighting\n              let diff = max(dot(n, lightDir), 0.0);\n              \n              // Soft shadow\n              let shadow = softShadow(p + n * 0.002, lightDir, 0.01, 5.0, 8.0);\n              \n              // Specular\n              let viewDir = normalize(ro - p);\n              let halfDir = normalize(lightDir + viewDir);\n              let spec = pow(max(dot(n, halfDir), 0.0), 64.0);\n              \n              // Fresnel rim\n              let fresnel = pow(1.0 - max(dot(viewDir, n), 0.0), 3.0);\n              \n              // Ambient\n              let ambient = vec3f(0.05, 0.08, 0.12);\n              \n              // Combine\n              col = ambient * matCol * ao;\n              col += matCol * lightCol * diff * shadow;\n              col += lightCol * spec * shadow * 0.5;\n              col += vec3f(0.4, 0.6, 1.0) * fresnel * 0.3;\n              \n              // Glow based on step count (edges glow more)\n              let glowAmount = f32(hit.steps) / f32(MAX_STEPS);\n              let glowCol = palette(glowAmount + time * 0.2);\n              col += glowCol * glowAmount * 0.15;\n              \n              // Fog\n              let fogAmount = 1.0 - exp(-hit.dist * 0.15);\n              let fogColor = vec3f(0.01, 0.02, 0.04);\n              col = mix(col, fogColor, fogAmount);\n            } else {\n              // Background with glow based on closest approach\n              let bgGrad = rd.y * 0.5 + 0.5;\n              col = mix(vec3f(0.01, 0.02, 0.04), vec3f(0.02, 0.04, 0.08), bgGrad);\n              \n              // Glow based on how many steps we took (indicates near-miss)\n              let glowIntensity = f32(hit.steps) / f32(MAX_STEPS);\n              let glowCol = palette(glowIntensity + time * 0.2);\n              col += glowCol * glowIntensity * glowIntensity * 0.5;\n            }\n            \n            // Tone mapping (ACES approximation)\n            col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);\n            \n            // Gamma correction\n            col = pow(col, vec3f(1.0 / 2.2));\n            \n            // Vignette\n            let vignette = 1.0 - 0.4 * length(uv);\n            col *= vignette;\n            \n            return vec4f(col, 1.0);\n          }"
-  },
-  {
-    "slug": "terrain",
-    "title": "Terrain",
-    "description": "Procedural terrain generation.",
-    "category": "advanced",
-    "shaderCode": "// Lunar Landscape - Original implementation by Ralph-GPU AI\n          const MAX_STEPS: i32 = 160; \n          const MAX_DIST: f32 = 400.0;\n          const SURF_DIST: f32 = 0.01; \n          const SUN_DIR: vec3f = vec3f(-0.4, 0.6, -0.5); // Higher sun angle for more light\n\n          fn hash21(p: vec2f) -> f32 {\n            var p3 = fract(vec3f(p.x, p.y, p.x) * 0.13);\n            p3 += dot(p3, p3.yzx + 3.333);\n            return fract((p3.x + p3.y) * p3.z);\n          }\n\n          fn hash33(p: vec3f) -> vec3f {\n            var p3 = fract(p * vec3f(0.1031, 0.1030, 0.0973));\n            p3 += dot(p3, p3.yzx + 33.33);\n            return fract((p3.xxy + p3.yzz) * p3.zyx);\n          }\n\n          // Value noise with analytical derivatives\n          fn moonNoise(p: vec2f) -> vec3f {\n            let i = floor(p);\n            let f = fract(p);\n            let u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);\n            let du = 30.0 * f * f * (f * (f - 2.0) + 1.0);\n            \n            let a = hash21(i + vec2f(0.0, 0.0));\n            let b = hash21(i + vec2f(1.0, 0.0));\n            let c = hash21(i + vec2f(0.0, 1.0));\n            let d = hash21(i + vec2f(1.0, 1.0));\n\n            let k0 = a;\n            let k1 = b - a;\n            let k2 = c - a;\n            let k3 = a - b - c + d;\n\n            let val = k0 + k1 * u.x + k2 * u.y + k3 * u.x * u.y;\n            let deriv = du * vec2f(k1 + k3 * u.y, k2 + k3 * u.x);\n\n            return vec3f(val, deriv);\n          }\n\n          // Optimized procedural crater function (single loop layer)\n          fn crater(p: vec2f) -> f32 {\n            let i = floor(p);\n            let f = fract(p);\n            var dist = 1.0;\n            \n            for (var y = -1.0; y <= 1.0; y += 1.0) {\n              for (var x = -1.0; x <= 1.0; x += 1.0) {\n                let g = vec2f(x, y);\n                let o = hash33(vec3f(i + g, 0.0)).xy * 0.7;\n                let r = length(g + o - f);\n                dist = min(dist, r);\n              }\n            }\n            // Safer crater shape to avoid raymarching holes\n            return -exp(-dist * dist * 4.0) * 2.0;\n          }\n\n          // Lunar surface displacement - balanced for performance\n          fn moonSurface(p: vec2f) -> vec3f {\n            var h: f32 = 0.0;\n            var d = vec2f(0.0);\n            var a: f32 = 0.5;\n            var pos = p * 0.05;\n            let m = mat2x2f(0.8, 0.6, -0.6, 0.8);\n            \n            for (var i = 0; i < 5; i++) { \n              let n = moonNoise(pos);\n              d += a * n.yz;\n              h += a * n.x / (1.0 + dot(d, d)); \n              a *= 0.5;\n              pos = m * pos * 2.2;\n            }\n            \n            // Single pass of craters\n            h += crater(p * 0.03) * 1.2;\n            \n            return vec3f(pow(h, 1.) * 3.0 - 5.0, d * 15.0 * 0.05);\n          }\n\n          fn skyBackdrop(rd: vec3f) -> vec3f {\n            var col = vec3f(0.0);\n            \n            // Distant sharp stars\n            let res = globals.resolution.x * 0.5;\n            var p = rd;\n            for (var i: f32 = 0.0; i < 3.0; i += 1.0) {\n              let q = fract(p * (0.2 * res)) - 0.5;\n              let id = floor(p * (0.2 * res));\n              let rn = hash33(id).xy;\n              var c2 = 1.0 - smoothstep(0.0, 0.5, length(q));\n              c2 *= step(rn.x, 0.0004 + i * 0.0005);\n              col += c2 * (mix(vec3f(1.0, 0.9, 0.8), vec3f(0.8, 0.9, 1.0), rn.y));\n              p *= 1.5;\n            }\n            \n            // Earth-glow\n            let earthDir = normalize(vec3f(0.5, 0.3, 0.8));\n            let earthDot = max(0.0, dot(rd, earthDir));\n            col += pow(earthDot, 100.0) * vec3f(0.2, 0.5, 1.0) * 3.0;\n            col += pow(earthDot, 10.0) * vec3f(0.1, 0.2, 0.5) * 0.8;\n            \n            return col;\n          }\n\n          struct MoonHit {\n            dist: f32,\n            derivs: vec2f,\n          }\n\n          fn mapMoon(p: vec3f) -> MoonHit {\n            let ms = moonSurface(p.xz);\n            var r: MoonHit;\n            r.dist = p.y - ms.x;\n            r.derivs = ms.yz;\n            return r;\n          }\n\n          fn raymarchMoon(ro: vec3f, rd: vec3f) -> MoonHit {\n            var t: f32 = 0.0;\n            var res: MoonHit;\n            res.dist = MAX_DIST;\n            \n            var precis = 0.001;\n            for (var i = 0; i < MAX_STEPS; i++) {\n              let p = ro + rd * t;\n              let m = mapMoon(p);\n              if (abs(m.dist) < precis || t > MAX_DIST) {\n                res = m;\n                res.dist = t;\n                break;\n              }\n              // More conservative stepping to avoid holes\n              t += m.dist * 0.8; \n            }\n            return res;\n          }\n\n          @fragment\n          fn main(@builtin(position) fc: vec4f) -> @location(0) vec4f {\n            let q = fc.xy / globals.resolution;\n            var uv = (fc.xy - 0.5 * globals.resolution) / globals.resolution.y;\n            uv.y = -uv.y;\n            \n            let time = globals.time;\n            \n            let ro = vec3f(time * 8.0, 10.0 + sin(time * 0.1) * 2.0, 0.0);\n            let lookAt = vec3f(time * 8.0 + 20.0, 5.0, sin(time * 0.05) * 5.0);\n            let fwd = normalize(lookAt - ro);\n            let rgt = normalize(cross(vec3f(0.0, 1.0, 0.0), fwd));\n            let up = cross(fwd, rgt);\n            let rd = normalize(uv.x * rgt + uv.y * up + fwd * 1.2);\n            \n            let bg = skyBackdrop(rd);\n            var col = bg;\n            \n            let hit = raymarchMoon(ro, rd);\n            \n            if (hit.dist < MAX_DIST) {\n              let p = ro + rd * hit.dist;\n              let n = normalize(vec3f(-hit.derivs.x, 1.0, -hit.derivs.y));\n              \n              let sunLgt = normalize(-SUN_DIR);\n              let dif = max(0.0, dot(n, sunLgt));\n              \n              // Brighter regolith with more variation\n              let noiseVar = hash21(p.xz * 0.2);\n              let regolith = mix(vec3f(0.55, 0.55, 0.58), vec3f(0.7, 0.7, 0.75), noiseVar);\n              \n              // Stronger fill light (Earth glow contribution)\n              let earthDir = normalize(vec3f(0.5, 0.3, 0.8));\n              let earthFill = max(0.0, dot(n, earthDir)) * vec3f(0.1, 0.2, 0.4) * 0.5;\n              \n              let bounce = max(0.0, 0.5 + 0.5 * n.y) * 0.05;\n              \n              col = regolith * (dif + bounce) + earthFill;\n              \n              col = mix(col, bg, smoothstep(MAX_DIST * 0.7, MAX_DIST, hit.dist));\n            }\n            \n            col = (col * (2.51 * col + 0.03)) / (col * (2.43 * col + 0.59) + 0.14); // ACES\n            col = pow(col, vec3f(0.4545)); // Gamma\n            col *= 1.0 - 0.15 * length(uv);\n            \n            return vec4f(col, 1.0);\n          }"
-  },
-  {
-    "slug": "alien-planet",
-    "title": "Alien Planet",
-    "description": "A procedurally generated alien planet with rings and atmosphere.",
-    "category": "advanced",
-    "shaderCode": "// Constants\n          const MAX_STEPS: i32 = 128;\n          const MAX_DIST: f32 = 200.0;\n          const SURF_DIST: f32 = 0.001;\n          const PI: f32 = 3.14159265359;\n          \n          // Planet parameters\n          const PLANET_RADIUS: f32 = 8.0;\n          const PLANET_POS: vec3f = vec3f(0.0, 0.0, 30.0);\n          const ATMOSPHERE_RADIUS: f32 = 9.5;\n          const RING_INNER: f32 = 11.0;\n          const RING_OUTER: f32 = 16.0;\n          const MOON_RADIUS: f32 = 1.2;\n\n          // ========================================\n          // Hash functions for procedural generation\n          // ========================================\n          \n          fn hash21(p: vec2f) -> f32 {\n            var p3 = fract(vec3f(p.x, p.y, p.x) * 0.1031);\n            p3 += dot(p3, p3.yzx + 33.33);\n            return fract((p3.x + p3.y) * p3.z);\n          }\n\n          fn hash31(p: vec3f) -> f32 {\n            var p3 = fract(p * 0.1031);\n            p3 += dot(p3, p3.zyx + 31.32);\n            return fract((p3.x + p3.y) * p3.z);\n          }\n\n          fn hash33(p: vec3f) -> vec3f {\n            var p3 = fract(p * vec3f(0.1031, 0.1030, 0.0973));\n            p3 += dot(p3, p3.yxz + 33.33);\n            return fract((p3.xxy + p3.yxx) * p3.zyx);\n          }\n\n          // ========================================\n          // Noise functions\n          // ========================================\n          \n          fn noise3D(p: vec3f) -> f32 {\n            let i = floor(p);\n            let f = fract(p);\n            let u = f * f * (3.0 - 2.0 * f);\n            \n            return mix(\n              mix(\n                mix(hash31(i), hash31(i + vec3f(1.0, 0.0, 0.0)), u.x),\n                mix(hash31(i + vec3f(0.0, 1.0, 0.0)), hash31(i + vec3f(1.0, 1.0, 0.0)), u.x),\n                u.y\n              ),\n              mix(\n                mix(hash31(i + vec3f(0.0, 0.0, 1.0)), hash31(i + vec3f(1.0, 0.0, 1.0)), u.x),\n                mix(hash31(i + vec3f(0.0, 1.0, 1.0)), hash31(i + vec3f(1.0, 1.0, 1.0)), u.x),\n                u.y\n              ),\n              u.z\n            );\n          }\n\n          fn fbm(p: vec3f) -> f32 {\n            var value: f32 = 0.0;\n            var amplitude: f32 = 0.5;\n            var frequency: f32 = 1.0;\n            var pos = p;\n            \n            for (var i = 0; i < 5; i++) {\n              value += amplitude * noise3D(pos * frequency);\n              amplitude *= 0.5;\n              frequency *= 2.0;\n            }\n            \n            return value;\n          }\n\n          // ========================================\n          // SDF Primitives\n          // ========================================\n          \n          fn sdSphere(p: vec3f, r: f32) -> f32 {\n            return length(p) - r;\n          }\n\n          fn sdTorus(p: vec3f, t: vec2f) -> f32 {\n            let q = vec2f(length(p.xz) - t.x, p.y);\n            return length(q) - t.y;\n          }\n\n          // Planet with surface detail\n          fn sdPlanet(p: vec3f) -> f32 {\n            let localP = p - PLANET_POS;\n            let baseSphere = sdSphere(localP, PLANET_RADIUS);\n            \n            // Add surface detail using noise\n            let noiseScale = 0.3;\n            let surfaceNoise = fbm(normalize(localP) * 8.0) * noiseScale;\n            \n            // Add craters\n            let craterNoise = pow(fbm(normalize(localP) * 4.0 + 10.0), 2.0) * 0.2;\n            \n            return baseSphere - surfaceNoise + craterNoise;\n          }\n\n          // Rings (flat torus)\n          fn sdRings(p: vec3f) -> f32 {\n            let localP = p - PLANET_POS;\n            \n            // Tilt the rings\n            let tiltAngle = 0.3;\n            let c = cos(tiltAngle);\n            let s = sin(tiltAngle);\n            let tiltedP = vec3f(localP.x, localP.y * c - localP.z * s, localP.y * s + localP.z * c);\n            \n            let distFromCenter = length(tiltedP.xz);\n            let ringDist = abs(tiltedP.y) - 0.05;\n            \n            // Check if within ring bounds\n            if (distFromCenter < RING_INNER || distFromCenter > RING_OUTER) {\n              return MAX_DIST;\n            }\n            \n            return ringDist;\n          }\n\n          // Moon\n          fn getMoonPos(time: f32) -> vec3f {\n            let orbitRadius = 14.0;\n            let orbitSpeed = 0.15;\n            let orbitTilt = 0.4;\n            \n            return PLANET_POS + vec3f(\n              cos(time * orbitSpeed) * orbitRadius,\n              sin(time * orbitSpeed * 0.7) * orbitRadius * 0.3,\n              sin(time * orbitSpeed) * orbitRadius * cos(orbitTilt)\n            );\n          }\n\n          fn sdMoon(p: vec3f, time: f32) -> f32 {\n            let moonPos = getMoonPos(time);\n            let localP = p - moonPos;\n            let baseSphere = sdSphere(localP, MOON_RADIUS);\n            \n            // Add some crater detail\n            let craters = fbm(normalize(localP) * 6.0) * 0.08;\n            \n            return baseSphere - craters;\n          }\n\n          // ========================================\n          // Scene\n          // ========================================\n          \n          struct SceneResult {\n            dist: f32,\n            materialId: i32,\n          }\n\n          fn map(p: vec3f, time: f32) -> SceneResult {\n            var result: SceneResult;\n            result.dist = MAX_DIST;\n            result.materialId = 0;\n            \n            // Planet\n            let planetDist = sdPlanet(p);\n            if (planetDist < result.dist) {\n              result.dist = planetDist;\n              result.materialId = 1;\n            }\n            \n            // Rings\n            let ringsDist = sdRings(p);\n            if (ringsDist < result.dist) {\n              result.dist = ringsDist;\n              result.materialId = 2;\n            }\n            \n            // Moon\n            let moonDist = sdMoon(p, time);\n            if (moonDist < result.dist) {\n              result.dist = moonDist;\n              result.materialId = 3;\n            }\n            \n            return result;\n          }\n\n          // Calculate normals\n          fn calcNormal(p: vec3f, time: f32) -> vec3f {\n            let e = vec2f(0.001, 0.0);\n            return normalize(vec3f(\n              map(p + e.xyy, time).dist - map(p - e.xyy, time).dist,\n              map(p + e.yxy, time).dist - map(p - e.yxy, time).dist,\n              map(p + e.yyx, time).dist - map(p - e.yyx, time).dist\n            ));\n          }\n\n          // ========================================\n          // Raymarching\n          // ========================================\n          \n          fn raymarch(ro: vec3f, rd: vec3f, time: f32) -> SceneResult {\n            var t: f32 = 0.0;\n            var result: SceneResult;\n            result.dist = MAX_DIST;\n            result.materialId = 0;\n            \n            for (var i = 0; i < MAX_STEPS; i++) {\n              let p = ro + rd * t;\n              let res = map(p, time);\n              \n              if (res.dist < SURF_DIST) {\n                result.dist = t;\n                result.materialId = res.materialId;\n                break;\n              }\n              \n              if (t > MAX_DIST) {\n                break;\n              }\n              \n              t += res.dist * 0.8;\n            }\n            \n            return result;\n          }\n\n          // ========================================\n          // Starfield\n          // ========================================\n          \n          fn stars(rd: vec3f, time: f32) -> vec3f {\n            var col = vec3f(0.0);\n            \n            // Layer 1: Dense small stars\n            let gridSize1 = 100.0;\n            let starGrid1 = floor(rd * gridSize1);\n            let starHash1 = hash31(starGrid1);\n            \n            if (starHash1 > 0.97) {\n              let starCenter = (starGrid1 + 0.5) / gridSize1;\n              let dist = length(rd - normalize(starCenter)) * gridSize1;\n              let brightness = smoothstep(1.5, 0.0, dist);\n              let twinkle = sin(time * 3.0 + starHash1 * 100.0) * 0.3 + 0.7;\n              col += vec3f(brightness * twinkle * 0.5);\n            }\n            \n            // Layer 2: Bright stars\n            let gridSize2 = 50.0;\n            let starGrid2 = floor(rd * gridSize2);\n            let starHash2 = hash31(starGrid2 + 100.0);\n            \n            if (starHash2 > 0.99) {\n              let starCenter = (starGrid2 + 0.5) / gridSize2;\n              let dist = length(rd - normalize(starCenter)) * gridSize2;\n              let brightness = smoothstep(2.0, 0.0, dist);\n              let twinkle = sin(time * 2.0 + starHash2 * 50.0) * 0.2 + 0.8;\n              \n              // Color variation\n              let colorVar = hash33(starGrid2);\n              let starColor = mix(vec3f(1.0, 0.9, 0.8), vec3f(0.8, 0.9, 1.0), colorVar.x);\n              col += starColor * brightness * twinkle;\n            }\n            \n            // Layer 3: Rare bright stars with color\n            let gridSize3 = 30.0;\n            let starGrid3 = floor(rd * gridSize3);\n            let starHash3 = hash31(starGrid3 + 200.0);\n            \n            if (starHash3 > 0.995) {\n              let starCenter = (starGrid3 + 0.5) / gridSize3;\n              let dist = length(rd - normalize(starCenter)) * gridSize3;\n              let brightness = smoothstep(3.0, 0.0, dist);\n              \n              let colorVar = hash33(starGrid3 + 300.0);\n              var starColor = vec3f(1.0);\n              if (colorVar.x > 0.7) {\n                starColor = vec3f(1.0, 0.6, 0.3); // Orange\n              } else if (colorVar.x > 0.4) {\n                starColor = vec3f(0.6, 0.8, 1.0); // Blue\n              }\n              col += starColor * brightness * 1.5;\n            }\n            \n            return col;\n          }\n\n          // ========================================\n          // Atmospheric scattering\n          // ========================================\n          \n          fn atmosphere(ro: vec3f, rd: vec3f, planetPos: vec3f, planetR: f32, atmosR: f32) -> vec3f {\n            // Ray-sphere intersection for atmosphere\n            let oc = ro - planetPos;\n            let b = dot(oc, rd);\n            let c = dot(oc, oc) - atmosR * atmosR;\n            let h = b * b - c;\n            \n            if (h < 0.0) {\n              return vec3f(0.0);\n            }\n            \n            let t1 = -b - sqrt(h);\n            let t2 = -b + sqrt(h);\n            \n            if (t2 < 0.0) {\n              return vec3f(0.0);\n            }\n            \n            let tEnter = max(t1, 0.0);\n            let tExit = t2;\n            \n            // Check if we hit the planet\n            let oc2 = ro - planetPos;\n            let b2 = dot(oc2, rd);\n            let c2 = dot(oc2, oc2) - planetR * planetR;\n            let h2 = b2 * b2 - c2;\n            \n            var actualExit = tExit;\n            if (h2 > 0.0) {\n              let planetHit = -b2 - sqrt(h2);\n              if (planetHit > 0.0 && planetHit < tExit) {\n                actualExit = planetHit;\n              }\n            }\n            \n            // Sample atmosphere\n            let numSamples = 8;\n            var scatter = vec3f(0.0);\n            let stepSize = (actualExit - tEnter) / f32(numSamples);\n            \n            for (var i = 0; i < numSamples; i++) {\n              let t = tEnter + (f32(i) + 0.5) * stepSize;\n              let samplePos = ro + rd * t;\n              let altitude = length(samplePos - planetPos) - planetR;\n              let normalizedAlt = altitude / (atmosR - planetR);\n              \n              // Density decreases with altitude\n              let density = exp(-normalizedAlt * 4.0);\n              \n              // Rayleigh scattering colors (more blue at edges)\n              let rayleigh = vec3f(0.2, 0.5, 1.0) * density;\n              \n              // Mie scattering (sunset colors)\n              let mie = vec3f(1.0, 0.4, 0.2) * density * 0.3;\n              \n              scatter += (rayleigh + mie) * stepSize * 0.15;\n            }\n            \n            return scatter;\n          }\n\n          // ========================================\n          // God rays\n          // ========================================\n          \n          fn godRays(ro: vec3f, rd: vec3f, sunDir: vec3f, time: f32) -> vec3f {\n            let sunDot = max(dot(rd, sunDir), 0.0);\n            \n            // Main sun glow\n            let sunGlow = pow(sunDot, 256.0) * 2.0;\n            \n            // Corona\n            let corona = pow(sunDot, 8.0) * 0.3;\n            \n            // Rays\n            let rays = pow(sunDot, 2.0) * 0.15;\n            \n            let sunColor = vec3f(1.0, 0.9, 0.7);\n            \n            return sunColor * (sunGlow + corona + rays);\n          }\n\n          // ========================================\n          // Materials\n          // ========================================\n          \n          fn getPlanetColor(p: vec3f, n: vec3f, time: f32) -> vec3f {\n            let localP = p - PLANET_POS;\n            let sphereCoord = normalize(localP);\n            \n            // Base terrain colors\n            let noise1 = fbm(sphereCoord * 4.0);\n            let noise2 = fbm(sphereCoord * 8.0 + 10.0);\n            \n            // Alien planet colors\n            let color1 = vec3f(0.6, 0.2, 0.4);  // Purple/magenta\n            let color2 = vec3f(0.2, 0.5, 0.4);  // Teal\n            let color3 = vec3f(0.8, 0.6, 0.3);  // Orange/sand\n            let color4 = vec3f(0.1, 0.2, 0.3);  // Deep blue\n            \n            var col = mix(color1, color2, noise1);\n            col = mix(col, color3, noise2 * 0.5);\n            \n            // Add polar ice caps\n            let polarAmount = abs(sphereCoord.y);\n            if (polarAmount > 0.7) {\n              let iceCol = vec3f(0.7, 0.8, 0.9);\n              col = mix(col, iceCol, smoothstep(0.7, 0.9, polarAmount));\n            }\n            \n            // Add some bioluminescent patches\n            let bioNoise = fbm(sphereCoord * 12.0 + time * 0.05);\n            if (bioNoise > 0.65) {\n              let bioCol = vec3f(0.2, 1.0, 0.6);\n              col += bioCol * (bioNoise - 0.65) * 0.5;\n            }\n            \n            return col;\n          }\n\n          fn getRingColor(p: vec3f, time: f32) -> vec3f {\n            let localP = p - PLANET_POS;\n            let dist = length(localP.xz);\n            \n            // Ring pattern\n            let ringPattern = sin(dist * 8.0) * 0.5 + 0.5;\n            let noise = hash21(vec2f(dist * 10.0, atan2(localP.x, localP.z) * 5.0));\n            \n            // Base ring color\n            let color1 = vec3f(0.8, 0.7, 0.6);\n            let color2 = vec3f(0.4, 0.35, 0.3);\n            \n            var col = mix(color1, color2, ringPattern);\n            col *= 0.5 + noise * 0.5;\n            \n            // Add gaps\n            let gapNoise = sin(dist * 30.0);\n            if (gapNoise > 0.7) {\n              col *= 0.3;\n            }\n            \n            return col;\n          }\n\n          fn getMoonColor(p: vec3f, n: vec3f) -> vec3f {\n            // Gray lunar surface with variation\n            let noise = fbm(n * 8.0);\n            let baseCol = vec3f(0.5, 0.5, 0.55);\n            let darkCol = vec3f(0.2, 0.2, 0.25);\n            \n            return mix(darkCol, baseCol, noise);\n          }\n\n          // ========================================\n          // Main Fragment Shader\n          // ========================================\n          \n          @fragment\n          fn main(@builtin(position) fragCoord: vec4f) -> @location(0) vec4f {\n            var uv = (fragCoord.xy - 0.5 * globals.resolution) / globals.resolution.y;\n            uv.y = -uv.y;\n            \n            let time = globals.time;\n            \n            // Camera setup - slowly approaching the planet\n            let camDist = 50.0 - time * 0.5;\n            let camAngle = time * 0.05;\n            \n            let ro = vec3f(\n              sin(camAngle) * 15.0,\n              sin(time * 0.1) * 3.0 + 5.0,\n              camDist\n            );\n            \n            // Look at planet\n            let lookAt = PLANET_POS;\n            let forward = normalize(lookAt - ro);\n            let right = normalize(cross(vec3f(0.0, 1.0, 0.0), forward));\n            let up = cross(forward, right);\n            \n            // Ray direction\n            let rd = normalize(forward + uv.x * right + uv.y * up);\n            \n            // Sun direction (behind and to the side)\n            let sunDir = normalize(vec3f(0.5, 0.3, -1.0));\n            \n            // Start with starfield background\n            var col = stars(rd, time);\n            \n            // Add god rays from sun\n            col += godRays(ro, rd, sunDir, time);\n            \n            // Add nebula-like background\n            let nebulaCoord = rd * 2.0;\n            let nebula1 = fbm(nebulaCoord + vec3f(0.0, 0.0, time * 0.01));\n            let nebula2 = fbm(nebulaCoord * 2.0 + vec3f(100.0, 0.0, time * 0.02));\n            let nebulaCol = mix(\n              vec3f(0.1, 0.0, 0.15),\n              vec3f(0.0, 0.1, 0.2),\n              nebula1\n            );\n            col += nebulaCol * nebula2 * 0.15;\n            \n            // Raymarch the scene\n            let hit = raymarch(ro, rd, time);\n            \n            if (hit.dist < MAX_DIST) {\n              let p = ro + rd * hit.dist;\n              let n = calcNormal(p, time);\n              \n              var matCol = vec3f(0.5);\n              \n              // Get material color\n              if (hit.materialId == 1) {\n                matCol = getPlanetColor(p, n, time);\n              } else if (hit.materialId == 2) {\n                matCol = getRingColor(p, time);\n              } else if (hit.materialId == 3) {\n                matCol = getMoonColor(p, n);\n              }\n              \n              // Lighting\n              let diff = max(dot(n, sunDir), 0.0);\n              let ambient = vec3f(0.02, 0.03, 0.05);\n              \n              // Specular\n              let viewDir = normalize(ro - p);\n              let halfDir = normalize(sunDir + viewDir);\n              let spec = pow(max(dot(n, halfDir), 0.0), 32.0);\n              \n              // Fresnel for rim lighting\n              let fresnel = pow(1.0 - max(dot(viewDir, n), 0.0), 4.0);\n              \n              // Combine lighting\n              var surfaceCol = ambient * matCol;\n              surfaceCol += matCol * vec3f(1.0, 0.95, 0.9) * diff;\n              surfaceCol += vec3f(1.0, 0.9, 0.8) * spec * 0.3;\n              \n              // Add rim light (atmospheric glow for planet)\n              if (hit.materialId == 1) {\n                let rimCol = vec3f(0.3, 0.5, 1.0);\n                surfaceCol += rimCol * fresnel * 0.5;\n              }\n              \n              // Rings are partially transparent\n              if (hit.materialId == 2) {\n                let ringAlpha = 0.7;\n                col = mix(col, surfaceCol, ringAlpha);\n              } else {\n                col = surfaceCol;\n              }\n            }\n            \n            // Add atmospheric glow around planet\n            let atmosCol = atmosphere(ro, rd, PLANET_POS, PLANET_RADIUS, ATMOSPHERE_RADIUS);\n            col += atmosCol;\n            \n            // Tone mapping\n            col = col / (col + vec3f(1.0));\n            \n            // Slight color grading\n            col = pow(col, vec3f(0.95, 1.0, 1.05));\n            \n            // Gamma correction\n            col = pow(col, vec3f(1.0 / 2.2));\n            \n            // Vignette\n            let vignette = 1.0 - 0.3 * length(uv);\n            col *= vignette;\n            \n            return vec4f(col, 1.0);\n          }"
-  },
-  {
-    "slug": "triangle-particles",
-    "title": "Triangle Particles",
-    "description": "Particles made of triangles.",
-    "category": "features",
-    "shaderCode": ""
-  },
-  {
-    "slug": "texture-sampling",
-    "title": "Texture Sampling",
-    "description": "Sampling textures in shaders.",
-    "category": "features",
-    "shaderCode": "@fragment\n        fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {\n          let uv = pos.xy / globals.resolution;\n          \n          // Create a checkerboard + circle pattern\n          let gridSize = 8.0;\n          let cellX = floor(uv.x * gridSize);\n          let cellY = floor(uv.y * gridSize);\n          // WGSL uses % for integers, fract for floats\n          let sum = cellX + cellY;\n          let checker = fract(sum * 0.5) * 2.0; // 0 or 1\n          \n          // Add a circle in the center\n          let center = length(uv - 0.5);\n          let circle = smoothstep(0.3, 0.28, center);\n          \n          // Combine\n          let pattern = mix(checker * 0.3, 1.0, circle);\n          \n          return vec4f(vec3f(pattern), 1.0);\n        }"
-  },
-  {
-    "slug": "storage-texture",
-    "title": "Storage Texture",
-    "description": "Using storage textures for read/write access.",
-    "category": "features",
-    "shaderCode": "@fragment\n        fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {\n          let uv = pos.xy / globals.resolution;\n          \n          // Animated wave pattern\n          let t = globals.time;\n          let wave1 = sin(uv.x * 10.0 + t * 2.0) * 0.5 + 0.5;\n          let wave2 = sin(uv.y * 10.0 - t * 1.5) * 0.5 + 0.5;\n          let pattern = wave1 * wave2;\n          \n          // Rainbow color\n          let hue = uv.x + t * 0.1;\n          let color = vec3f(\n            sin(hue * 6.28) * 0.5 + 0.5,\n            sin((hue + 0.33) * 6.28) * 0.5 + 0.5,\n            sin((hue + 0.66) * 6.28) * 0.5 + 0.5\n          );\n          \n          return vec4f(color * pattern, 1.0);\n        }"
+    slug: "raymarching",
+    title: "3D Raymarching",
+    description: "Complex 3D scene rendered using Signed Distance Functions (SDFs).",
+    category: "techniques",
+    shaderCode: `
+// Constants
+const MAX_STEPS: i32 = 100;
+const MAX_DIST: f32 = 100.0;
+const SURF_DIST: f32 = 0.001;
+const PI: f32 = 3.14159265359;
+
+// ========================================
+// SDF Primitives
+// ========================================
+
+fn sdSphere(p: vec3f, r: f32) -> f32 {
+  return length(p) - r;
+}
+
+fn sdBox(p: vec3f, b: vec3f) -> f32 {
+  let q = abs(p) - b;
+  return length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+fn sdTorus(p: vec3f, t: vec2f) -> f32 {
+  let q = vec2f(length(p.xz) - t.x, p.y);
+  return length(q) - t.y;
+}
+
+fn sdCapsule(p: vec3f, a: vec3f, b: vec3f, r: f32) -> f32 {
+  let pa = p - a;
+  let ba = b - a;
+  let h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+  return length(pa - ba * h) - r;
+}
+
+fn sdOctahedron(p: vec3f, s: f32) -> f32 {
+  let q = abs(p);
+  return (q.x + q.y + q.z - s) * 0.57735027;
+}
+
+// ========================================
+// SDF Operations
+// ========================================
+
+fn opUnion(d1: f32, d2: f32) -> f32 {
+  return min(d1, d2);
+}
+
+fn opSubtraction(d1: f32, d2: f32) -> f32 {
+  return max(-d1, d2);
+}
+
+fn opIntersection(d1: f32, d2: f32) -> f32 {
+  return max(d1, d2);
+}
+
+fn opSmoothUnion(d1: f32, d2: f32, k: f32) -> f32 {
+  let h = clamp(0.5 + 0.5 * (d2 - d1) / k, 0.0, 1.0);
+  return mix(d2, d1, h) - k * h * (1.0 - h);
+}
+
+fn opSmoothSubtraction(d1: f32, d2: f32, k: f32) -> f32 {
+  let h = clamp(0.5 - 0.5 * (d2 + d1) / k, 0.0, 1.0);
+  return mix(d2, -d1, h) + k * h * (1.0 - h);
+}
+
+fn opSmoothIntersection(d1: f32, d2: f32, k: f32) -> f32 {
+  let h = clamp(0.5 - 0.5 * (d2 - d1) / k, 0.0, 1.0);
+  return mix(d2, d1, h) + k * h * (1.0 - h);
+}
+
+// ========================================
+// Rotation helpers
+// ========================================
+
+fn rot2D(angle: f32) -> mat2x2f {
+  let c = cos(angle);
+  let s = sin(angle);
+  return mat2x2f(c, -s, s, c);
+}
+
+fn rotateX(p: vec3f, angle: f32) -> vec3f {
+  let c = cos(angle);
+  let s = sin(angle);
+  return vec3f(p.x, c * p.y - s * p.z, s * p.y + c * p.z);
+}
+
+fn rotateY(p: vec3f, angle: f32) -> vec3f {
+  let c = cos(angle);
+  let s = sin(angle);
+  return vec3f(c * p.x + s * p.z, p.y, -s * p.x + c * p.z);
+}
+
+fn rotateZ(p: vec3f, angle: f32) -> vec3f {
+  let c = cos(angle);
+  let s = sin(angle);
+  return vec3f(c * p.x - s * p.y, s * p.x + c * p.y, p.z);
+}
+
+// ========================================
+// Scene Definition
+// ========================================
+
+struct SceneResult {
+  dist: f32,
+  materialId: f32,
+}
+
+fn map(p: vec3f) -> SceneResult {
+  let time = globals.time;
+  var result: SceneResult;
+  
+  // Animated central sphere that pulses
+  let spherePos = vec3f(0.0, sin(time * 2.0) * 0.3, 0.0);
+  let sphereRadius = 0.8 + sin(time * 3.0) * 0.1;
+  let sphere = sdSphere(p - spherePos, sphereRadius);
+  
+  // Rotating torus around the sphere
+  var torusP = p;
+  torusP = rotateY(torusP, time * 0.7);
+  torusP = rotateX(torusP, time * 0.5);
+  let torus = sdTorus(torusP, vec2f(1.5, 0.15));
+  
+  // Another torus at different angle
+  var torus2P = p;
+  torus2P = rotateZ(torus2P, time * 0.6);
+  torus2P = rotateX(torus2P, PI * 0.5 + time * 0.4);
+  let torus2 = sdTorus(torus2P, vec2f(1.5, 0.15));
+  
+  // Orbiting smaller spheres
+  let orbitRadius = 2.2;
+  let orbit1 = vec3f(
+    cos(time * 1.5) * orbitRadius,
+    sin(time * 2.0) * 0.5,
+    sin(time * 1.5) * orbitRadius
+  );
+  let orbit2 = vec3f(
+    cos(time * 1.2 + PI * 0.66) * orbitRadius,
+    sin(time * 1.8 + PI) * 0.5,
+    sin(time * 1.2 + PI * 0.66) * orbitRadius
+  );
+  let orbit3 = vec3f(
+    cos(time * 1.0 + PI * 1.33) * orbitRadius,
+    sin(time * 1.5 + PI * 0.5) * 0.5,
+    sin(time * 1.0 + PI * 1.33) * orbitRadius
+  );
+  
+  let orbitSphere1 = sdSphere(p - orbit1, 0.3);
+  let orbitSphere2 = sdSphere(p - orbit2, 0.3);
+  let orbitSphere3 = sdSphere(p - orbit3, 0.3);
+  
+  // Rotating box
+  var boxP = p - vec3f(0.0, -1.5, 0.0);
+  boxP = rotateY(boxP, time * 0.8);
+  boxP = rotateX(boxP, time * 0.3);
+  let box = sdBox(boxP, vec3f(0.4, 0.4, 0.4));
+  
+  // Octahedron floating above
+  var octP = p - vec3f(0.0, 1.8 + sin(time * 2.5) * 0.2, 0.0);
+  octP = rotateY(octP, time);
+  let oct = sdOctahedron(octP, 0.5);
+  
+  // Ground plane (very far below to not interfere)
+  let ground = p.y + 3.5;
+  
+  // Combine everything with smooth union for organic look
+  var d = sphere;
+  var matId = 1.0;
+  
+  // Smooth blend tori with sphere
+  d = opSmoothUnion(d, torus, 0.3);
+  d = opSmoothUnion(d, torus2, 0.3);
+  
+  // Add orbiting spheres (different material)
+  let orbitDist = min(min(orbitSphere1, orbitSphere2), orbitSphere3);
+  if (orbitDist < d) {
+    matId = 2.0;
   }
+  d = opSmoothUnion(d, orbitDist, 0.2);
+  
+  // Add box
+  if (box < d) {
+    matId = 3.0;
+  }
+  d = opSmoothUnion(d, box, 0.15);
+  
+  // Add octahedron
+  if (oct < d) {
+    matId = 4.0;
+  }
+  d = opSmoothUnion(d, oct, 0.15);
+  
+  // Ground with different material
+  if (ground < d) {
+    matId = 0.0;
+  }
+  d = min(d, ground);
+  
+  result.dist = d;
+  result.materialId = matId;
+  return result;
+}
+
+// Simple map returning just distance for normals/shadows
+fn mapDist(p: vec3f) -> f32 {
+  return map(p).dist;
+}
+
+// ========================================
+// Normal Calculation
+// ========================================
+
+fn calcNormal(p: vec3f) -> vec3f {
+  let e = vec2f(0.001, 0.0);
+  return normalize(vec3f(
+    mapDist(p + e.xyy) - mapDist(p - e.xyy),
+    mapDist(p + e.yxy) - mapDist(p - e.yxy),
+    mapDist(p + e.yyx) - mapDist(p - e.yyx)
+  ));
+}
+
+// ========================================
+// Raymarching
+// ========================================
+
+fn raymarch(ro: vec3f, rd: vec3f) -> SceneResult {
+  var t = 0.0;
+  var result: SceneResult;
+  result.dist = MAX_DIST;
+  result.materialId = -1.0;
+  
+  for (var i = 0; i < MAX_STEPS; i++) {
+    let p = ro + rd * t;
+    let res = map(p);
+    
+    if (res.dist < SURF_DIST) {
+      result.dist = t;
+      result.materialId = res.materialId;
+      break;
+    }
+    
+    if (t > MAX_DIST) {
+      break;
+    }
+    
+    t += res.dist;
+  }
+  
+  return result;
+}
+
+// ========================================
+// Soft Shadows
+// ========================================
+
+fn softShadow(ro: vec3f, rd: vec3f, mint: f32, maxt: f32, k: f32) -> f32 {
+  var res = 1.0;
+  var t = mint;
+  
+  for (var i = 0; i < 32; i++) {
+    if (t >= maxt) { break; }
+    let h = mapDist(ro + rd * t);
+    if (h < 0.001) {
+      return 0.0;
+    }
+    res = min(res, k * h / t);
+    t += h;
+  }
+  
+  return res;
+}
+
+// ========================================
+// Ambient Occlusion
+// ========================================
+
+fn calcAO(pos: vec3f, nor: vec3f) -> f32 {
+  var occ = 0.0;
+  var sca = 1.0;
+  
+  for (var i = 0; i < 5; i++) {
+    let h = 0.01 + 0.12 * f32(i) / 4.0;
+    let d = mapDist(pos + h * nor);
+    occ += (h - d) * sca;
+    sca *= 0.95;
+  }
+  
+  return clamp(1.0 - 3.0 * occ, 0.0, 1.0);
+}
+
+// ========================================
+// Material Colors
+// ========================================
+
+fn getMaterial(matId: f32, p: vec3f) -> vec3f {
+  let time = globals.time;
+  
+  if (matId < 0.5) {
+    // Ground - checkerboard
+    let checker = step(0.0, sin(p.x * 2.0) * sin(p.z * 2.0));
+    return mix(vec3f(0.1, 0.1, 0.12), vec3f(0.15, 0.15, 0.18), checker);
+  } else if (matId < 1.5) {
+    // Main sphere + tori - gradient based on position
+    let h = sin(p.y * 2.0 + time) * 0.5 + 0.5;
+    return mix(vec3f(0.8, 0.2, 0.4), vec3f(0.2, 0.4, 0.9), h);
+  } else if (matId < 2.5) {
+    // Orbiting spheres - emissive-like warm colors
+    return vec3f(1.0, 0.6, 0.2);
+  } else if (matId < 3.5) {
+    // Box - cool cyan
+    return vec3f(0.2, 0.8, 0.8);
+  } else {
+    // Octahedron - golden
+    return vec3f(0.95, 0.8, 0.3);
+  }
+}
+
+// ========================================
+// Main Fragment Shader
+// ========================================
+
+@fragment
+fn main(@builtin(position) fragCoord: vec4f) -> @location(0) vec4f {
+  // Normalized coordinates (-1 to 1, aspect corrected)
+  // Flip Y to correct for WebGPU's top-left origin
+  var uv = (fragCoord.xy - 0.5 * globals.resolution) / globals.resolution.y;
+  uv.y = -uv.y;
+  
+  let time = globals.time;
+  
+  // Camera setup - orbit around scene
+  let camDist = 6.0;
+  let camAngle = time * 0.3;
+  let camHeight = 2.0 + sin(time * 0.5) * 0.5;
+  
+  let ro = vec3f(
+    cos(camAngle) * camDist,
+    camHeight,
+    sin(camAngle) * camDist
+  );
+  
+  // Look at center
+  let lookAt = vec3f(0.0, 0.0, 0.0);
+  let forward = normalize(lookAt - ro);
+  let right = normalize(cross(vec3f(0.0, 1.0, 0.0), forward));
+  let up = cross(forward, right);
+  
+  // Ray direction
+  let rd = normalize(forward + uv.x * right + uv.y * up);
+  
+  // Light positions
+  let lightPos1 = vec3f(5.0, 8.0, -5.0);
+  let lightPos2 = vec3f(-4.0, 3.0, 4.0);
+  let lightCol1 = vec3f(1.0, 0.95, 0.9);
+  let lightCol2 = vec3f(0.4, 0.5, 0.8);
+  
+  // Raymarch
+  let hit = raymarch(ro, rd);
+  
+  var col = vec3f(0.0);
+  
+  if (hit.dist < MAX_DIST) {
+    // Hit point
+    let p = ro + rd * hit.dist;
+    let n = calcNormal(p);
+    
+    // Material
+    let matCol = getMaterial(hit.materialId, p);
+    
+    // Ambient occlusion
+    let ao = calcAO(p, n);
+    
+    // Lighting
+    let l1Dir = normalize(lightPos1 - p);
+    let l2Dir = normalize(lightPos2 - p);
+    
+    // Diffuse
+    let diff1 = max(dot(n, l1Dir), 0.0);
+    let diff2 = max(dot(n, l2Dir), 0.0);
+    
+    // Specular (Blinn-Phong)
+    let viewDir = normalize(ro - p);
+    let h1 = normalize(l1Dir + viewDir);
+    let h2 = normalize(l2Dir + viewDir);
+    let spec1 = pow(max(dot(n, h1), 0.0), 32.0);
+    let spec2 = pow(max(dot(n, h2), 0.0), 32.0);
+    
+    // Soft shadows
+    let shadow1 = softShadow(p + n * 0.01, l1Dir, 0.02, 10.0, 16.0);
+    let shadow2 = softShadow(p + n * 0.01, l2Dir, 0.02, 10.0, 16.0);
+    
+    // Ambient
+    let ambient = vec3f(0.03, 0.04, 0.06);
+    
+    // Combine lighting
+    col = ambient * matCol;
+    col += matCol * lightCol1 * diff1 * shadow1;
+    col += matCol * lightCol2 * diff2 * shadow2;
+    col += lightCol1 * spec1 * shadow1 * 0.3;
+    col += lightCol2 * spec2 * shadow2 * 0.2;
+    
+    // Apply AO
+    col *= ao;
+    
+    // Fresnel rim light
+    let fresnel = pow(1.0 - max(dot(viewDir, n), 0.0), 3.0);
+    col += fresnel * vec3f(0.3, 0.4, 0.6) * 0.5;
+    
+    // Fog
+    let fogAmount = 1.0 - exp(-hit.dist * 0.04);
+    let fogColor = vec3f(0.02, 0.03, 0.05);
+    col = mix(col, fogColor, fogAmount);
+  } else {
+    // Background - subtle gradient
+    let bgGrad = rd.y * 0.5 + 0.5;
+    col = mix(vec3f(0.02, 0.02, 0.04), vec3f(0.05, 0.08, 0.15), bgGrad);
+    
+    // Add some subtle "stars"
+    let stars = fract(sin(dot(floor(rd * 500.0), vec3f(12.9898, 78.233, 45.543))) * 43758.5453);
+    if (stars > 0.998) {
+      col += vec3f(0.5) * (stars - 0.998) * 500.0;
+    }
+  }
+  
+  // Tone mapping
+  col = col / (col + vec3f(1.0));
+  
+  // Gamma correction
+  col = pow(col, vec3f(1.0 / 2.2));
+  
+  // Vignette
+  let vignette = 1.0 - 0.3 * length(uv);
+  col *= vignette;
+  
+  return vec4f(col, 1.0);
+}
+`.trim(),
+  },
+  {
+    slug: "lines",
+    title: "SDF Lines",
+    description: "Anti-aliased lines and shapes rendered using Signed Distance Functions.",
+    category: "basics",
+    shaderCode: `
+// Distance from point p to line segment a-b
+fn sdSegment(p: vec2f, a: vec2f, b: vec2f) -> f32 {
+  let pa = p - a;
+  let ba = b - a;
+  let h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+  return length(pa - ba * h);
+}
+
+@fragment
+fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  let uv = pos.xy / globals.resolution;
+  let p = uv * 2.0 - 1.0;
+  let aspect = globals.resolution.x / globals.resolution.y;
+  let p_aspect = vec2f(p.x * aspect, p.y);
+  
+  var color = vec3f(0.0);
+  let lineWidth = 0.015;
+  let t = globals.time;
+  
+  // Line 1: Animated horizontal line (cyan)
+  let y1 = sin(t * 2.0) * 0.3 + 0.4;
+  let d1 = sdSegment(p_aspect, vec2f(-0.8, y1), vec2f(0.8, y1 + 0.1));
+  let line1 = smoothstep(lineWidth, lineWidth * 0.5, d1);
+  color = mix(color, vec3f(0.2, 0.8, 1.0), line1);
+  
+  // Line 2: Diagonal animated (orange)
+  let a2 = vec2f(-0.6, -0.2 + sin(t * 1.5) * 0.1);
+  let b2 = vec2f(0.6, 0.3 + sin(t * 1.5 + 1.0) * 0.1);
+  let d2 = sdSegment(p_aspect, a2, b2);
+  let line2 = smoothstep(lineWidth, lineWidth * 0.5, d2);
+  color = mix(color, vec3f(1.0, 0.5, 0.2), line2);
+  
+  // Line 3: Animated wave (green)
+  let waveY = sin(p.x * 6.28 + t * 3.0) * 0.15 - 0.5;
+  let d3 = abs(p.y - waveY);
+  let line3 = smoothstep(lineWidth, lineWidth * 0.5, d3);
+  color = mix(color, vec3f(0.3, 1.0, 0.5), line3);
+  
+  // Circle (magenta)
+  let circleCenter = vec2f(0.5, 0.0);
+  let circleRadius = 0.2;
+  let dCircle = abs(length(p_aspect - circleCenter) - circleRadius);
+  let circle = smoothstep(lineWidth, lineWidth * 0.5, dCircle);
+  color = mix(color, vec3f(1.0, 0.3, 0.8), circle);
+  
+  // Spiral (yellow)
+  let spiralCenter = vec2f(-0.5, -0.3);
+  let sp = p_aspect - spiralCenter;
+  let angle = atan2(sp.y, sp.x);
+  let radius = length(sp);
+  let spiralLine = abs(radius - (angle + 3.14159) * 0.05 - fract(t * 0.2) * 0.3);
+  let spiral = smoothstep(lineWidth * 0.7, lineWidth * 0.3, spiralLine);
+  color = mix(color, vec3f(1.0, 0.9, 0.3), spiral * step(radius, 0.35));
+  
+  return vec4f(color, 1.0);
+}
+`.trim(),
+  },
 ];
 
 export function getExampleBySlug(slug: string): ExampleMeta | undefined {
-  return examples.find(example => example.slug === slug);
+  return examples.find(e => e.slug === slug);
 }
 
-export function getExamplesByCategory(category: string): ExampleMeta[] {
-  return examples.filter(example => example.category === category);
+export function getExamplesByCategory(category: Category): ExampleMeta[] {
+  return examples.filter(e => e.category === category);
 }
 
 export function getAllCategories(): Category[] {
-  return ["basics", "techniques", "simulations", "advanced", "features"];
+  return [...new Set(examples.map(e => e.category))];
 }

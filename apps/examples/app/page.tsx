@@ -1,104 +1,98 @@
-import Link from 'next/link';
-import styles from './page.module.css';
+import { examples, getAllCategories, getExamplesByCategory } from '../lib/examples';
+import ExampleCard from '../components/ExampleCard';
 
 export default function Home() {
+  const categories = getAllCategories();
+
   return (
-    <main className={styles.main}>
-      <div className={styles.header}>
-        <h1>ralph-gpu Examples</h1>
-        <p>Minimal WebGPU shader library</p>
-      </div>
+    <main style={{
+      minHeight: '100vh',
+      backgroundColor: '#0a0a0f',
+      color: '#f8f9fa',
+      padding: '2rem 1rem',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <header style={{ textAlign: 'center', marginBottom: '4rem' }}>
+          <h1 style={{ 
+            fontSize: '3.5rem', 
+            fontWeight: 800, 
+            marginBottom: '1rem',
+            background: 'linear-gradient(to right, #fff, #94a3b8)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.02em'
+          }}>
+            ralph-gpu Gallery
+          </h1>
+          <p style={{ fontSize: '1.25rem', color: '#94a3b8', maxWidth: '600px', margin: '0 auto' }}>
+            A collection of high-performance WebGPU shaders and techniques.
+          </p>
+        </header>
 
-      <div className={styles.grid}>
-        <Link href="/basic" className={styles.card}>
-          <h2>Basic Gradient →</h2>
-          <p>Simple fullscreen shader with time-based animation</p>
-        </Link>
+        {categories.map(category => {
+          const categoryExamples = getExamplesByCategory(category);
+          if (categoryExamples.length === 0) return null;
 
-        <Link href="/uniforms" className={styles.card}>
-          <h2>Custom Uniforms →</h2>
-          <p>Animated wave with controllable parameters</p>
-        </Link>
+          return (
+            <section key={category} style={{ marginBottom: '4rem' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '1rem', 
+                marginBottom: '2rem',
+                borderBottom: '1px solid #1e1e26',
+                paddingBottom: '0.75rem'
+              }}>
+                <h2 style={{ 
+                  fontSize: '1.5rem', 
+                  fontWeight: 600, 
+                  textTransform: 'capitalize',
+                  margin: 0
+                }}>
+                  {category}
+                </h2>
+                <span style={{ 
+                  backgroundColor: '#16161a', 
+                  padding: '2px 8px', 
+                  borderRadius: '12px', 
+                  fontSize: '0.8rem', 
+                  color: '#64748b',
+                  border: '1px solid #2a2a32'
+                }}>
+                  {categoryExamples.length}
+                </span>
+              </div>
 
-        <Link href="/geometry" className={styles.card}>
-          <h2>Custom Geometry →</h2>
-          <p>Triangle and cube with storage buffer positions</p>
-        </Link>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+                gap: '2rem' 
+              }}>
+                {categoryExamples.map(example => (
+                  <ExampleCard
+                    key={example.slug}
+                    slug={example.slug}
+                    title={example.title}
+                    description={example.description}
+                    category={example.category}
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })}
 
-        <Link href="/lines" className={styles.card}>
-          <h2>Line Rendering →</h2>
-          <p>Line-list, line-strip and point-list topologies</p>
-        </Link>
-
-        <Link href="/render-target" className={styles.card}>
-          <h2>Render Target →</h2>
-          <p>Render to texture and post-processing</p>
-        </Link>
-
-        <Link href="/ping-pong" className={styles.card}>
-          <h2>Ping-Pong Buffers →</h2>
-          <p>Iterative effects and simulations</p>
-        </Link>
-
-        <Link href="/particles" className={styles.card}>
-          <h2>Particles →</h2>
-          <p>Instanced rendering with storage buffers</p>
-        </Link>
-
-        <Link href="/compute" className={styles.card}>
-          <h2>Compute Shader →</h2>
-          <p>GPU particle physics simulation</p>
-        </Link>
-
-        <Link href="/fluid" className={styles.card}>
-          <h2>Fluid Simulation →</h2>
-          <p>Full Navier-Stokes with curl, vorticity & pressure</p>
-        </Link>
-
-        <Link href="/raymarching" className={styles.card}>
-          <h2>3D Raymarching →</h2>
-          <p>Raymarched scene with SDFs, soft shadows & ambient occlusion</p>
-        </Link>
-
-        <Link href="/metaballs" className={styles.card}>
-          <h2>Metaballs →</h2>
-          <p>Smooth blob-like organic shapes using SDFs</p>
-        </Link>
-
-        <Link href="/morphing" className={styles.card}>
-          <h2>Shape Morphing →</h2>
-          <p>Animated transitions between different SDF shapes</p>
-        </Link>
-
-        <Link href="/mandelbulb" className={styles.card}>
-          <h2>Mandelbulb →</h2>
-          <p>3D fractal rendered with raymarching</p>
-        </Link>
-
-        <Link href="/terrain" className={styles.card}>
-          <h2>Terrain →</h2>
-          <p>Procedural terrain with raymarched heightmaps</p>
-        </Link>
-
-        <Link href="/alien-planet" className={styles.card}>
-          <h2>Alien Planet →</h2>
-          <p>Stylized alien landscape with atmosphere</p>
-        </Link>
-
-        <Link href="/triangle-particles" className={styles.card}>
-          <h2>Triangle Particles →</h2>
-          <p>SDF-driven particle system with postprocessing blur</p>
-        </Link>
-
-        <Link href="/texture-sampling" className={styles.card}>
-          <h2>Texture Sampling →</h2>
-          <p>Custom samplers with different filter and wrap modes</p>
-        </Link>
-
-        <Link href="/storage-texture" className={styles.card}>
-          <h2>Storage Texture →</h2>
-          <p>Compute shader writes using textureStore()</p>
-        </Link>
+        <footer style={{ 
+          marginTop: '6rem', 
+          paddingTop: '2rem', 
+          borderTop: '1px solid #1e1e26', 
+          textAlign: 'center',
+          color: '#475569',
+          fontSize: '0.9rem'
+        }}>
+          <p>© {new Date().getFullYear()} ralph-gpu. Built with Next.js and WebGPU.</p>
+        </footer>
       </div>
     </main>
   );

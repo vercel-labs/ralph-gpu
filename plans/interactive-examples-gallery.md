@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: gallery-page
     content: Redesign gallery page with thumbnail grid layout
-    status: pending
+    status: completed
   - id: playground-page
     content: Create playground page with split layout (editor + preview)
     status: pending
