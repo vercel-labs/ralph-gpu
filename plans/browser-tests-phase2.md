@@ -310,27 +310,30 @@ Unusual but valid usage patterns.
 **Total Tests: 50** (from 10 original)
 
 ### Phase 2a - Critical Coverage ✅
-| Ralph | Feature | Tests Added |
-|-------|---------|-------------|
-| 45 | Uniforms | 3 |
-| 46 | Time Controls | 3 |
-| 47 | Resize | 2 |
-| 48 | Error Handling | 2 |
-| 49 | Blend Modes | 4 |
+
+| Ralph | Feature        | Tests Added |
+| ----- | -------------- | ----------- |
+| 45    | Uniforms       | 3           |
+| 46    | Time Controls  | 3           |
+| 47    | Resize         | 2           |
+| 48    | Error Handling | 2           |
+| 49    | Blend Modes    | 4           |
 
 ### Phase 2b - Features ✅
-| Ralph | Feature | Tests Added |
-|-------|---------|-------------|
-| 50 | Texture Formats | 4 |
-| 51 | Topology | 5 |
-| 52 | Compute Advanced | 3 |
-| 53 | Material Advanced | 3 |
+
+| Ralph | Feature           | Tests Added |
+| ----- | ----------------- | ----------- |
+| 50    | Texture Formats   | 4           |
+| 51    | Topology          | 5           |
+| 52    | Compute Advanced  | 3           |
+| 53    | Material Advanced | 3           |
 
 ### Phase 2c - Polish ✅
-| Ralph | Feature | Tests Added |
-|-------|---------|-------------|
-| 54 | Events & Profiler | 6 |
-| 55 | Edge Cases | 5 |
+
+| Ralph | Feature           | Tests Added |
+| ----- | ----------------- | ----------- |
+| 54    | Events & Profiler | 6           |
+| 55    | Edge Cases        | 5           |
 
 **Total Cost**: ~$3.50 across 11 ralphs
 **Models Used**: Gemini (9), Claude (2 - blend modes retry, compute retry)

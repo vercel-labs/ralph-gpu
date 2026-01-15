@@ -54,13 +54,17 @@ test.describe('Texture Formats', () => {
       await waitForFrame();
       
       const format = target.format;
-      // Skip readPixels for r16float to avoid alignment issues in existing implementation
+      const data = await target.readPixels(0, 0, 1, 1);
+      const value = data[0];
+      const isFloatArray = data instanceof Float32Array;
       
       teardown();
-      return { format };
+      return { format, value, isFloatArray };
     });
 
     expect(result.format).toBe("r16float");
+    expect(result.isFloatArray).toBe(true);
+    expect(result.value).toBeCloseTo(0.5, 2);
   });
 
   test('rg16float format works', async ({ page }) => {

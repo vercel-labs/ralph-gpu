@@ -99,6 +99,11 @@ export default function Home() {
           <h2>Storage Texture →</h2>
           <p>Compute shader writes using textureStore()</p>
         </Link>
+
+        <Link href="/debug-r16float" className={styles.card}>
+          <h2>Debug: r16float →</h2>
+          <p>Debug readPixels alignment issue with r16float format</p>
+        </Link>
       </div>
     </main>
   );
