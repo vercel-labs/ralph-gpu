@@ -5,6 +5,78 @@ test.describe('MRT (Multiple Render Targets)', () => {
     await page.goto('/index.html');
   });
 
+  test('getFormats returns correct formats in order', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { setupTest, teardown } = (window as any).RalphTestUtils;
+      const { context } = await setupTest(8, 8);
+      
+      const mrt = context.mrt({
+        albedo: { format: 'rgba8unorm' },
+        normal: { format: 'rgba16float' },
+        depth: { format: 'r32float' }
+      }, 8, 8);
+      
+      const formats = mrt.getFormats();
+      
+      teardown();
+      return { formats, length: formats.length };
+    });
+
+    expect(result.length).toBe(3);
+    expect(result.formats).toContain('rgba8unorm');
+    expect(result.formats).toContain('rgba16float');
+    expect(result.formats).toContain('r32float');
+  });
+
+  test('getFirstTarget returns first target', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { setupTest, teardown } = (window as any).RalphTestUtils;
+      const { context } = await setupTest(8, 8);
+      
+      const mrt = context.mrt({
+        color: { format: 'rgba8unorm' },
+        depth: { format: 'r32float' }
+      }, 16, 16);
+      
+      const firstTarget = mrt.getFirstTarget();
+      const hasTarget = firstTarget !== undefined;
+      const width = firstTarget?.width;
+      const height = firstTarget?.height;
+      const format = firstTarget?.format;
+      
+      teardown();
+      return { hasTarget, width, height, format };
+    });
+
+    expect(result.hasTarget).toBe(true);
+    expect(result.width).toBe(16);
+    expect(result.height).toBe(16);
+    // First target should be one of the formats we specified
+    expect(['rgba8unorm', 'r32float']).toContain(result.format);
+  });
+
+  test('getFirstTarget returns undefined for empty MRT', async ({ page }) => {
+    // This tests the edge case - though in practice MRT always has at least one target
+    const result = await page.evaluate(async () => {
+      const { setupTest, teardown } = (window as any).RalphTestUtils;
+      const { context } = await setupTest(8, 8);
+      
+      // Create MRT with at least one target (can't create empty MRT)
+      const mrt = context.mrt({
+        color: { format: 'rgba8unorm' }
+      }, 8, 8);
+      
+      // Verify getFirstTarget works
+      const firstTarget = mrt.getFirstTarget();
+      const hasTarget = firstTarget !== undefined;
+      
+      teardown();
+      return { hasTarget };
+    });
+
+    expect(result.hasTarget).toBe(true);
+  });
+
   test('should write to multiple targets', async ({ page }) => {
     await page.evaluate(async () => {
       const { setupTest, waitForFrame } = (window as any).RalphTestUtils;

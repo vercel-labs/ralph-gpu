@@ -47,6 +47,21 @@ export class MultiRenderTarget {
   }
 
   /**
+   * Get all render target formats in order
+   */
+  getFormats(): string[] {
+    return Array.from(this.targets.values()).map((target) => target.format);
+  }
+
+  /**
+   * Get the first target (useful for getting format when only one target matters)
+   */
+  getFirstTarget(): RenderTarget | undefined {
+    const firstEntry = this.targets.values().next();
+    return firstEntry.done ? undefined : firstEntry.value;
+  }
+
+  /**
    * Get the width
    */
   get width(): number {

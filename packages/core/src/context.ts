@@ -813,13 +813,11 @@ export class GPUContext {
       };
       format = formatMap[this.currentTarget.format] || "rgba8unorm";
     } else {
-      // MRT - use first target for now (should handle properly)
+      // MRT - use first target's view and format
       const views = this.currentTarget.getViews();
       view = views[0];
-      // Get format from the first MRT target
-      const firstTarget = this.currentTarget.get(
-        Array.from((this.currentTarget as any).targets.keys())[0] as string
-      );
+      // Get format from the first MRT target using public API
+      const firstTarget = this.currentTarget.getFirstTarget();
       if (firstTarget) {
         const formatMap: Record<string, GPUTextureFormat> = {
           "rgba8unorm": "rgba8unorm",
