@@ -348,6 +348,86 @@ export default function ConceptsPage() {
         <CodeBlock code={uniformsCode} language="typescript" />
       </section>
 
+      {/* Important Notes */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-bold text-white mb-4" id="important-notes">
+          Important Notes
+        </h2>
+        <p className="text-neutral-300 mb-6">
+          A few things to keep in mind when working with ralph-gpu:
+        </p>
+
+        {/* Reading Pixels */}
+        <div className="mb-6 p-4 rounded-lg bg-neutral-900 border border-neutral-800">
+          <h3 className="font-semibold text-white mb-2">Reading Pixels from Screen</h3>
+          <p className="text-neutral-400 text-sm mb-3">
+            <strong className="text-orange-400">You cannot read pixels from the screen</strong> (swap chain texture). 
+            For pixel readback, render to a RenderTarget first:
+          </p>
+          <div className="text-sm font-mono bg-neutral-950 p-3 rounded border border-neutral-800">
+            <div className="text-red-400">// ❌ Won&apos;t work - screen can&apos;t be read</div>
+            <div className="text-neutral-400">ctx.setTarget(null);</div>
+            <div className="text-neutral-400">await ctx.readPixels(); // Returns zeros!</div>
+            <div className="mt-2 text-green-400">// ✅ Works - render to a RenderTarget</div>
+            <div className="text-neutral-400">const target = ctx.target(256, 256);</div>
+            <div className="text-neutral-400">ctx.setTarget(target);</div>
+            <div className="text-neutral-400">await target.readPixels(); // Actual data!</div>
+          </div>
+        </div>
+
+        {/* Globals Binding */}
+        <div className="mb-6 p-4 rounded-lg bg-neutral-900 border border-neutral-800">
+          <h3 className="font-semibold text-white mb-2">Globals Binding</h3>
+          <p className="text-neutral-400 text-sm">
+            The <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">globals</code> struct is auto-injected at <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">@group(0)</code>. 
+            User uniforms are always at <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">@group(1)</code>. 
+            If your shader doesn&apos;t use <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">globals.time</code>, <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">globals.resolution</code>, etc., 
+            the WGSL optimizer may remove unused bindings internally — the library handles this automatically.
+          </p>
+        </div>
+
+        {/* Particles Helper */}
+        <div className="mb-6 p-4 rounded-lg bg-neutral-900 border border-neutral-800">
+          <h3 className="font-semibold text-white mb-2">Particles Helper Functions</h3>
+          <p className="text-neutral-400 text-sm mb-3">
+            When using <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">ctx.particles()</code>, these WGSL functions are <strong className="text-blue-400">auto-injected</strong>:
+          </p>
+          <div className="text-sm font-mono bg-neutral-950 p-3 rounded border border-neutral-800 mb-3">
+            <div className="text-neutral-400">fn quadOffset(vid: u32) -&gt; vec2f  // -0.5 to 0.5</div>
+            <div className="text-neutral-400">fn quadUV(vid: u32) -&gt; vec2f      // 0 to 1</div>
+          </div>
+          <p className="text-neutral-400 text-sm">
+            <strong className="text-orange-400">Do NOT redefine these</strong> in your shader — use them directly. Redefining will cause duplicate function errors.
+          </p>
+        </div>
+
+        {/* Texture Formats */}
+        <div className="p-4 rounded-lg bg-neutral-900 border border-neutral-800">
+          <h3 className="font-semibold text-white mb-2">Texture Formats</h3>
+          <p className="text-neutral-400 text-sm mb-3">
+            Default formats differ between targets:
+          </p>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-700">
+                <th className="text-left py-2 text-neutral-300">Target</th>
+                <th className="text-left py-2 text-neutral-300">Default Format</th>
+              </tr>
+            </thead>
+            <tbody className="text-neutral-400">
+              <tr className="border-b border-neutral-800">
+                <td className="py-2">Canvas (screen)</td>
+                <td className="py-2 font-mono text-xs">bgra8unorm</td>
+              </tr>
+              <tr>
+                <td className="py-2">RenderTarget</td>
+                <td className="py-2 font-mono text-xs">rgba8unorm</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       {/* Next Steps */}
       <section>
         <h2 className="text-2xl font-bold text-white mb-4">Next Steps</h2>

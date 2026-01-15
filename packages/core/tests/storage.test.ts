@@ -63,10 +63,13 @@ describe('StorageBuffer', () => {
     
     storage.write(data);
     
+    // ArrayBufferView uses 5-argument form with byteOffset and byteLength
     expect(mockDevice.queue.writeBuffer).toHaveBeenCalledWith(
       mockBuffer,
       0,
-      data.buffer
+      data.buffer,
+      data.byteOffset,
+      data.byteLength
     );
   });
 

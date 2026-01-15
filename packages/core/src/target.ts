@@ -8,6 +8,51 @@ import { generateEventId } from "./events";
 import type { MemoryEvent } from "./events";
 
 /**
+ * Convert a Float16 (half-precision) value to Float32
+ * Float16: 1 sign bit, 5 exponent bits, 10 mantissa bits
+ * Float32: 1 sign bit, 8 exponent bits, 23 mantissa bits
+ */
+function float16ToFloat32(h: number): number {
+  const sign = (h & 0x8000) >> 15;
+  const exponent = (h & 0x7c00) >> 10;
+  const mantissa = h & 0x03ff;
+
+  if (exponent === 0) {
+    if (mantissa === 0) {
+      // Zero
+      return sign ? -0 : 0;
+    }
+    // Subnormal number
+    const m = mantissa / 1024;
+    const value = m * Math.pow(2, -14);
+    return sign ? -value : value;
+  } else if (exponent === 31) {
+    // Infinity or NaN
+    if (mantissa === 0) {
+      return sign ? -Infinity : Infinity;
+    }
+    return NaN;
+  }
+
+  // Normal number
+  const e = exponent - 15;
+  const m = 1 + mantissa / 1024;
+  const value = m * Math.pow(2, e);
+  return sign ? -value : value;
+}
+
+/**
+ * Convert a Uint16Array of float16 values to Float32Array
+ */
+function convertFloat16ArrayToFloat32(uint16Data: Uint16Array): Float32Array {
+  const result = new Float32Array(uint16Data.length);
+  for (let i = 0; i < uint16Data.length; i++) {
+    result[i] = float16ToFloat32(uint16Data[i]);
+  }
+  return result;
+}
+
+/**
  * Maps our texture format strings to GPUTextureFormat
  */
 function getGPUTextureFormat(format: TextureFormat): GPUTextureFormat {
@@ -271,8 +316,15 @@ export class RenderTarget {
                           this._format === "rgba16float" ? 8 :
                           this._format === "r32float" ? 4 : 4;
     
-    const bytesPerRow = Math.ceil((width * bytesPerPixel) / 256) * 256;
-    const bufferSize = bytesPerRow * height;
+    // Determine if this is a float16 format that needs conversion
+    const isFloat16 = this._format === "r16float" || 
+                      this._format === "rg16float" || 
+                      this._format === "rgba16float";
+    const isFloat32 = this._format === "r32float";
+    
+    const actualBytesPerRow = width * bytesPerPixel;
+    const alignedBytesPerRow = Math.ceil(actualBytesPerRow / 256) * 256;
+    const bufferSize = alignedBytesPerRow * height;
 
     const buffer = this.device.createBuffer({
       size: bufferSize,
@@ -282,7 +334,7 @@ export class RenderTarget {
     const encoder = this.device.createCommandEncoder();
     encoder.copyTextureToBuffer(
       { texture: this._gpuTexture, origin: { x, y, z: 0 } },
-      { buffer, bytesPerRow },
+      { buffer, bytesPerRow: alignedBytesPerRow },
       { width, height, depthOrArrayLayers: 1 }
     );
     this.device.queue.submit([encoder.finish()]);
@@ -290,16 +342,43 @@ export class RenderTarget {
     await buffer.mapAsync(GPUMapMode.READ);
     const arrayBuffer = buffer.getMappedRange();
     
-    // Create appropriate typed array based on format
-    const isFloat = this._format !== "rgba8unorm";
-    const data = isFloat 
-      ? new Float32Array(arrayBuffer.slice(0))
-      : new Uint8Array(arrayBuffer.slice(0));
+    // Strip out row padding if needed
+    let packedData: Uint8Array;
+    if (alignedBytesPerRow === actualBytesPerRow) {
+      packedData = new Uint8Array(arrayBuffer.slice(0));
+    } else {
+      const paddedData = new Uint8Array(arrayBuffer);
+      const packedSize = actualBytesPerRow * height;
+      packedData = new Uint8Array(packedSize);
+      
+      for (let row = 0; row < height; row++) {
+        const srcOffset = row * alignedBytesPerRow;
+        const dstOffset = row * actualBytesPerRow;
+        packedData.set(paddedData.subarray(srcOffset, srcOffset + actualBytesPerRow), dstOffset);
+      }
+    }
     
     buffer.unmap();
     buffer.destroy();
 
-    return data;
+    // Convert to appropriate typed array based on format
+    if (this._format === "rgba8unorm") {
+      return packedData;
+    }
+    
+    if (isFloat16) {
+      // Float16 formats need conversion from half-precision to single-precision
+      const uint16Data = new Uint16Array(packedData.buffer);
+      return convertFloat16ArrayToFloat32(uint16Data);
+    }
+    
+    if (isFloat32) {
+      // Float32 formats can be directly interpreted
+      return new Float32Array(packedData.buffer);
+    }
+    
+    // Fallback (shouldn't reach here with current formats)
+    return new Float32Array(packedData.buffer);
   }
 
   /**

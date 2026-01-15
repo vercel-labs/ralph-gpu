@@ -79,11 +79,8 @@ export class ComputeShader {
     // Check if shader uses globals (references globals. anywhere)
     this.usesGlobals = /\bglobals\.\w+/.test(this.wgsl);
     
-    // Prepend globals to shader
-    const fullWGSL = `
-${getGlobalsWGSL()}
-${this.wgsl}
-`;
+    // Only prepend globals if shader uses them to avoid WebGPU validation errors
+    const fullWGSL = this.usesGlobals ? `${getGlobalsWGSL()}\n${this.wgsl}` : this.wgsl;
 
     try {
       // Create shader module

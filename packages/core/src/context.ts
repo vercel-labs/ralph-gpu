@@ -343,11 +343,6 @@ export class GPUContext {
       this.globals.aspect = this._width / this._height;
     }
 
-    // DEBUG: Log resolution for first few frames
-    if (this._frame < 5) {
-      console.log(`[GPUContext] Frame ${this._frame}: resolution=${this.globals.resolution[0]}x${this.globals.resolution[1]}, target=${this.currentTarget ? 'FBO' : 'screen'}`);
-    }
-
     updateGlobalsBuffer(this.device, this.globalsBuffer, this.globals);
   }
 
@@ -818,10 +813,23 @@ export class GPUContext {
       };
       format = formatMap[this.currentTarget.format] || "rgba8unorm";
     } else {
-      // MRT - use first target for now (should handle properly)
+      // MRT - use first target's view and format
       const views = this.currentTarget.getViews();
       view = views[0];
-      format = this.format; // TODO: Get format from MRT
+      // Get format from the first MRT target using public API
+      const firstTarget = this.currentTarget.getFirstTarget();
+      if (firstTarget) {
+        const formatMap: Record<string, GPUTextureFormat> = {
+          "rgba8unorm": "rgba8unorm",
+          "rgba16float": "rgba16float",
+          "r16float": "r16float",
+          "rg16float": "rg16float",
+          "r32float": "r32float",
+        };
+        format = formatMap[firstTarget.format] || "rgba8unorm";
+      } else {
+        format = "rgba8unorm";
+      }
     }
 
     const renderPassDescriptor: GPURenderPassDescriptor = {

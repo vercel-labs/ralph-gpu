@@ -1291,6 +1291,65 @@ fn opSmoothUnion(d1: f32, d2: f32, k: f32) -> f32 {
 }
 ```
 
+## Important Internals & Gotchas
+
+### Globals Binding Behavior
+
+The globals struct (`@group(0) @binding(0)`) is **always declared** in your shader, but the WGSL optimizer may remove unused bindings. If your shader doesn't reference `globals.time`, `globals.resolution`, etc., the binding may be optimized away internally. The library handles this automatically, but be aware that:
+
+- Globals are auto-prepended to all shaders at `@group(0)`
+- User uniforms are always at `@group(1)`
+- The library detects if your shader uses globals and only binds them when needed
+
+### Reading Pixels from Screen vs RenderTarget
+
+**You cannot `readPixels()` from the screen** (swap chain texture). The WebGPU swap chain texture doesn't have `CopySrc` usage. For pixel verification or CPU readback:
+
+```tsx
+// ❌ This won't work - screen can't be read
+ctx.setTarget(null);
+myPass.draw();
+const pixels = await ctx.readPixels(); // Returns zeros!
+
+// ✅ This works - render to a RenderTarget first
+const target = ctx.target(256, 256);
+ctx.setTarget(target);
+myPass.draw();
+const pixels = await target.readPixels(); // Actual pixel data!
+```
+
+### Particles Helper Functions
+
+The `ctx.particles()` helper **auto-injects** these WGSL functions into your shader:
+
+```wgsl
+fn quadOffset(vid: u32) -> vec2f  // Returns -0.5 to 0.5 (quad corner position)
+fn quadUV(vid: u32) -> vec2f      // Returns 0 to 1 (UV coordinates)
+```
+
+**Do NOT redefine these functions** in your shader - it will cause duplicate function errors:
+
+```wgsl
+// ❌ DON'T define your own - these are auto-injected
+fn quadOffset(index: u32) -> vec2f { ... }
+
+// ✅ DO use them directly
+let pos = quadOffset(vid) * particleSize;
+let uv = quadUV(vid);
+```
+
+### Texture Format Differences
+
+Be aware of default texture formats:
+
+| Target          | Default Format    |
+| --------------- | ----------------- |
+| Canvas (screen) | `bgra8unorm`      |
+| RenderTarget    | `rgba8unorm`      |
+| MRT targets     | Per-target format |
+
+When creating render pipelines that target different outputs, format mismatches will cause WebGPU validation errors. The library handles this internally, but if you're doing advanced rendering, be aware of these differences.
+
 ## Best Practices
 
 1. **Always check WebGPU support** before initializing
@@ -1352,8 +1411,8 @@ ralph-gpu includes a built-in profiler and event system for performance monitori
 const ctx = await gpu.init(canvas, {
   events: {
     enabled: true,
-    types: ['draw', 'compute', 'frame', 'memory'], // Optional filter
-    historySize: 1000,  // Event history buffer size
+    types: ["draw", "compute", "frame", "memory"], // Optional filter
+    historySize: 1000, // Event history buffer size
   },
 });
 ```
@@ -1371,21 +1430,21 @@ const profiler = new Profiler(ctx, {
 
 // In your render loop
 function animate() {
-  profiler.tick();  // Track frame timing for FPS
-  
+  profiler.tick(); // Track frame timing for FPS
+
   // Profile specific regions
-  profiler.begin('physics');
+  profiler.begin("physics");
   // ... physics code ...
-  profiler.end('physics');
-  
-  profiler.begin('render');
+  profiler.end("physics");
+
+  profiler.begin("render");
   myPass.draw();
-  profiler.end('render');
-  
+  profiler.end("render");
+
   // Get stats
   const fps = profiler.getFPS();
   const regions = profiler.getResults();
-  
+
   requestAnimationFrame(animate);
 }
 
@@ -1422,7 +1481,7 @@ profiler.dispose()                     // Cleanup and unsubscribe
 
 ```tsx
 // Subscribe to specific event type
-const unsubscribe = ctx.on('draw', (event) => {
+const unsubscribe = ctx.on("draw", (event) => {
   console.log(`Draw: ${event.source}, vertices: ${event.vertexCount}`);
 });
 
@@ -1432,7 +1491,7 @@ ctx.onAll((event) => {
 });
 
 // Get event history
-const history = ctx.getEventHistory(['draw', 'compute']);
+const history = ctx.getEventHistory(["draw", "compute"]);
 
 // Unsubscribe
 unsubscribe();
@@ -1440,15 +1499,15 @@ unsubscribe();
 
 ### Event Types
 
-| Event Type | Description |
-|------------|-------------|
-| `draw` | Draw call (pass, material, particles) |
-| `compute` | Compute shader dispatch |
-| `frame` | Frame start/end with timing |
-| `shader_compile` | Shader compilation |
-| `memory` | Buffer/texture allocate/free/resize |
-| `target` | Render target set/clear |
-| `pipeline` | Pipeline creation (with cache hit info) |
+| Event Type       | Description                             |
+| ---------------- | --------------------------------------- |
+| `draw`           | Draw call (pass, material, particles)   |
+| `compute`        | Compute shader dispatch                 |
+| `frame`          | Frame start/end with timing             |
+| `shader_compile` | Shader compilation                      |
+| `memory`         | Buffer/texture allocate/free/resize     |
+| `target`         | Render target set/clear                 |
+| `pipeline`       | Pipeline creation (with cache hit info) |
 
 ## API Quick Reference
 
@@ -1512,6 +1571,15 @@ pingPong.write                             // Next state (RenderTarget)
 pingPong.swap()                            // Swap read/write
 pingPong.resize(width, height)             // Resize both
 pingPong.dispose()                         // Cleanup
+
+// Multi Render Target (MRT)
+mrt.get(name)                              // Get target by name → RenderTarget | undefined
+mrt.getViews()                             // Get all GPUTextureViews → GPUTextureView[]
+mrt.getFormats()                           // Get all formats → string[]
+mrt.getFirstTarget()                       // Get first target → RenderTarget | undefined
+mrt.width / mrt.height                     // Dimensions
+mrt.resize(width, height)                  // Resize all targets
+mrt.dispose()                              // Cleanup all targets
 
 // Storage Buffer
 storage.write(data)                        // Write TypedArray

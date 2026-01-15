@@ -93,18 +93,18 @@ function updateReadme(sizes) {
   const gzipKb = (esmSize.gzip / 1024).toFixed(1);
   const brotliKb = (esmSize.brotli / 1024).toFixed(1);
   
-  // Update the badges at the top
+  // Update the badges at the top (both URL and alt text)
   readme = readme.replace(
-    /gzip-[\d.]+kB-blue/,
-    `gzip-${gzipKb}kB-blue`
+    /gzip-[\d.]+kB-blue" alt="[^"]*"/,
+    `gzip-${gzipKb}kB-blue" alt="Bundle size: ~${gzipKb}kB gzipped"`
   );
   readme = readme.replace(
-    /brotli-[\d.]+kB-purple/,
-    `brotli-${brotliKb}kB-purple`
+    /brotli-[\d.]+kB-purple" alt="[^"]*"/,
+    `brotli-${brotliKb}kB-purple" alt="Brotli: ~${brotliKb}kB"`
   );
   readme = readme.replace(
-    /<strong>~[\d.]+kB gzipped<\/strong>/,
-    `<strong>~${Math.round(esmSize.gzip / 1024)}kB gzipped</strong>`
+    /<strong>~[\d.]+kB gzipped<\/strong>/g,
+    `<strong>~${gzipKb}kB gzipped</strong>`
   );
   
   // Create the bundle size section

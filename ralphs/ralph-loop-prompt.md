@@ -319,7 +319,12 @@ Include relevant rules in your LoopAgent configuration:
      git add -A
      git commit -m "feat: brief description of what the ralph accomplished"
      ```
-   - ❌ **Task failed**: Reset changes and rerun with improved task prompt
+   - ❌ **Task failed**: Follow this recovery process:
+     1. **Reset ALL uncommitted changes**: `git checkout -- . && git clean -fd` (remove all changes from the failed ralph)
+     2. **Analyze why it failed**: Check `.ralph-output.log`, `.progress.md`, test output
+     3. **Create a NEW ralph** with improved instructions based on learnings
+     4. **Try a different model**: If `google/gemini-3-flash` failed, use `anthropic/claude-sonnet-4-20250514`
+     5. **Never manually fix** the ralph's code - let the new ralph do it with better instructions
 
 ## Best Practices
 
@@ -336,3 +341,82 @@ Include relevant rules in your LoopAgent configuration:
 - **Be specific in TASK**: Include exact file paths, working directories, code examples, and step-by-step navigation instructions
 - **Documentation**: Ask ralphs to update docs, tests, and cursor rules as needed
 - **Keep executing until completion**: Continue working through all tasks in your plan until the entire long-term goal is achieved. Don't stop after individual ralphs complete. Keep running sleeps commands to check progress.
+- **Progress tracking**: Never edit the .progress.md file yourself, instruct the ralph LLM to do it.
+
+## CRITICAL: Orchestrator Agent Rules
+
+**YOU (the orchestrator agent running in Cursor) MUST follow these rules when executing ralphs:**
+
+### DO NOT Create Automation Scripts
+
+**NEVER create scripts like:**
+
+- `run-all-phase2.sh`
+- `wait-and-continue.sh`
+- `run-remaining-ralphs.sh`
+- Any script that automatically chains or batches ralph execution
+
+**Why?** You need to review results after each ralph and potentially adjust your plan. Automation removes your ability to adapt.
+
+### Execute ONE Ralph at a Time
+
+1. **Create ONE ralph** for the immediate next task
+2. **Run it in background**: `pnpm start > .ralph-output.log 2>&1 &`
+3. **Monitor it yourself** using `sleep` + check commands (do NOT delegate monitoring to scripts)
+4. **Wait for completion** - keep checking every 1-3 minutes
+5. **Review results** thoroughly
+6. **Update the plan file** with findings
+7. **Commit changes** if successful
+8. **Then and only then** create the next ralph
+
+### You Are the Orchestrator
+
+As the orchestrator agent, YOU must:
+
+- **Actively monitor** each ralph using sleep commands and log checks
+- **Stay in the loop** - don't hand off control to automation scripts
+- **Review and adapt** after each ralph completes
+- **Update plan documents** yourself based on results
+- **Make decisions** about whether to proceed, retry, or change approach
+
+### Monitoring Pattern
+
+```bash
+# Start ralph in background
+cd ralphs/[number]-feature-name
+pnpm start > .ralph-output.log 2>&1 &
+
+# Monitor every 60-180 seconds (YOU run these, don't script them)
+sleep 60 && tail -n 30 .ralph-output.log && cat .progress.md
+
+# Keep checking until ralph completes
+sleep 120 && tail -n 30 .ralph-output.log
+
+# When done, review results
+cat .ralph-output.log | tail -n 50
+cat .progress.md
+```
+
+### After Each Ralph Completes
+
+1. **Check results**: Did it succeed? What was created/changed?
+2. **Verify changes**: Are the changes correct? Run tests if applicable
+3. **Update plan**: Add notes, mark items complete, document findings
+4. **Commit**: `git add -A && git commit -m "feat: description"`
+5. **Decide next step**: Based on results, create the next ralph OR adjust approach
+
+### Example Workflow
+
+```
+1. Read plan, identify first task
+2. Create ralph 45 for "uniforms tests"
+3. Run ralph 45, monitor with sleep commands
+4. Ralph 45 completes - review output
+5. Update plan with findings from ralph 45
+6. Commit ralph 45 changes
+7. Based on results, create ralph 46 for "time controls tests"
+8. Run ralph 46, monitor with sleep commands
+9. ... repeat until plan is complete
+```
+
+**Remember: You are the brain coordinating the work. Don't automate yourself out of the loop!**

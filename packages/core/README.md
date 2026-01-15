@@ -1,12 +1,12 @@
 # ralph-gpu
 
 <p align="center">
-  <strong>~11kB gzipped</strong> · WebGPU shader library for creative coding
+  <strong>~10.9kB gzipped</strong> · WebGPU shader library for creative coding
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/gzip-10.6kB-blue" alt="Bundle size: ~8.3kB gzipped" />
-  <img src="https://img.shields.io/badge/brotli-9.5kB-purple" alt="Brotli: ~7.4kB" />
+  <img src="https://img.shields.io/badge/gzip-10.9kB-blue" alt="Bundle size: ~10.9kB gzipped" />
+  <img src="https://img.shields.io/badge/brotli-9.7kB-purple" alt="Brotli: ~9.7kB" />
   <img src="https://img.shields.io/badge/WebGPU-ready-green" alt="WebGPU Ready" />
 </p>
 
@@ -156,7 +156,7 @@ Textures can be passed as full `RenderTarget` objects (includes texture + sample
 const uniforms = {
   // Option 1: Pass full RenderTarget (auto extracts texture + sampler)
   inputTex: { value: renderTarget },
-  
+
   // Option 2: Pass texture and sampler separately
   inputTex: { value: renderTarget.texture }, // GPUTexture
   inputSampler: { value: mySampler }, // GPUSampler (optional, matched by name)
@@ -370,7 +370,8 @@ particleCompute.dispatch(numParticles / 64);
 Compute shaders can sample from textures (e.g., reading from an SDF texture):
 
 ```typescript
-const compute = ctx.compute(/* wgsl */ `
+const compute = ctx.compute(
+  /* wgsl */ `
   @group(1) @binding(0) var<uniform> u: MyUniforms;
   @group(1) @binding(1) var<storage, read_write> data: array<f32>;
   @group(1) @binding(2) var myTexture: texture_2d<f32>;
@@ -382,11 +383,13 @@ const compute = ctx.compute(/* wgsl */ `
     let texValue = textureSampleLevel(myTexture, mySampler, uv, 0.0);
     data[id.x] = texValue.r;
   }
-`, {
-  uniforms: {
-    myTexture: { value: renderTarget }, // RenderTarget auto-extracts texture + sampler
-  },
-});
+`,
+  {
+    uniforms: {
+      myTexture: { value: renderTarget }, // RenderTarget auto-extracts texture + sampler
+    },
+  }
+);
 
 compute.storage("data", dataBuffer);
 compute.dispatch(512);
@@ -403,7 +406,8 @@ const outputTarget = ctx.target(512, 512, {
   usage: "storage", // Enable write operations
 });
 
-const compute = ctx.compute(/* wgsl */ `
+const compute = ctx.compute(
+  /* wgsl */ `
   @group(1) @binding(0) var input: texture_2d<f32>;
   @group(1) @binding(1) var inputSampler: sampler;
   @group(1) @binding(2) var output: texture_storage_2d<rgba16float, write>;
@@ -414,12 +418,14 @@ const compute = ctx.compute(/* wgsl */ `
     let color = textureSampleLevel(input, inputSampler, uv, 0.0);
     textureStore(output, id.xy, color * 2.0); // Write to storage texture
   }
-`, {
-  uniforms: {
-    input: { value: inputTarget },
-    output: { value: outputTarget },
-  },
-});
+`,
+  {
+    uniforms: {
+      input: { value: inputTarget },
+      output: { value: outputTarget },
+    },
+  }
+);
 
 compute.dispatch(512 / 8, 512 / 8);
 ```
@@ -429,7 +435,8 @@ compute.dispatch(512 / 8, 512 / 8);
 Use `textureLoad()` for direct pixel access without sampling:
 
 ```typescript
-const compute = ctx.compute(/* wgsl */ `
+const compute = ctx.compute(
+  /* wgsl */ `
   @group(1) @binding(0) var dataTexture: texture_2d<f32>;
   
   @compute @workgroup_size(64)
@@ -437,11 +444,13 @@ const compute = ctx.compute(/* wgsl */ `
     let value = textureLoad(dataTexture, vec2i(id.xy), 0).r;
     // No sampler needed for textureLoad
   }
-`, {
-  uniforms: {
-    dataTexture: { value: target.texture },
-  },
-});
+`,
+  {
+    uniforms: {
+      dataTexture: { value: target.texture },
+    },
+  }
+);
 ```
 
 ## Materials (Custom Geometry)
@@ -639,6 +648,18 @@ pingPong.resize(width, height); // Resize both
 pingPong.dispose(); // Cleanup
 ```
 
+### Multi Render Target (MRT)
+
+```typescript
+mrt.get(name); // Get target by name → RenderTarget | undefined
+mrt.getViews(); // Get all texture views → GPUTextureView[]
+mrt.getFormats(); // Get all formats → string[]
+mrt.getFirstTarget(); // Get first target → RenderTarget | undefined
+mrt.width / mrt.height; // Dimensions
+mrt.resize(width, height); // Resize all targets
+mrt.dispose(); // Cleanup all targets
+```
+
 ### Storage Buffer
 
 ```typescript
@@ -678,18 +699,18 @@ sampler.dispose(); // Cleanup (currently no-op, kept for API consistency)
 
 ```typescript
 import {
-  gpu,              // Main entry point
-  GPUContext,       // GPU context class
-  Pass,             // Fullscreen pass
-  Material,         // Custom vertex shader
-  ComputeShader,    // Compute shader
-  RenderTarget,     // Render target
+  gpu, // Main entry point
+  GPUContext, // GPU context class
+  Pass, // Fullscreen pass
+  Material, // Custom vertex shader
+  ComputeShader, // Compute shader
+  RenderTarget, // Render target
   TextureReference, // Stable texture reference (used internally by RenderTarget)
-  PingPongTarget,   // Ping-pong buffer
-  MultiRenderTarget,// Multiple render targets
-  StorageBuffer,    // Storage buffer
-  Particles,        // Particle system helper
-  Sampler,          // Texture sampler
+  PingPongTarget, // Ping-pong buffer
+  MultiRenderTarget, // Multiple render targets
+  StorageBuffer, // Storage buffer
+  Particles, // Particle system helper
+  Sampler, // Texture sampler
 } from "ralph-gpu";
 ```
 
@@ -715,14 +736,94 @@ try {
 }
 ```
 
+## Important Notes
+
+### Reading Pixels
+
+**You cannot read pixels from the screen** (swap chain texture). For pixel readback, render to a RenderTarget first:
+
+```typescript
+// ❌ Won't work - screen can't be read
+ctx.setTarget(null);
+myPass.draw();
+const pixels = await ctx.readPixels(); // Returns zeros!
+
+// ✅ Works - render to a RenderTarget
+const target = ctx.target(256, 256);
+ctx.setTarget(target);
+myPass.draw();
+const pixels = await target.readPixels(); // Actual pixel data!
+```
+
+### Globals Binding
+
+The globals struct is auto-injected at `@group(0)`. If your shader doesn't use `globals.time`, `globals.resolution`, etc., the WGSL optimizer may remove the binding internally. The library handles this automatically.
+
+### Particles Helper Functions
+
+When using `ctx.particles()`, these WGSL functions are **auto-injected**:
+
+```wgsl
+fn quadOffset(vid: u32) -> vec2f  // Returns -0.5 to 0.5
+fn quadUV(vid: u32) -> vec2f      // Returns 0 to 1
+```
+
+**Do NOT redefine these** in your shader - use them directly.
+
+### Texture Formats
+
+Default formats differ between targets:
+
+| Target          | Default Format |
+| --------------- | -------------- |
+| Canvas (screen) | `bgra8unorm`   |
+| RenderTarget    | `rgba8unorm`   |
+
+## Testing
+
+The library has two test suites:
+
+### Unit Tests (Vitest)
+
+Tests for pure logic, types, and API surface:
+
+```bash
+# Run unit tests
+pnpm test
+
+# Run in watch mode
+pnpm run test:watch
+```
+
+### Browser Tests (Playwright)
+
+WebGPU rendering tests that run in a real browser:
+
+```bash
+# Build the test bundle first
+pnpm run build:test
+
+# Run browser tests (headless)
+pnpm run test:browser
+
+# Run browser tests with visible browser (useful for debugging)
+pnpm run test:browser:headed
+```
+
+### Run All Tests
+
+```bash
+pnpm run test:all
+```
+
 ## Bundle Size
 
 | Format | Raw | Gzip | Brotli |
 |--------|-----|------|--------|
-| index.js | 43.21 kB | 10.81 kB | 9.65 kB |
-| index.mjs | 42.70 kB | 10.61 kB | 9.49 kB |
+| index.js | 44.18 kB | 11.08 kB | 9.89 kB |
+| index.mjs | 43.67 kB | 10.88 kB | 9.71 kB |
 
-> 📦 **~10.6 kB** gzipped (ESM)
+> 📦 **~10.9 kB** gzipped (ESM)
 
 ## Browser Support
 

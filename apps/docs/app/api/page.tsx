@@ -213,6 +213,35 @@ velocity.resize(width, height)
 // Cleanup
 velocity.dispose()`;
 
+const mrtCode = `// Create multiple render targets
+const gbuffer = ctx.mrt({
+  albedo: { format: "rgba8unorm" },
+  normal: { format: "rgba16float" },
+  depth: { format: "r32float" },
+}, 1024, 1024);
+
+// Get individual targets
+gbuffer.get("albedo")     // → RenderTarget | undefined
+gbuffer.get("normal")     // → RenderTarget | undefined
+
+// Or access via property (proxied)
+gbuffer.albedo            // → RenderTarget | undefined
+
+// Get all views/formats
+gbuffer.getViews()        // → GPUTextureView[]
+gbuffer.getFormats()      // → string[]
+gbuffer.getFirstTarget()  // → RenderTarget | undefined
+
+// Dimensions
+gbuffer.width             // 1024
+gbuffer.height            // 1024
+
+// Resize all targets
+gbuffer.resize(2048, 2048)
+
+// Cleanup
+gbuffer.dispose()`;
+
 const storageCode = `// Create buffer (size in bytes)
 const buffer = ctx.storage(4 * 4 * 1000);  // 1000 vec4s
 
@@ -497,6 +526,7 @@ export default function ApiPage() {
           <li><a href="#compute" className="text-primary-400 hover:text-primary-300">ComputeShader</a></li>
           <li><a href="#target" className="text-primary-400 hover:text-primary-300">RenderTarget</a></li>
           <li><a href="#pingpong" className="text-primary-400 hover:text-primary-300">PingPongTarget</a></li>
+          <li><a href="#mrt" className="text-primary-400 hover:text-primary-300">MultiRenderTarget</a></li>
           <li><a href="#storage" className="text-primary-400 hover:text-primary-300">StorageBuffer</a></li>
           <li><a href="#particles" className="text-primary-400 hover:text-primary-300">Particles</a></li>
           <li><a href="#sampler" className="text-primary-400 hover:text-primary-300">Sampler</a></li>
@@ -668,14 +698,40 @@ export default function ApiPage() {
         <CodeBlock code={pingPongCode} language="typescript" />
 
         <div className="mt-4 p-4 rounded-lg bg-gray-900 border border-gray-800">
-          <h4 className="font-semibold text-gray-100 mb-2">Usage Pattern</h4>
-          <ol className="text-gray-400 text-sm space-y-1 list-decimal list-inside">
-            <li>Read from <code>pingPong.read.texture</code> in your shader</li>
-            <li>Set target to <code>pingPong.write</code></li>
-            <li>Draw your pass</li>
-            <li>Call <code>pingPong.swap()</code></li>
-            <li>Repeat next frame</li>
-          </ol>
+            <h4 className="font-semibold text-gray-100 mb-2">Usage Pattern</h4>
+            <ol className="text-gray-400 text-sm space-y-1 list-decimal list-inside">
+              <li>Read from <code>pingPong.read.texture</code> in your shader</li>
+              <li>Set target to <code>pingPong.write</code></li>
+              <li>Draw your pass</li>
+              <li>Call <code>pingPong.swap()</code></li>
+              <li>Repeat next frame</li>
+            </ol>
+          </div>
+      </section>
+
+      {/* MultiRenderTarget */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center gap-3" id="mrt">
+          <span className="px-2 py-1 bg-primary-500/20 rounded text-primary-400 font-mono text-sm">class</span>
+          MultiRenderTarget
+        </h2>
+        <p className="text-gray-300 mb-4">
+          Multiple render targets (MRT) for deferred rendering, G-buffers, or any technique requiring simultaneous output to multiple textures.
+        </p>
+        <CodeBlock code={mrtCode} language="typescript" />
+
+        <div className="mt-4 space-y-4">
+          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
+            <h4 className="font-semibold text-gray-100 mb-2">Common Use Cases</h4>
+            <ul className="text-gray-400 text-sm space-y-1">
+              <li>• <strong>Deferred rendering</strong> — Store albedo, normals, depth in separate buffers</li>
+              <li>• <strong>G-buffer</strong> — Multiple material properties for post-processing</li>
+              <li>• <strong>Multi-output effects</strong> — Generate multiple textures in one pass</li>
+            </ul>
+          </div>
+          <div className="p-4 rounded-lg bg-primary-500/10 border border-primary-500/20 text-primary-200">
+            <strong>Access patterns:</strong> Use <code>mrt.get(&quot;name&quot;)</code> for type-safe access, or <code>mrt.name</code> for convenience (proxied property access).
+          </div>
         </div>
       </section>
 

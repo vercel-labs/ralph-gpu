@@ -28,13 +28,13 @@ importers:
         version: 16.1.1(@mdx-js/react@3.1.1(@types/react@18.3.27)(react@18.3.1))
       geist:
         specifier: ^1.5.1
-        version: 1.5.1(next@14.2.35(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
+        version: 1.5.1(next@14.2.35(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
       lucide-react:
         specifier: ^0.562.0
         version: 0.562.0(react@18.3.1)
       next:
         specifier: ^14.2.23
-        version: 14.2.35(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 14.2.35(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       ralph-gpu:
         specifier: workspace:*
         version: link:../../packages/core
@@ -86,7 +86,7 @@ importers:
         version: 0.9.36(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       next:
         specifier: ^14.2.23
-        version: 14.2.35(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 14.2.35(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       ralph-gpu:
         specifier: workspace:*
         version: link:../../packages/core
@@ -121,6 +121,9 @@ importers:
 
   packages/core:
     devDependencies:
+      '@playwright/test':
+        specifier: ^1.57.0
+        version: 1.57.0
       '@swc/core':
         specifier: ^1.9.3
         version: 1.15.8
@@ -941,6 +944,460 @@ importers:
         specifier: ^5.3.3
         version: 5.9.3
 
+  ralphs/36-setup-playwright:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/37-test-harness:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/38-test-utils:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/39-core-browser-tests:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/40-fix-browser-tests:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/41-advanced-browser-tests:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/42-fix-advanced-tests:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/43-update-scripts:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/45-uniforms-browser-tests:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/46-time-controls-tests:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/47-resize-tests:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/48-error-handling-tests:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/49-blend-modes-tests:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/50-texture-formats-tests:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/51-topology-tests:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.30(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/52-compute-advanced-tests:
+    dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^3.0.11
+        version: 3.0.11(zod@3.25.76)
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/53-material-advanced-tests:
+    dependencies:
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/54-events-profiler-tests:
+    dependencies:
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  ralphs/55-edge-cases-tests:
+    dependencies:
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
 packages:
 
   '@acemir/cssom@0.9.30':
@@ -1509,6 +1966,11 @@ packages:
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
+
+  '@playwright/test@1.57.0':
+    resolution: {integrity: sha512-6TyEnHgd6SArQO8UO2OMTxshln3QMWBtPGrOCgs3wVEmQmwyuNtB10IZMfmYDE0riwNR1cu4q+pPcxMVtaG3TA==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
@@ -5014,6 +5476,10 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
+  '@playwright/test@1.57.0':
+    dependencies:
+      playwright: 1.57.0
+
   '@polka/url@1.0.0-next.29': {}
 
   '@radix-ui/primitive@1.0.0':
@@ -6621,9 +7087,9 @@ snapshots:
 
   functions-have-names@1.2.3: {}
 
-  geist@1.5.1(next@14.2.35(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)):
+  geist@1.5.1(next@14.2.35(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)):
     dependencies:
-      next: 14.2.35(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      next: 14.2.35(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
 
   generator-function@2.0.1: {}
 
@@ -7280,7 +7746,7 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next@14.2.35(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  next@14.2.35(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@next/env': 14.2.35
       '@swc/helpers': 0.5.5
@@ -7302,6 +7768,7 @@ snapshots:
       '@next/swc-win32-ia32-msvc': 14.2.33
       '@next/swc-win32-x64-msvc': 14.2.33
       '@opentelemetry/api': 1.9.0
+      '@playwright/test': 1.57.0
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros

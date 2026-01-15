@@ -65,6 +65,7 @@ export class Pass {
   private globalsBuffer: GPUBuffer;
   private blendMode: PassOptions["blend"];
   private context: import("./context").GPUContext;
+  private usesGlobals: boolean;
 
   constructor(
     device: GPUDevice,
@@ -79,6 +80,9 @@ export class Pass {
     this.globalsBuffer = globalsBuffer;
     this.blendMode = options.blend;
     this.context = context;
+    
+    // Detect if shader uses globals (references globals. anywhere)
+    this.usesGlobals = /\bglobals\.\w+/.test(fragmentWGSL);
 
     // Detect which mode to use
     if (simpleUniforms && !hasManualBindings(fragmentWGSL)) {
@@ -154,8 +158,10 @@ export class Pass {
     }
 
     // Create fullscreen quad vertex shader
+    // Only include globals if shader uses them to avoid WebGPU validation errors
+    const globalsWGSL = this.usesGlobals ? getGlobalsWGSL() : '';
     const vertexWGSL = `
-${getGlobalsWGSL()}
+${globalsWGSL}
 
 struct VertexOutput {
   @builtin(position) position: vec4f,
@@ -178,9 +184,9 @@ fn main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
 }
 `;
 
-    // Prepend globals to fragment shader
+    // Only prepend globals to fragment shader if used
     const fullFragmentWGSL = `
-${getGlobalsWGSL()}
+${globalsWGSL}
 ${this.fragmentWGSL}
 `;
 
@@ -321,17 +327,19 @@ ${this.fragmentWGSL}
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     passEncoder.setPipeline(pipeline);
 
-    // Bind globals (group 0) - need to recreate this each time
-    const globalsBindGroup = this.device.createBindGroup({
-      layout: pipeline.getBindGroupLayout(0),
-      entries: [
-        {
-          binding: 0,
-          resource: { buffer: this.globalsBuffer },
-        },
-      ],
-    });
-    passEncoder.setBindGroup(0, globalsBindGroup);
+    // Bind globals (group 0) only if shader uses them
+    if (this.usesGlobals) {
+      const globalsBindGroup = this.device.createBindGroup({
+        layout: pipeline.getBindGroupLayout(0),
+        entries: [
+          {
+            binding: 0,
+            resource: { buffer: this.globalsBuffer },
+          },
+        ],
+      });
+      passEncoder.setBindGroup(0, globalsBindGroup);
+    }
 
     // Bind user uniforms (group 1)
     // Use generated bindings for simple mode, parse for manual mode

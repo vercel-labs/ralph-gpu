@@ -1,0 +1,20 @@
+{
+  "name": "50-texture-formats-tests",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx index.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/gateway": "^3.0.11",
+    "@ai-sdk/openai-compatible": "^1.0.0",
+    "@ralph/agent-loop": "workspace:*",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

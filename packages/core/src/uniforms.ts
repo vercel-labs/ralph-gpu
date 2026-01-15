@@ -352,8 +352,15 @@ export function collectTextureBindings(uniforms: Uniforms): Map<string, TextureB
       else if ("texture" in value) {
          // It might be a RenderTarget or PingPong buffer result
          const texture = value.texture;
-         // It might have a sampler
-         const sampler = "sampler" in value ? value.sampler : undefined;
+         // First, check if user provided a separate sampler by name convention
+         // This allows overriding the RenderTarget's default sampler
+         let sampler = samplers.get(key + "Sampler") 
+           || samplers.get(key.replace(/Tex(ture)?$/, "Sampler"))
+           || samplers.get(key.replace(/Texture$/, "") + "Sampler");
+         // Fall back to RenderTarget's built-in sampler if no user sampler provided
+         if (!sampler && "sampler" in value) {
+           sampler = value.sampler;
+         }
          
          textures.set(key, {
            texture,
@@ -682,7 +689,13 @@ export function collectSimpleTextureBindings(simpleUniforms: SimpleUniforms): Ma
       // Check if it's a RenderTarget or similar object with texture/sampler
       else if ("texture" in value) {
         const texture = (value as any).texture;
-        const sampler = "sampler" in value ? (value as any).sampler : undefined;
+        // First, check if user provided a separate sampler by name convention
+        // This allows overriding the RenderTarget's default sampler
+        let sampler = samplers.get(key + "Sampler") || samplers.get(key.replace(/Tex$/, "Sampler"));
+        // Fall back to RenderTarget's built-in sampler if no user sampler provided
+        if (!sampler && "sampler" in value) {
+          sampler = (value as any).sampler;
+        }
         textures.set(key, { texture, sampler });
       }
     }

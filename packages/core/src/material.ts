@@ -96,10 +96,8 @@ export class Material {
       return this.pipelines.get(cacheKey)!;
     }
 
-    // Only prepend globals to shader if it uses them
-    const fullWGSL = this.usesGlobals 
-      ? `${getGlobalsWGSL()}\n${this.wgsl}`
-      : this.wgsl;
+    // Only prepend globals if shader uses them to avoid WebGPU validation errors
+    const fullWGSL = this.usesGlobals ? `${getGlobalsWGSL()}\n${this.wgsl}` : this.wgsl;
 
     try {
       // Create shader module
@@ -224,12 +222,8 @@ export class Material {
       passEncoder.setBindGroup(0, globalsBindGroup);
     }
 
-    // When usesGlobals is true, user bindings are at group 1
-    // When usesGlobals is false, user bindings are at group 0
-    const userBindGroupIndex = this.usesGlobals ? 1 : 0;
-    
-    // Parse bindings from the correct group in the WGSL
-    const bindings = parseBindGroupBindings(this.wgsl, userBindGroupIndex);
+    // User bindings are always at group 1 (globals are always at group 0)
+    const bindings = parseBindGroupBindings(this.wgsl, 1);
     const bindGroupEntries: GPUBindGroupEntry[] = [];
 
     // Add uniform buffer if present and used
@@ -302,12 +296,12 @@ export class Material {
     }
 
     if (bindGroupEntries.length > 0) {
-      const userBindGroupLayout = pipeline.getBindGroupLayout(userBindGroupIndex);
+      const userBindGroupLayout = pipeline.getBindGroupLayout(1);
       const bindGroup = this.device.createBindGroup({
         layout: userBindGroupLayout,
         entries: bindGroupEntries,
       });
-      passEncoder.setBindGroup(userBindGroupIndex, bindGroup);
+      passEncoder.setBindGroup(1, bindGroup);
     }
 
     // Draw - use indexed drawing if index buffer is present
