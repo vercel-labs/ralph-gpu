@@ -158,9 +158,10 @@ export class Pass {
     }
 
     // Create fullscreen quad vertex shader
-    // Always include globals to maintain bind group layout stability
+    // Only include globals if shader uses them to avoid WebGPU validation errors
+    const globalsWGSL = this.usesGlobals ? getGlobalsWGSL() : '';
     const vertexWGSL = `
-${getGlobalsWGSL()}
+${globalsWGSL}
 
 struct VertexOutput {
   @builtin(position) position: vec4f,
@@ -183,9 +184,9 @@ fn main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
 }
 `;
 
-    // Always prepend globals to fragment shader for bind group layout stability
+    // Only prepend globals to fragment shader if used
     const fullFragmentWGSL = `
-${getGlobalsWGSL()}
+${globalsWGSL}
 ${this.fragmentWGSL}
 `;
 

@@ -96,8 +96,8 @@ export class Material {
       return this.pipelines.get(cacheKey)!;
     }
 
-    // Always prepend globals to shader for bind group layout stability
-    const fullWGSL = `${getGlobalsWGSL()}\n${this.wgsl}`;
+    // Only prepend globals if shader uses them to avoid WebGPU validation errors
+    const fullWGSL = this.usesGlobals ? `${getGlobalsWGSL()}\n${this.wgsl}` : this.wgsl;
 
     try {
       // Create shader module

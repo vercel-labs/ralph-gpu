@@ -1,11 +1,11 @@
 # ralph-gpu
 
 <p align="center">
-  <strong>~10.8kB gzipped</strong> · WebGPU shader library for creative coding
+  <strong>~10.9kB gzipped</strong> · WebGPU shader library for creative coding
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/gzip-10.8kB-blue" alt="Bundle size: ~10.8kB gzipped" />
+  <img src="https://img.shields.io/badge/gzip-10.9kB-blue" alt="Bundle size: ~10.9kB gzipped" />
   <img src="https://img.shields.io/badge/brotli-9.7kB-purple" alt="Brotli: ~9.7kB" />
   <img src="https://img.shields.io/badge/WebGPU-ready-green" alt="WebGPU Ready" />
 </p>
@@ -808,10 +808,10 @@ pnpm run test:all
 
 | Format | Raw | Gzip | Brotli |
 |--------|-----|------|--------|
-| index.js | 44.00 kB | 11.03 kB | 9.85 kB |
-| index.mjs | 43.49 kB | 10.84 kB | 9.67 kB |
+| index.js | 44.07 kB | 11.05 kB | 9.86 kB |
+| index.mjs | 43.56 kB | 10.86 kB | 9.68 kB |
 
-> 📦 **~10.8 kB** gzipped (ESM)
+> 📦 **~10.9 kB** gzipped (ESM)
 
 ## Browser Support
 
