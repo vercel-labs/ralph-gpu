@@ -13,10 +13,10 @@ todos:
     status: completed
   - id: full-api-examples
     content: Refactor examples to show full ralph-gpu API with index.tsx setup code, not just shaders
-    status: in-progress
+    status: completed
   - id: preview-images
     content: Create script to generate preview images for examples and display them on gallery page
-    status: pending
+    status: completed
 ---
 
 # Examples Gallery Improvements
