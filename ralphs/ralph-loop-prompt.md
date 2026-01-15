@@ -122,12 +122,20 @@ ralph-gpu/                    (project root)
 - Example: To edit core library: \`cd \${PROJECT_ROOT}/packages/core\`
 - Example: To update progress: \`cat >> \${process.cwd()}/.progress.md\`
 
-## CRITICAL: Update Progress
-After EVERY significant action, update .progress.md in this folder:
-- Path: \${process.cwd()}/.progress.md
-- Log what you did with timestamp
-- Update checkboxes for acceptance criteria
-- Document any errors
+## ⚠️ CRITICAL: CHECK EXISTING PROGRESS FIRST ⚠️
+**BEFORE doing ANY work, you MUST:**
+1. Check if .progress.md exists: \`cat \${process.cwd()}/.progress.md 2>/dev/null || echo "No progress file"\`
+2. Check if .brain/ exists: \`ls \${process.cwd()}/.brain/ 2>/dev/null && cat \${process.cwd()}/.brain/index.md 2>/dev/null || echo "No brain"\`
+3. Check what files already exist in the target locations
+
+**If progress exists, CONTINUE from where you left off. DO NOT restart from scratch!**
+**If files already exist, skip creating them and move to the NEXT incomplete task.**
+
+## Progress Tracking Rules
+- ONLY create .progress.md if it doesn't exist
+- ONLY update .progress.md by APPENDING or updating checkboxes, never recreate from scratch
+- Read your previous progress before each action to avoid repeating work
+- If a task is already marked [x] complete, skip it and move to the next one
 
 ## Context
 [Explain the current state and what needs to be implemented]
@@ -156,6 +164,10 @@ cd \${PROJECT_ROOT}
 pnpm build
 pnpm test
 \\\`\\\`\\\`
+
+## 🚨 FIRST ACTION - ALWAYS DO THIS FIRST 🚨
+Your VERY FIRST action must be to check existing progress and what already exists.
+Based on what already exists, SKIP completed tasks and proceed to the next incomplete one.
 \`;
 
 // Verification functions
@@ -331,7 +343,9 @@ Include relevant rules in your LoopAgent configuration:
 - **COMMIT AFTER EVERY SUCCESSFUL RALPH**: Always `git add -A && git commit` immediately after a ralph completes successfully. Don't accumulate uncommitted changes across multiple ralphs.
 - **BROWSER VALIDATION FOR UI TASKS**: If the ralph creates or modifies any UI (pages, components, visual features), include `visualCheckRule` and add browser validation to acceptance criteria. Build passing ≠ UI working!
 - **Repository structure clarity**: Always include a visual diagram of the repo structure in the TASK string so the LLM understands where it is and how to navigate
+- **CHECK EXISTING PROGRESS FIRST**: The TASK must instruct the ralph to check for existing `.progress.md` and `.brain/` files BEFORE doing any work. This prevents the agent from restarting tasks from scratch each iteration. Include a "FIRST ACTION" section that reads existing state and checks if files already exist.
 - **Progress tracking**: Ralph tracks progress in its own folder (`.progress.md`, `.brain/`)
+- **Don't overwrite progress**: Instruct the ralph to APPEND to `.progress.md` rather than recreating it. Only create these files if they don't exist. If tasks are already marked complete, skip them.
 - **Don't pre-create state files**: Let the agent create `.brain/` and `.progress.md` - provide templates in TASK string
 - **Always enable traces**: Use `trace: true` for debugging and analysis
 - **Only enable debug for issues**: Use `debug: false` by default, enable only when troubleshooting the runner itself

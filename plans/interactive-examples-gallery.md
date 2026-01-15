@@ -4,7 +4,7 @@ overview: Transform the ralph-gpu examples app into an interactive Shadertoy-lik
 todos:
   - id: setup-monaco
     content: Install @monaco-editor/react and create MonacoEditor wrapper component
-    status: pending
+    status: completed
   - id: example-registry
     content: Create examples registry with metadata (title, description, code) for each example
     status: pending
