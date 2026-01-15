@@ -76,10 +76,13 @@ Maintain a \`.progress.md\` file to track your work:
 - Any issues encountered
 \`\`\`
 
-This helps with:
-- Resuming interrupted work
-- Understanding agent behavior
-- Debugging stuck states
+### CRITICAL: Respect completed items
+- If a task is marked \`[x]\` complete, DO NOT redo it
+- If ALL tasks are \`[x]\` complete, call \`done()\` after one final verification
+- Do NOT keep re-reading and re-verifying completed work
+
+### When to call done():
+If \`.progress.md\` shows ALL items complete → verify once → call done()
 `;
 
 /**
@@ -91,12 +94,28 @@ export const visualCheckRule = `
 For any UI changes, verify visually before marking done:
 
 1. Start the dev server: \`startProcess({ name: 'dev', command: 'pnpm dev', readyPattern: 'Ready' })\`
-2. Open browser: \`openBrowser({ url: 'http://localhost:3000' })\`
+2. Open browser in HEADLESS mode: \`openBrowser({ url: 'http://localhost:3000' })\`
+   - NEVER set headless: false unless the task explicitly requires it
 3. Check the screenshot for correctness
 4. Look for console errors in the response
-5. Test interactions if relevant
 
-Never mark UI tasks complete without visual verification.
+### What counts as "verified":
+- Screenshot shows the expected UI elements rendered correctly
+- No console errors related to the component
+- The main visual output is correct
+
+### What does NOT need to be verified in headless mode:
+- Keyboard shortcuts (unreliable in headless Playwright with complex editors)
+- Hover states and animations
+- Complex user interactions
+
+If the screenshot shows the UI working and there are no errors, that is SUFFICIENT verification.
+Do NOT keep re-verifying or writing custom Playwright scripts to test interactions.
+
+### After ONE successful visual verification:
+- Call \`done()\` immediately
+- Do NOT take more screenshots of the same thing
+- Do NOT re-read files you just verified
 `;
 
 /**
@@ -166,6 +185,41 @@ export const debugRule = `
 `;
 
 /**
+ * Prevents spawning multiple dev servers and manages processes efficiently.
+ */
+export const processManagementRule = `
+## Process Management
+
+### Before starting a dev server:
+1. Check if one is already running: \`listProcesses()\`
+2. If a process named 'dev' exists, REUSE it - do NOT start another
+3. Only start a new process if none exists
+
+### Avoid common mistakes:
+- ❌ Starting \`pnpm dev\` every iteration (spawns multiple servers on different ports)
+- ❌ Not checking existing processes before starting new ones
+- ❌ Creating orphan processes that keep running
+
+### Correct pattern:
+\`\`\`
+// First, check what's running
+listProcesses()
+
+// Only start if not already running
+if (no 'dev' process exists) {
+  startProcess({ name: 'dev', command: 'pnpm dev' })
+}
+
+// Reuse the existing process's output
+getProcessOutput({ name: 'dev' })
+\`\`\`
+
+### Port conflicts indicate multiple servers:
+If you see "Port 3000 in use, trying 3001", you've spawned multiple servers.
+Use \`listProcesses()\` and reuse existing processes instead.
+`;
+
+/**
  * CRITICAL: Ensures the agent knows when and how to stop.
  * This rule prevents infinite iteration loops.
  */
@@ -174,27 +228,47 @@ export const completionRule = `
 
 **You MUST call the \`done\` tool when the task is complete. Do NOT keep iterating.**
 
+### STOP SIGNAL: Check .progress.md
+If \`.progress.md\` shows ALL tasks marked as \`[x]\` complete:
+1. Do ONE final verification (if not already done this iteration)
+2. Call \`done()\` IMMEDIATELY
+3. Do NOT start another iteration
+
 ### When to call done():
 1. All acceptance criteria in the task are met
-2. The build/tests pass (if applicable)
-3. No errors remain to fix
+2. The build/tests pass (if applicable)  
+3. Visual verification passed (screenshot looks correct, no console errors)
+4. \`.progress.md\` shows all items complete
 
 ### How to call done():
 \`\`\`
 done({ summary: "Brief description of what was accomplished" })
 \`\`\`
 
-### Common mistakes to avoid:
-- ❌ Re-reading files you just wrote (you already know their contents)
-- ❌ Re-verifying things that already passed
-- ❌ Making unnecessary "improvements" after the task is done
-- ❌ Waiting for something without calling done()
+### CRITICAL: Avoid Re-Verification Loops
+Once something is verified, it stays verified. Do NOT:
+- ❌ Re-read files you just wrote or verified
+- ❌ Take multiple screenshots of the same page
+- ❌ Re-run the same verification scripts
+- ❌ Start a new dev server when one is already running
+- ❌ Write custom Playwright scripts to test interactions in headless mode
+- ❌ Keep iterating after visual verification shows the UI working
 
-### If you're unsure if you're done:
-1. Check the acceptance criteria list
-2. Verify the build passes once
-3. If all criteria met → call done() immediately
-4. If something is missing → fix it, then call done()
+### Signs you should call done() NOW:
+- \`.progress.md\` shows all \`[x]\` checkboxes complete
+- Screenshot shows the expected UI
+- No console errors
+- You've already verified this same thing in a previous iteration
 
-**The goal is to complete the task efficiently, not to iterate forever.**
+### Common anti-patterns (STOP if you're doing these):
+- Starting iteration by reading the same files as last iteration
+- Running \`pnpm dev\` when it's already running (check with listProcesses first)
+- Taking screenshot → seeing it works → NOT calling done → repeating
+
+### If you've verified something once, trust that verification:
+1. First verification passes → Call done()
+2. Do NOT verify again "just to be sure"
+3. Do NOT write verification scripts after visual verification passed
+
+**The goal is to complete the task efficiently. Once criteria are met, STOP.**
 `;

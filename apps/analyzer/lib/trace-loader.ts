@@ -23,17 +23,22 @@ export async function loadAllTraces(): Promise<TaskTrace[]> {
       
       if (events.length === 0) continue;
 
-      // Extract task info from path: ralphs/54-events-profiler-tests/.traces/...
+      // Extract task info from path: ralphs/54-events-profiler-tests/.traces/trace-2026-01-14T01-00-00-000Z.ndjson
       const pathParts = traceFile.split('/');
       const ralphsIndex = pathParts.findIndex(p => p === 'ralphs');
       const taskName = ralphsIndex !== -1 ? pathParts[ralphsIndex + 1] : 'unknown';
+      
+      // Extract trace filename for unique ID (e.g., "trace-2026-01-14T01-00-00-000Z")
+      const traceFileName = pathParts[pathParts.length - 1].replace('.ndjson', '');
+      // Create unique taskId by combining task name and trace filename
+      const taskId = `${taskName}__${traceFileName}`;
       
       const summary = events.find(e => e.type === 'summary') as SummaryEvent | undefined;
       const startTime = events[0]?.ts;
       const endTime = events[events.length - 1]?.ts;
 
       tasks.push({
-        taskId: taskName,
+        taskId,
         taskName,
         traceFile,
         events,

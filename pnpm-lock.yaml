@@ -1469,6 +1469,25 @@ importers:
         specifier: ^5.3.3
         version: 5.9.3
 
+  ralphs/57-example-registry:
+    dependencies:
+      '@ralph/agent-loop':
+        specifier: workspace:*
+        version: link:../../packages/ralph
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.28
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
 packages:
 
   '@acemir/cssom@0.9.30':

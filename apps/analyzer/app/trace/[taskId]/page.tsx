@@ -96,6 +96,11 @@ export default function TraceDetailPage({ params }: { params: { taskId: string }
             </button>
             
             <h1 className="text-3xl font-bold mb-2">{currentTask.taskName}</h1>
+            {currentTask.startTime && (
+              <p className="text-sm text-foreground-muted mb-2">
+                Run: {new Date(currentTask.startTime).toLocaleString()}
+              </p>
+            )}
             {currentTask.summary && (
               <div className="flex gap-6 text-sm text-foreground-secondary">
                 <span>{currentTask.summary.totalIterations} iterations</span>

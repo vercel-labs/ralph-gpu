@@ -78,7 +78,7 @@ Create a new numbered folder in `ralphs/` (e.g., `[number]-feature-name/`) with:
  */
 
 import "dotenv/config";
-import { LoopAgent, brainRule, trackProgressRule, minimalChangesRule } from "@ralph/agent-loop";
+import { LoopAgent, brainRule, trackProgressRule, minimalChangesRule, completionRule, visualCheckRule, processManagementRule } from "@ralph/agent-loop";
 import * as fs from "fs/promises";
 
 // Configuration from environment
@@ -153,10 +153,11 @@ ralph-gpu/                    (project root)
 [Provide step-by-step instructions with code examples]
 
 ## Browser Automation
-⚠️ **CRITICAL**: If this task requires browser automation, ALWAYS use headless mode:
-- Run all browser tests and visual checks in headless mode
-- Configure browser with \`headless: true\`
-- This improves performance and reliability
+⚠️ **CRITICAL**: Browser automation ALWAYS runs in headless mode by default.
+- Do NOT set headless: false
+- Do NOT write custom Playwright scripts for interaction testing
+- Visual verification (screenshot + no console errors) is SUFFICIENT
+- After ONE successful visual verification → call done() immediately
 
 ## Testing Commands
 \\\`\\\`\\\`bash
@@ -183,7 +184,9 @@ async function main() {
     model: AGENT_MODEL,
     trace: true,  // Always enable traces
     task: TASK,
-    rules: [brainRule, trackProgressRule, minimalChangesRule],
+    // ALWAYS include completionRule to prevent infinite loops
+    // For UI tasks, also include visualCheckRule and processManagementRule
+    rules: [brainRule, trackProgressRule, minimalChangesRule, completionRule, visualCheckRule, processManagementRule],
     debug: DEBUG,
     limits: {
       maxIterations: 30,
@@ -256,29 +259,57 @@ Include relevant rules in your LoopAgent configuration:
 
 - `brainRule` - Use `.brain/` folder for persistent knowledge
 - `trackProgressRule` - Track progress in `.progress.md`
-- `visualCheckRule` - **USE FOR UI TASKS**: Visually verify UI changes with browser (always run in headless mode)
+- `visualCheckRule` - **USE FOR UI TASKS**: Visually verify UI changes with browser (always headless)
 - `testFirstRule` - Run tests before and after changes
 - `minimalChangesRule` - Keep changes surgical and focused
 - `explorationRule` - Explore codebase before editing
 - `gitCheckpointRule` - Commit after each change
 - `debugRule` - Systematic debugging approach
-- `completionRule` - **IMPORTANT**: Ensures agent calls `done()` when task is complete (prevents infinite loops)
+- `completionRule` - **CRITICAL**: Ensures agent calls `done()` when task is complete (prevents infinite loops)
+- `processManagementRule` - **NEW**: Prevents spawning multiple dev servers, manages processes efficiently
+
+### ALWAYS Include These Rules for UI Tasks:
+
+```typescript
+rules: [
+  brainRule,
+  trackProgressRule,
+  minimalChangesRule,
+  completionRule,
+  visualCheckRule,
+  processManagementRule,
+];
+```
 
 ### Browser Validation (IMPORTANT)
 
 **For any task that creates or modifies UI components, the ralph MUST validate with a real browser:**
 
-1. **Include `visualCheckRule`** in the rules array for UI tasks
+1. **Include `visualCheckRule` and `processManagementRule`** in the rules array for UI tasks
 2. **Add browser validation steps** to the TASK acceptance criteria:
    ```
    ### Browser Validation (REQUIRED)
-   - [ ] Start dev server: `pnpm dev`
-   - [ ] Navigate to the page in browser
+   - [ ] Start dev server: `pnpm dev` (check listProcesses first, reuse if running)
+   - [ ] Navigate to the page in headless browser
    - [ ] Take screenshot to verify rendering
    - [ ] Check browser console for errors
-   - [ ] Verify interactive elements work
+   - [ ] If screenshot shows UI working with no errors → DONE
    ```
-3. **Run in headless mode** for reliability: `headless: true`
+3. **ALWAYS run in headless mode** - the browser MUST be headless (default behavior)
+
+**What counts as "verified":**
+
+- Screenshot shows the expected UI elements
+- No console errors
+- The main visual output looks correct
+
+**What does NOT need verification in headless mode:**
+
+- Keyboard shortcuts (unreliable in headless Playwright)
+- Hover states and animations
+- Complex user interactions
+
+**After ONE successful visual verification → call done() immediately**
 
 **Examples of tasks that REQUIRE browser validation:**
 
@@ -288,6 +319,24 @@ Include relevant rules in your LoopAgent configuration:
 - Fixing rendering bugs
 
 **Do NOT skip browser validation** - `pnpm build` passing does NOT mean the UI actually works!
+
+### CRITICAL: Avoid Re-Verification Loops
+
+A common failure pattern is the agent getting stuck re-verifying the same thing:
+
+1. Takes screenshot → UI looks good → doesn't call done()
+2. Next iteration: reads same files → takes same screenshot → doesn't call done()
+3. Repeats forever, wasting tokens
+
+**To prevent this, the TASK should include:**
+
+```
+## Completion Criteria
+After visual verification passes (screenshot shows UI working, no errors):
+1. Update .progress.md to mark all items [x] complete
+2. Call done() IMMEDIATELY
+3. Do NOT re-read files or take more screenshots
+```
 
 ## Execution Workflow
 
@@ -342,6 +391,9 @@ Include relevant rules in your LoopAgent configuration:
 
 - **COMMIT AFTER EVERY SUCCESSFUL RALPH**: Always `git add -A && git commit` immediately after a ralph completes successfully. Don't accumulate uncommitted changes across multiple ralphs.
 - **BROWSER VALIDATION FOR UI TASKS**: If the ralph creates or modifies any UI (pages, components, visual features), include `visualCheckRule` and add browser validation to acceptance criteria. Build passing ≠ UI working!
+- **ALWAYS HEADLESS BROWSER**: Browser automation MUST run in headless mode. The agent should NEVER launch visible browser windows unless explicitly required by the task.
+- **INCLUDE completionRule**: Always include `completionRule` to prevent infinite iteration loops.
+- **INCLUDE processManagementRule**: For UI tasks, include `processManagementRule` to prevent spawning multiple dev servers.
 - **Repository structure clarity**: Always include a visual diagram of the repo structure in the TASK string so the LLM understands where it is and how to navigate
 - **CHECK EXISTING PROGRESS FIRST**: The TASK must instruct the ralph to check for existing `.progress.md` and `.brain/` files BEFORE doing any work. This prevents the agent from restarting tasks from scratch each iteration. Include a "FIRST ACTION" section that reads existing state and checks if files already exist.
 - **Progress tracking**: Ralph tracks progress in its own folder (`.progress.md`, `.brain/`)
@@ -349,13 +401,54 @@ Include relevant rules in your LoopAgent configuration:
 - **Don't pre-create state files**: Let the agent create `.brain/` and `.progress.md` - provide templates in TASK string
 - **Always enable traces**: Use `trace: true` for debugging and analysis
 - **Only enable debug for issues**: Use `debug: false` by default, enable only when troubleshooting the runner itself
-- **Browser headless mode**: Always run browser automation in headless mode for performance and reliability
 - **One ralph at a time**: Create and run ralphs sequentially, not in parallel. This allows you to pivot the scope of your larger goal based on results and adapt your approach between tasks
 - **Verification is critical**: Always include TypeScript verification functions that run after completion
 - **Be specific in TASK**: Include exact file paths, working directories, code examples, and step-by-step navigation instructions
 - **Documentation**: Ask ralphs to update docs, tests, and cursor rules as needed
 - **Keep executing until completion**: Continue working through all tasks in your plan until the entire long-term goal is achieved. Don't stop after individual ralphs complete. Keep running sleeps commands to check progress.
 - **Progress tracking**: Never edit the .progress.md file yourself, instruct the ralph LLM to do it.
+
+## Common Anti-Patterns to Avoid
+
+These patterns cause ralphs to waste tokens and get stuck in loops:
+
+### 1. Re-Verification Loop
+
+**Problem**: Agent keeps re-verifying completed work instead of calling `done()`
+
+```
+Iter 1: Verify UI → works → doesn't call done
+Iter 2: Verify UI → works → doesn't call done
+... repeats forever
+```
+
+**Solution**: TASK should explicitly state: "After ONE successful verification, call done() immediately"
+
+### 2. Multiple Dev Servers
+
+**Problem**: Agent starts `pnpm dev` every iteration, spawning servers on ports 3000, 3001, 3002...
+**Solution**: Include `processManagementRule` and instruct agent to check `listProcesses()` first
+
+### 3. Redundant File Reading
+
+**Problem**: Agent re-reads the same files every iteration
+**Solution**: TASK should state: "Do NOT re-read files you just wrote or verified"
+
+### 4. Flaky Interaction Testing
+
+**Problem**: Agent writes Playwright scripts to test keyboard shortcuts in headless mode (unreliable)
+**Solution**: TASK should state: "Visual verification (screenshot + no errors) is SUFFICIENT. Do NOT test keyboard shortcuts in headless mode"
+
+### 5. Never Calling done()
+
+**Problem**: Agent completes all tasks but never calls `done()`
+**Solution**: Include `completionRule` and add explicit completion criteria to TASK:
+
+```
+## When to call done()
+If .progress.md shows ALL items [x] complete AND visual verification passed:
+→ Call done({ summary: "..." }) IMMEDIATELY
+```
 
 ## CRITICAL: Orchestrator Agent Rules
 
