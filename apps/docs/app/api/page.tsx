@@ -65,6 +65,7 @@ ctx.setScissor(x?, y?, w?, h?)   // Set scissor rectangle
 
 // Clearing
 ctx.autoClear = true        // Auto-clear before each draw (default: true)
+ctx.clearColor = [r, g, b, a] // Set clear color (default: [0, 0, 0, 1])
 ctx.clear(target?, color?)  // Manual clear (color as [r, g, b, a])
 
 // Resize
@@ -76,7 +77,8 @@ ctx.dpr: number           // Device pixel ratio (get/set)
 ctx.time: number          // Elapsed time in seconds
 ctx.timeScale: number     // Time multiplier (default: 1)
 ctx.paused: boolean       // Pause time updates
-ctx.autoClear: boolean    // Auto-clear before draw (default: true)`;
+ctx.autoClear: boolean    // Auto-clear before draw (default: true)
+ctx.clearColor: [number, number, number, number] // Clear color RGBA (default: [0, 0, 0, 1])`;
 
 const timeControlCode = `// Pause/resume time
 ctx.paused = true;         // Freeze globals.time

@@ -1537,6 +1537,7 @@ ctx.createSampler(descriptor?)             // → Sampler (custom texture sample
 
 ctx.setTarget(target | null)               // Set render target
 ctx.clear(target?, color?)                 // Clear target
+ctx.clearColor = [r, g, b, a]              // Set clear color (default black)
 ctx.resize(width, height)                  // Resize context (pixels)
 ctx.dpr                                    // Get/set device pixel ratio
 ctx.dispose()                              // Cleanup all resources

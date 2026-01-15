@@ -586,6 +586,7 @@ ctx.time: number
 ctx.timeScale: number
 ctx.paused: boolean
 ctx.autoClear: boolean
+ctx.clearColor: [number, number, number, number] // Clear color [r, g, b, a] (default: [0, 0, 0, 1])
 ```
 
 ### Pass / Material

@@ -51,6 +51,7 @@ export class GPUContext {
   private _timeScale = 1;
   private _paused = false;
   private _autoClear = true;
+  private _clearColor: [number, number, number, number] = [0, 0, 0, 1];
   private _frame = 0;
   private lastFrameTime = 0;
   private currentTarget: RenderTarget | MultiRenderTarget | null = null;
@@ -298,6 +299,17 @@ export class GPUContext {
 
   set autoClear(value: boolean) {
     this._autoClear = value;
+  }
+
+  /**
+   * Get/set clear color (RGBA values 0-1)
+   */
+  get clearColor(): [number, number, number, number] {
+    return [...this._clearColor] as [number, number, number, number];
+  }
+
+  set clearColor(value: [number, number, number, number]) {
+    this._clearColor = [...value] as [number, number, number, number];
   }
 
   /**
@@ -625,9 +637,10 @@ export class GPUContext {
    */
   clear(
     target?: RenderTarget | MultiRenderTarget | null,
-    color: [number, number, number, number] = [0, 0, 0, 1]
+    color?: [number, number, number, number]
   ): void {
     const clearTarget = target !== undefined ? target : this.currentTarget;
+    const clearColor = color ?? this._clearColor;
 
     const commandEncoder = this.device.createCommandEncoder();
     
@@ -638,7 +651,7 @@ export class GPUContext {
         colorAttachments: [
           {
             view: textureView,
-            clearValue: { r: color[0], g: color[1], b: color[2], a: color[3] },
+            clearValue: { r: clearColor[0], g: clearColor[1], b: clearColor[2], a: clearColor[3] },
             loadOp: "clear",
             storeOp: "store",
           },
@@ -652,7 +665,7 @@ export class GPUContext {
         colorAttachments: [
           {
             view: clearTarget.view,
-            clearValue: { r: color[0], g: color[1], b: color[2], a: color[3] },
+            clearValue: { r: clearColor[0], g: clearColor[1], b: clearColor[2], a: clearColor[3] },
             loadOp: "clear",
             storeOp: "store",
           },
@@ -665,7 +678,7 @@ export class GPUContext {
       const views = clearTarget.getViews();
       const colorAttachments = views.map((view) => ({
         view,
-        clearValue: { r: color[0], g: color[1], b: color[2], a: color[3] },
+        clearValue: { r: clearColor[0], g: clearColor[1], b: clearColor[2], a: clearColor[3] },
         loadOp: "clear" as GPULoadOp,
         storeOp: "store" as GPUStoreOp,
       }));
@@ -836,7 +849,7 @@ export class GPUContext {
       colorAttachments: [
         {
           view,
-          clearValue: { r: 0, g: 0, b: 0, a: 1 },
+          clearValue: { r: this._clearColor[0], g: this._clearColor[1], b: this._clearColor[2], a: this._clearColor[3] },
           loadOp,
           storeOp: "store",
         },
