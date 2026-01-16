@@ -19,7 +19,8 @@ const navItems = [
       { href: '/api', label: 'API Reference' },
       { href: '/profiler', label: 'Profiler & Debug' },
       { href: '/examples', label: 'Examples' },
-      { href: '/mcp-server', label: 'MCP Server' },  // ADD THIS LINE
+      { href: '/mcp-server', label: 'MCP Server' },
+      { href: '/llms.txt', label: 'llms.txt' },
     ]
   }
 ];
