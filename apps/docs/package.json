@@ -15,12 +15,14 @@
     "@next/mdx": "^16.1.1",
     "geist": "^1.5.1",
     "lucide-react": "^0.562.0",
+    "mcp-handler": "^1.0.7",
     "next": "^14.2.23",
     "ralph-gpu": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "rehype-pretty-code": "^0.14.1",
-    "shiki": "^3.21.0"
+    "shiki": "^3.21.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/mdx": "^2.0.13",
