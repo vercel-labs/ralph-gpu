@@ -64,6 +64,7 @@ todos:
 - All tasks complete, testing MCP integration next
 
 ### MCP Server Integration Tested - Complete
+
 - Fixed route to use correct `registerTool` API (not `tool`)
 - Added proper options: `basePath: "/api/mcp"`, `maxDuration`, `verboseLogs`
 - Verified endpoint responds at `/api/mcp/mcp`

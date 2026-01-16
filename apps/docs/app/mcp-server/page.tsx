@@ -2,15 +2,15 @@ import { CodeBlock } from '@/components/mdx/CodeBlock';
 
 // Generate the Cursor deeplink URL
 const MCP_CONFIG = {
-  url: "https://ralph-gpu.vercel.app/api/mcp/mcp"
+  url: "https://ralph-gpu.vercel.app/mcp/mcp"
 };
 const CONFIG_BASE64 = Buffer.from(JSON.stringify(MCP_CONFIG)).toString('base64');
 const CURSOR_DEEPLINK = `cursor://anysphere.cursor-deeplink/mcp/install?name=ralph-gpu-docs&config=${CONFIG_BASE64}`;
 
-const manualConfigCode = `{
+const configCode = `{
   "mcpServers": {
     "ralph-gpu-docs": {
-      "url": "https://ralph-gpu.vercel.app/api/mcp/mcp"
+      "url": "https://ralph-gpu.vercel.app/mcp/mcp"
     }
   }
 }`;
@@ -18,7 +18,7 @@ const manualConfigCode = `{
 const localConfigCode = `{
   "mcpServers": {
     "ralph-gpu-docs": {
-      "url": "http://localhost:3001/api/mcp/mcp"
+      "url": "http://localhost:3001/mcp/mcp"
     }
   }
 }`;
@@ -33,24 +33,37 @@ export default function McpServerPage() {
         Connect your AI assistant to ralph-gpu documentation using the Model Context Protocol.
       </p>
 
-      {/* Hero: Add to Cursor Button */}
+      {/* Setup */}
       <section className="mb-12">
-        <div className="p-6 rounded-lg bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20">
-          <h2 className="text-xl font-semibold text-gray-12 mb-3">
-            One-Click Setup for Cursor
-          </h2>
-          <p className="text-gray-11 mb-4">
-            Add the ralph-gpu MCP server to Cursor instantly. Your AI assistant will gain access to all documentation, examples, and API references.
-          </p>
-          <a
-            href={CURSOR_DEEPLINK}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
-            Add to Cursor
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4">
+          Setup
+        </h2>
+        
+        <div className="mb-6">
+          <a href={CURSOR_DEEPLINK}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              src="https://cursor.com/deeplink/mcp-install-dark.svg" 
+              alt="Add ralph-gpu MCP server to Cursor" 
+              height={32}
+              className="h-8"
+            />
           </a>
+        </div>
+
+        <p className="text-gray-11 mb-4">
+          Or add manually to your <code className="bg-gray-2 px-1.5 py-0.5 rounded text-sm">.cursor/mcp.json</code>:
+        </p>
+        <CodeBlock language="json" title=".cursor/mcp.json">
+          {configCode}
+        </CodeBlock>
+        
+        <div className="mt-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+          <p className="text-blue-400 text-sm font-medium mb-2">Local Development</p>
+          <p className="text-gray-11 text-sm mb-3">For local development, use the local URL instead:</p>
+          <CodeBlock language="json">
+            {localConfigCode}
+          </CodeBlock>
         </div>
       </section>
 
@@ -113,27 +126,6 @@ export default function McpServerPage() {
             <span className="text-gray-10 text-sm ml-2">query: string</span>
             <p className="text-gray-9 text-sm mt-1">Search documentation for relevant sections by keyword.</p>
           </div>
-        </div>
-      </section>
-
-      {/* Manual Setup */}
-      <section className="mb-12">
-        <h2 className="text-2xl font-semibold text-gray-12 mb-4">
-          Manual Setup
-        </h2>
-        <p className="text-gray-11 mb-4">
-          If you prefer manual configuration, add the following to your <code className="bg-gray-2 px-1.5 py-0.5 rounded text-sm">.cursor/mcp.json</code> file:
-        </p>
-        <CodeBlock language="json" title=".cursor/mcp.json">
-          {manualConfigCode}
-        </CodeBlock>
-        
-        <div className="mt-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-          <p className="text-blue-400 text-sm font-medium mb-2">Local Development</p>
-          <p className="text-gray-11 text-sm mb-3">For local development, use the local URL instead:</p>
-          <CodeBlock language="json">
-            {localConfigCode}
-          </CodeBlock>
         </div>
       </section>
 

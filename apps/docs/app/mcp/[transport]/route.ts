@@ -111,7 +111,7 @@ const handler = createMcpHandler(
   },
   {},
   {
-    basePath: "/api/mcp",
+    basePath: "/mcp",
     maxDuration: 60,
     verboseLogs: process.env.NODE_ENV === "development",
   }
