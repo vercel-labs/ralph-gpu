@@ -1,5 +1,5 @@
 import { Terminal } from "lucide-react";
-import { highlightCode } from "@/lib/shiki";
+import { highlightCode, countLinesInHtml } from "@/lib/shiki";
 import { CopyButton } from "./CopyButton";
 
 interface CodeBlockProps {
@@ -33,7 +33,8 @@ export async function CodeBlock({
   
   // Highlight code on the server at render time
   const highlightedHtml = await highlightCode(code, language);
-  const lines = code.trim().split("\n");
+  // Count actual line elements from Shiki's HTML output, not from raw code
+  const lineCount = countLinesInHtml(highlightedHtml);
 
   return (
     <div className="group relative rounded-lg border border-[#333] bg-[#0a0a0a] overflow-hidden my-4">
@@ -60,7 +61,7 @@ export async function CodeBlock({
           <div className="flex">
             {/* Line numbers */}
             <div className="flex-none py-4 pl-4 pr-3 text-right select-none border-r border-[#333] bg-[#0a0a0a]">
-              {lines.map((_, i) => (
+              {Array.from({ length: lineCount }, (_, i) => (
                 <div key={i} className="text-sm leading-6 text-[#444] font-mono">
                   {i + 1}
                 </div>

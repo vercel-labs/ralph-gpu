@@ -23,3 +23,9 @@ export async function highlightCode(code: string, language: string): Promise<str
   // Replace empty spans with spans containing a non-breaking space
   return html.replace(/<span class="line"><\/span>/g, '<span class="line">&nbsp;</span>');
 }
+
+export function countLinesInHtml(html: string): number {
+  // Count the number of <span class="line"> elements in the HTML
+  const matches = html.match(/<span class="line">/g);
+  return matches ? matches.length : 0;
+}
