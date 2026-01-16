@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import dynamic from 'next/dynamic';
 import { PreviewFrame } from './PreviewFrame';
+import { EditorFrame } from './EditorFrame';
 import { Example } from '@/lib/examples';
-
-const MonacoEditor = dynamic(() => import('./MonacoEditor').then(mod => mod.MonacoEditor), { ssr: false });
 
 interface ShaderPlaygroundProps {
   initialExample: Example;
@@ -195,11 +193,11 @@ export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
         {/* Editor Pane */}
         <div className="h-[40vh] lg:h-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-[#333]">
-          <MonacoEditor 
+          <EditorFrame 
+            initialCode={initialExample.code}
             code={code} 
             onChange={setCode} 
             onRun={handleRun}
-            language="typescript"
           />
         </div>
 
