@@ -1,15 +1,18 @@
 import { createHighlighter, type Highlighter } from 'shiki';
 
-let highlighterPromise: Promise<Highlighter> | null = null;
+// Use a global cache to ensure true singleton across module reloads in dev
+const globalForHighlighter = globalThis as unknown as {
+  highlighterPromise?: Promise<Highlighter>;
+};
 
 export async function getHighlighter() {
-  if (!highlighterPromise) {
-    highlighterPromise = createHighlighter({
+  if (!globalForHighlighter.highlighterPromise) {
+    globalForHighlighter.highlighterPromise = createHighlighter({
       themes: ['github-dark'],
       langs: ['typescript', 'javascript', 'tsx', 'jsx', 'json', 'bash', 'html', 'css', 'wgsl'],
     });
   }
-  return highlighterPromise;
+  return globalForHighlighter.highlighterPromise;
 }
 
 export async function highlightCode(code: string, language: string): Promise<string> {
