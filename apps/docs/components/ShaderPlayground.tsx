@@ -75,6 +75,72 @@ frame();
 `;
 }
 
+// v0 prompt for React conversion
+const V0_PROMPT = `Convert this ralph-gpu shader code to a React component.
+
+Follow this pattern:
+
+\`\`\`tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+import { gpu, GPUContext } from "ralph-gpu";
+
+export default function ShaderComponent() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    let ctx: GPUContext | null = null;
+    let animationId: number;
+    let disposed = false;
+
+    async function init() {
+      if (!canvasRef.current) return;
+      if (!gpu.isSupported()) {
+        console.error("WebGPU is not supported");
+        return;
+      }
+
+      ctx = await gpu.init(canvasRef.current, { autoResize: true });
+      if (disposed) { ctx.dispose(); return; }
+
+      // --- SHADER CODE GOES HERE ---
+
+      function frame() {
+        if (disposed) return;
+        // draw calls here
+        animationId = requestAnimationFrame(frame);
+      }
+      frame();
+    }
+
+    init();
+
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(animationId);
+      ctx?.dispose();
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="w-full h-full" />;
+}
+\`\`\`
+
+Keep the shader logic intact. Adapt the initialization and render loop to fit inside the useEffect.`;
+
+// Generate v0 URL with code and React conversion prompt
+function generateV0Url(code: string): string {
+  const base64Content = btoa(code);
+  const target = "components/shader.tsx";
+
+  return `https://v0.app/chat/api/open?prompt=${encodeURIComponent(
+    V0_PROMPT
+  )}&content=${encodeURIComponent(base64Content)}&target=${encodeURIComponent(
+    target
+  )}`;
+}
+
 export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
   const [code, setCode] = useState(initialExample.code);
   const [activeCode, setActiveCode] = useState<string | null>(null);
@@ -114,15 +180,31 @@ export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
         <span className="text-[11px] font-normal text-[#666] tracking-wide">
           index.ts
         </span>
-        <button 
-          onClick={handleRun}
-          className="flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-[#e5e5e5] text-black rounded-md text-[11px] font-medium transition-colors"
-        >
-          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M4 2l10 6-10 6V2z" />
-          </svg>
-          {runLabel}
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href={generateV0Url(code)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://v0.app/chat-static/button.svg"
+              alt="Open in v0"
+              width={99}
+              height={32}
+              className="h-7"
+            />
+          </a>
+          <button 
+            onClick={handleRun}
+            className="flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-[#e5e5e5] text-black rounded-md text-[11px] font-medium transition-colors"
+          >
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M4 2l10 6-10 6V2z" />
+            </svg>
+            {runLabel}
+          </button>
+        </div>
       </div>
       
       {/* Editor and Preview side by side */}
