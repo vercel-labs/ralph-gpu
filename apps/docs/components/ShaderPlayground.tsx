@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { PreviewFrame } from './PreviewFrame';
 import { Example } from '@/lib/examples';
@@ -13,6 +13,17 @@ interface ShaderPlaygroundProps {
 
 type UniformValue = number | number[];
 type Uniforms = Record<string, { value: UniformValue }>;
+
+// Simple hash function for code deduplication
+function hashCode(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash.toString(36);
+}
 
 // Try to parse uniform values from the code
 // Looks for patterns like: amplitude: 0.3, or color: [0.2, 0.8, 1.0]
@@ -75,6 +86,9 @@ frame();
 `;
 }
 
+// Minimum time between iframe recreations to prevent WebGPU crashes
+const MIN_RUN_INTERVAL_MS = 300;
+
 export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
   const [code, setCode] = useState(initialExample.code);
   const [activeCode, setActiveCode] = useState<string | null>(null);
@@ -82,10 +96,25 @@ export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
   const [error, setError] = useState<string | null>(null);
   const [platform, setPlatform] = useState<'mac' | 'other'>('other');
 
+  // Refs for run deduplication and throttling
+  const lastRunHashRef = useRef<string | null>(null);
+  const lastRunTimeRef = useRef<number>(0);
+  const pendingRunTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Run initial code on mount
   useEffect(() => {
+    lastRunHashRef.current = hashCode(initialExample.code);
     setActiveCode(initialExample.code);
   }, [initialExample.code]);
+
+  // Cleanup pending timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (pendingRunTimeoutRef.current) {
+        clearTimeout(pendingRunTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof navigator !== 'undefined') {
@@ -96,9 +125,46 @@ export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
   }, []);
 
   const handleRun = useCallback(() => {
+    const now = Date.now();
+    const codeHash = hashCode(code);
+
+    // Skip if same code as last run
+    if (codeHash === lastRunHashRef.current) {
+      return;
+    }
+
+    // Clear any pending scheduled run
+    if (pendingRunTimeoutRef.current) {
+      clearTimeout(pendingRunTimeoutRef.current);
+      pendingRunTimeoutRef.current = null;
+    }
+
+    // Check if we need to wait for cooldown
+    const timeSinceLastRun = now - lastRunTimeRef.current;
+    if (timeSinceLastRun < MIN_RUN_INTERVAL_MS) {
+      // Schedule run after cooldown expires
+      const delay = MIN_RUN_INTERVAL_MS - timeSinceLastRun;
+      pendingRunTimeoutRef.current = setTimeout(() => {
+        pendingRunTimeoutRef.current = null;
+        // Re-check hash in case code changed while waiting
+        const currentHash = hashCode(code);
+        if (currentHash !== lastRunHashRef.current) {
+          lastRunHashRef.current = currentHash;
+          lastRunTimeRef.current = Date.now();
+          setError(null);
+          setRunKey(k => k + 1);
+          setActiveCode(code);
+        }
+      }, delay);
+      return;
+    }
+
+    // Execute immediately
+    lastRunHashRef.current = codeHash;
+    lastRunTimeRef.current = now;
     setError(null);
-    setRunKey(k => k + 1); // Reset iframe on each run
-    setActiveCode(code); // Just run the code directly
+    setRunKey(k => k + 1);
+    setActiveCode(code);
   }, [code]);
 
   const handleError = useCallback((err: string | null) => {
