@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as http from 'http';
 import { PNG } from 'pngjs';
+import sharp from 'sharp';
 
 async function generatePreviews() {
   const examples = getAllExamples();
@@ -92,11 +93,11 @@ frame();
       });
       
       // Wait for rendering (longer for complex examples)
-      const isComplex = example.slug === 'fluid' || example.slug === 'alien-planet' || example.slug === "triangle-particles";
+      const isComplex = example.slug === 'fluid' || example.slug === "triangle-particles";
       if(isComplex) {
         await page.waitForTimeout(3000)
       }
-      await page.waitForTimeout(example.animated ? 6000 : 1000);
+      await page.waitForTimeout(example.animated ? 500 : 200);
       
       // Screenshot the canvas
       const canvas = await page.$('canvas');
@@ -105,8 +106,9 @@ frame();
         continue;
       }
       
-      const screenshotPath = path.join(outputDir, `${example.slug}.png`);
-      const buffer = await canvas.screenshot({ path: screenshotPath });
+      const pngPath = path.join(outputDir, `${example.slug}.png`);
+      const webpPath = path.join(outputDir, `${example.slug}.webp`);
+      const buffer = await canvas.screenshot({ path: pngPath });
       
       // Verify the screenshot has content
       const png = PNG.sync.read(buffer);
@@ -123,7 +125,20 @@ frame();
       }
       
       const percentNonBlack = (nonBlackPixels / (png.data.length / 4) * 100).toFixed(1);
-      console.log(`  ✓ Saved ${example.slug}.png (${percentNonBlack}% non-black)`);
+      
+      // Convert to WebP with good quality
+      const webpBuffer = await sharp(buffer)
+        .webp({ quality: 85 })
+        .toBuffer();
+      
+      fs.writeFileSync(webpPath, webpBuffer);
+      
+      // Get file sizes for comparison
+      const pngSize = fs.statSync(pngPath).size;
+      const webpSize = webpBuffer.length;
+      const savings = ((1 - webpSize / pngSize) * 100).toFixed(0);
+      
+      console.log(`  ✓ ${example.slug} (${percentNonBlack}% non-black) - WebP: ${(webpSize / 1024).toFixed(0)}KB (${savings}% smaller)`);
     } catch (error) {
       console.error(`Failed to generate preview for ${example.slug}:`, error);
     }

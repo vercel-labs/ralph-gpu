@@ -14,7 +14,7 @@ export function ExampleCard({ example }: ExampleCardProps) {
     >
       <div className="aspect-video relative bg-black">
         <Image
-          src={`/examples/${example.slug}.png`}
+          src={`/examples/${example.slug}.webp`}
           alt={example.title}
           fill
           className="object-cover"
