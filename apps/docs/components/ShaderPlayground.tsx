@@ -75,59 +75,8 @@ frame();
 `;
 }
 
-// v0 prompt for React conversion
-const V0_PROMPT = `Convert this ralph-gpu shader code to a React component.
-
-Follow this pattern:
-
-\`\`\`tsx
-"use client";
-
-import { useEffect, useRef } from "react";
-import { gpu, GPUContext } from "ralph-gpu";
-
-export default function ShaderComponent() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    let ctx: GPUContext | null = null;
-    let animationId: number;
-    let disposed = false;
-
-    async function init() {
-      if (!canvasRef.current) return;
-      if (!gpu.isSupported()) {
-        console.error("WebGPU is not supported");
-        return;
-      }
-
-      ctx = await gpu.init(canvasRef.current, { autoResize: true });
-      if (disposed) { ctx.dispose(); return; }
-
-      // --- SHADER CODE GOES HERE ---
-
-      function frame() {
-        if (disposed) return;
-        // draw calls here
-        animationId = requestAnimationFrame(frame);
-      }
-      frame();
-    }
-
-    init();
-
-    return () => {
-      disposed = true;
-      cancelAnimationFrame(animationId);
-      ctx?.dispose();
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} className="w-full h-full" />;
-}
-\`\`\`
-
-Keep the shader logic intact. Adapt the initialization and render loop to fit inside the useEffect.`;
+// v0 prompt for React conversion (must be under 500 chars for v0 API)
+const V0_PROMPT = `Convert this ralph-gpu shader to a React component. Use "use client", useRef<HTMLCanvasElement> for canvas, wrap everything in useEffect with async init(). Call gpu.init(canvasRef.current, {autoResize: true}), keep shader logic intact, add disposed flag for cleanup, and return cleanup function with cancelAnimationFrame + ctx?.dispose(). Return <canvas ref={canvasRef} className="w-full h-full" />.`;
 
 // Generate v0 URL with code and React conversion prompt
 function generateV0Url(code: string): string {
