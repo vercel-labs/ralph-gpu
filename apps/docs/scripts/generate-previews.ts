@@ -18,14 +18,14 @@ async function generatePreviews() {
   // Read template and ralph-gpu bundle
   const templatePath = path.join(__dirname, 'preview-template.html');
   const template = fs.readFileSync(templatePath, 'utf-8');
-  const ralphGpuPath = path.join(__dirname, '../public/ralph-gpu.mjs');
+  const ralphGpuPath = path.join(__dirname, '../public/dist/index.mjs');
   const ralphGpu = fs.readFileSync(ralphGpuPath, 'utf-8');
   
   let currentHtml = '';
   
   // Simple HTTP server
   const server = http.createServer((req, res) => {
-    if (req.url === '/ralph-gpu.mjs') {
+    if (req.url === '/dist/index.mjs') {
       res.writeHead(200, { 'Content-Type': 'application/javascript' });
       res.end(ralphGpu);
     } else {

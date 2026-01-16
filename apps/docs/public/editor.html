@@ -111,7 +111,7 @@
       // Load each type file
       for (const file of typeFiles) {
         try {
-          const response = await fetch(`/ralph-gpu-types/${file}`);
+          const response = await fetch(`/dist/${file}`);
           const content = await response.text();
           const modulePath = `file:///node_modules/ralph-gpu/dist/${file}`;
           monaco.languages.typescript.typescriptDefaults.addExtraLib(content, modulePath);

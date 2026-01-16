@@ -1,50 +1,63 @@
 #!/usr/bin/env node
 
 /**
- * Copy TypeScript Types to Docs
+ * Copy Distribution Files to Docs
  * 
- * Copies all .d.ts files from dist/ to the docs app public folder
- * so Monaco editor can load them with proper import resolution.
+ * Copies the entire dist/ directory from packages/core to apps/docs/public/dist
+ * so both the Monaco editor and preview iframe can access types and bundles.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const DIST_DIR = path.join(__dirname, '..', 'dist');
-const OUTPUT_DIR = path.join(__dirname, '..', '..', '..', 'apps', 'docs', 'public', 'ralph-gpu-types');
+const SOURCE_DIST_DIR = path.join(__dirname, '..', 'dist');
+const TARGET_DIST_DIR = path.join(__dirname, '..', '..', '..', 'apps', 'docs', 'public', 'dist');
 
-function copyTypes() {
-  // Check if dist directory exists
-  if (!fs.existsSync(DIST_DIR)) {
+function copyDirectory(src, dest) {
+  // Create destination directory
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true });
+  }
+
+  // Read all files and directories
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      copyDirectory(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
+function copyDist() {
+  // Check if source dist directory exists
+  if (!fs.existsSync(SOURCE_DIST_DIR)) {
     console.error('⚠ dist/ directory not found. Run build first.');
     process.exit(1);
   }
 
-  // Create output directory
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  // Remove old dist directory if it exists
+  if (fs.existsSync(TARGET_DIST_DIR)) {
+    fs.rmSync(TARGET_DIST_DIR, { recursive: true, force: true });
   }
 
-  // Read all .d.ts files (excluding .d.ts.map)
-  const files = fs
-    .readdirSync(DIST_DIR)
-    .filter((f) => f.endsWith('.d.ts') && !f.endsWith('.d.ts.map'));
+  // Copy entire dist directory
+  copyDirectory(SOURCE_DIST_DIR, TARGET_DIST_DIR);
 
-  if (files.length === 0) {
-    console.error('⚠ No .d.ts files found in dist/');
-    process.exit(1);
-  }
+  // Count files
+  const allFiles = fs.readdirSync(TARGET_DIST_DIR);
+  const typeFiles = allFiles.filter((f) => f.endsWith('.d.ts'));
+  const mjsFiles = allFiles.filter((f) => f.endsWith('.mjs'));
 
-  // Copy each file as-is (preserving imports/exports)
-  let count = 0;
-  for (const file of files) {
-    const sourcePath = path.join(DIST_DIR, file);
-    const destPath = path.join(OUTPUT_DIR, file);
-    fs.copyFileSync(sourcePath, destPath);
-    count++;
-  }
-
-  console.log(`✓ Copied ${count} type files to apps/docs/public/ralph-gpu-types/`);
+  console.log(`✓ Copied dist/ to apps/docs/public/dist/`);
+  console.log(`  - ${typeFiles.length} type definition files`);
+  console.log(`  - ${mjsFiles.length} module bundle(s)`);
+  console.log(`  - ${allFiles.length} total files`);
 }
 
-copyTypes();
+copyDist();
