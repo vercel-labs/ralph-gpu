@@ -29,49 +29,50 @@ export function CostChart({ events }: CostChartProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold mb-4">Cost Analysis</h2>
+        <h2 className="text-xl font-bold text-gray-12 mb-4">Cost Analysis</h2>
         
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-background-secondary rounded-lg p-4 border border-foreground-muted/20">
-            <div className="text-sm text-foreground-secondary">Total Cost</div>
-            <div className="text-2xl font-bold text-accent-green">
+          <div className="bg-gray-1 rounded-lg p-4 border border-gray-4 hover:border-gray-5 transition-colors">
+            <div className="text-sm text-gray-11">Total Cost</div>
+            <div className="text-2xl font-bold text-green-9">
               ${totalCost.toFixed(4)}
             </div>
           </div>
-          <div className="bg-background-secondary rounded-lg p-4 border border-foreground-muted/20">
-            <div className="text-sm text-foreground-secondary">Total Tokens</div>
-            <div className="text-2xl font-bold text-accent-blue">
+          <div className="bg-gray-1 rounded-lg p-4 border border-gray-4 hover:border-gray-5 transition-colors">
+            <div className="text-sm text-gray-11">Total Tokens</div>
+            <div className="text-2xl font-bold text-blue-9">
               {totalTokens.toLocaleString()}
             </div>
           </div>
-          <div className="bg-background-secondary rounded-lg p-4 border border-foreground-muted/20">
-            <div className="text-sm text-foreground-secondary">Avg Cost/Iter</div>
-            <div className="text-2xl font-bold text-accent-purple">
+          <div className="bg-gray-1 rounded-lg p-4 border border-gray-4 hover:border-gray-5 transition-colors">
+            <div className="text-sm text-gray-11">Avg Cost/Iter</div>
+            <div className="text-2xl font-bold text-purple-9">
               ${(totalCost / iterationEnds.length).toFixed(4)}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-background-secondary rounded-lg p-4 border border-foreground-muted/20">
-        <h3 className="text-sm font-semibold mb-4 text-foreground-secondary">Cost per Iteration</h3>
+      <div className="bg-gray-1 rounded-lg p-4 border border-gray-4 hover:border-gray-5 transition-colors">
+        <h3 className="text-sm font-semibold mb-4 text-gray-11">Cost per Iteration</h3>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={costData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#222222" />
             <XAxis 
               dataKey="iteration" 
-              stroke="#666"
-              tick={{ fill: '#a1a1a1', fontSize: 12 }}
+              stroke="#606060"
+              tick={{ fill: '#b4b4b4', fontSize: 12 }}
             />
             <YAxis 
-              stroke="#666"
-              tick={{ fill: '#a1a1a1', fontSize: 12 }}
+              stroke="#606060"
+              tick={{ fill: '#b4b4b4', fontSize: 12 }}
             />
             <Tooltip 
               contentStyle={{ 
                 backgroundColor: '#0a0a0a', 
-                border: '1px solid #333',
-                borderRadius: '8px'
+                border: '1px solid #222222',
+                borderRadius: '8px',
+                color: '#eeeeee'
               }}
             />
             <Line 
@@ -85,30 +86,31 @@ export function CostChart({ events }: CostChartProps) {
         </ResponsiveContainer>
       </div>
 
-      <div className="bg-background-secondary rounded-lg p-4 border border-foreground-muted/20">
-        <h3 className="text-sm font-semibold mb-4 text-foreground-secondary">Token Usage</h3>
+      <div className="bg-gray-1 rounded-lg p-4 border border-gray-4 hover:border-gray-5 transition-colors">
+        <h3 className="text-sm font-semibold mb-4 text-gray-11">Token Usage</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={costData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#222222" />
             <XAxis 
               dataKey="iteration" 
-              stroke="#666"
-              tick={{ fill: '#a1a1a1', fontSize: 12 }}
+              stroke="#606060"
+              tick={{ fill: '#b4b4b4', fontSize: 12 }}
             />
             <YAxis 
-              stroke="#666"
-              tick={{ fill: '#a1a1a1', fontSize: 12 }}
+              stroke="#606060"
+              tick={{ fill: '#b4b4b4', fontSize: 12 }}
             />
             <Tooltip 
               contentStyle={{ 
                 backgroundColor: '#0a0a0a', 
-                border: '1px solid #333',
-                borderRadius: '8px'
+                border: '1px solid #222222',
+                borderRadius: '8px',
+                color: '#eeeeee'
               }}
             />
             <Legend />
-            <Bar dataKey="inputTokens" stackId="a" fill="#50e3c2" name="Input" />
-            <Bar dataKey="outputTokens" stackId="a" fill="#7928ca" name="Output" />
+            <Bar dataKey="inputTokens" stackId="a" fill="#46a758" name="Input" />
+            <Bar dataKey="outputTokens" stackId="a" fill="#6e56cf" name="Output" />
           </BarChart>
         </ResponsiveContainer>
       </div>

@@ -24,7 +24,7 @@ export function Timeline({ events }: TimelineProps) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold">Timeline</h2>
+      <h2 className="text-xl font-bold text-gray-12">Timeline</h2>
       
       <div className="space-y-4">
         {sortedIterations.map(([iterNum, iterEvents]) => {
@@ -34,14 +34,14 @@ export function Timeline({ events }: TimelineProps) {
           const errors = iterEvents.filter(e => e.type === 'tool_error');
           
           return (
-            <div key={iterNum} className="bg-background-secondary rounded-lg p-4 border border-foreground-muted/20">
+            <div key={iterNum} className="bg-gray-1 rounded-lg p-4 border border-gray-4 hover:border-gray-5 transition-colors">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-accent-blue" />
-                  <span className="font-semibold">Iteration {iterNum}</span>
+                  <Clock className="w-4 h-4 text-blue-9" />
+                  <span className="font-semibold text-gray-12">Iteration {iterNum}</span>
                 </div>
                 {iterEnd && (
-                  <div className="flex gap-4 text-sm text-foreground-secondary">
+                  <div className="flex gap-4 text-sm text-gray-11">
                     <span>{(iterEnd.duration / 1000).toFixed(1)}s</span>
                     <span>${iterEnd.cost.toFixed(4)}</span>
                     <span>{toolCalls.length} tools</span>
@@ -92,23 +92,23 @@ export function Timeline({ events }: TimelineProps) {
                   return (
                     <div key={idx} className="flex items-start gap-2 text-sm">
                       {hasError ? (
-                        <XCircle className="w-4 h-4 text-accent-red mt-0.5 flex-shrink-0" />
+                        <XCircle className="w-4 h-4 text-red-9 mt-0.5 flex-shrink-0" />
                       ) : result ? (
-                        <CheckCircle className="w-4 h-4 text-accent-green mt-0.5 flex-shrink-0" />
+                        <CheckCircle className="w-4 h-4 text-green-9 mt-0.5 flex-shrink-0" />
                       ) : (
-                        <Terminal className="w-4 h-4 text-foreground-muted mt-0.5 flex-shrink-0" />
+                        <Terminal className="w-4 h-4 text-gray-9 mt-0.5 flex-shrink-0" />
                       )}
                       <div className="flex-1">
                         <div>
-                          <span className="font-mono text-accent-blue">{call.tool}</span>
+                          <span className="font-mono text-blue-9">{call.tool}</span>
                           {result && (
-                            <span className="text-foreground-secondary ml-2">
+                            <span className="text-gray-11 ml-2">
                               ({result.durationMs}ms)
                             </span>
                           )}
                         </div>
                         {details && (
-                          <div className="text-foreground-muted text-xs mt-0.5 truncate">
+                          <div className="text-gray-9 text-xs mt-0.5 truncate">
                             {details}
                           </div>
                         )}

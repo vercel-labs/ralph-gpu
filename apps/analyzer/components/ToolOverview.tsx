@@ -9,7 +9,7 @@ interface ToolOverviewProps {
   overview: ToolOverviewType;
 }
 
-const COLORS = ['#0070f3', '#50e3c2', '#7928ca', '#f5a623', '#ee0000', '#ff6b35'];
+const COLORS = ['#0070f3', '#46a758', '#6e56cf', '#ffc53d', '#e5484d', '#f76b15'];
 
 export function ToolOverview({ overview }: ToolOverviewProps) {
   const router = useRouter();
@@ -30,44 +30,44 @@ export function ToolOverview({ overview }: ToolOverviewProps) {
       <div>
         <button
           onClick={() => router.push('/')}
-          className="flex items-center gap-2 text-accent-blue hover:text-accent-blue-hover mb-4 transition-colors"
+          className="flex items-center gap-2 text-blue-9 hover:text-blue-10 mb-4 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Overview
         </button>
         
-        <h1 className="text-3xl font-bold mb-2 font-mono">{overview.toolName}</h1>
-        <p className="text-foreground-secondary">
+        <h1 className="text-3xl font-bold text-gray-12 mb-2 font-mono">{overview.toolName}</h1>
+        <p className="text-gray-11">
           Tool usage analysis across all ralph traces
         </p>
       </div>
 
       {/* Key Stats */}
       <div className="grid grid-cols-4 gap-4">
-        <div className="bg-background-secondary rounded-lg p-6 border border-foreground-muted/20">
-          <div className="text-sm text-foreground-secondary mb-2">Total Calls</div>
-          <div className="text-3xl font-bold text-accent-blue">
+        <div className="bg-gray-1 rounded-lg p-6 border border-gray-4 hover:border-gray-5 transition-colors">
+          <div className="text-sm text-gray-11 mb-2">Total Calls</div>
+          <div className="text-3xl font-bold text-blue-9">
             {overview.totalCalls.toLocaleString()}
           </div>
         </div>
         
-        <div className="bg-background-secondary rounded-lg p-6 border border-foreground-muted/20">
-          <div className="text-sm text-foreground-secondary mb-2">Avg Duration</div>
-          <div className="text-3xl font-bold text-accent-purple">
+        <div className="bg-gray-1 rounded-lg p-6 border border-gray-4 hover:border-gray-5 transition-colors">
+          <div className="text-sm text-gray-11 mb-2">Avg Duration</div>
+          <div className="text-3xl font-bold text-purple-9">
             {overview.avgDuration.toFixed(0)}ms
           </div>
         </div>
         
-        <div className="bg-background-secondary rounded-lg p-6 border border-foreground-muted/20">
-          <div className="text-sm text-foreground-secondary mb-2">Success Rate</div>
-          <div className="text-3xl font-bold text-accent-green">
+        <div className="bg-gray-1 rounded-lg p-6 border border-gray-4 hover:border-gray-5 transition-colors">
+          <div className="text-sm text-gray-11 mb-2">Success Rate</div>
+          <div className="text-3xl font-bold text-green-9">
             {successRate.toFixed(1)}%
           </div>
         </div>
         
-        <div className="bg-background-secondary rounded-lg p-6 border border-foreground-muted/20">
-          <div className="text-sm text-foreground-secondary mb-2">Errors</div>
-          <div className="text-3xl font-bold text-accent-red">
+        <div className="bg-gray-1 rounded-lg p-6 border border-gray-4 hover:border-gray-5 transition-colors">
+          <div className="text-sm text-gray-11 mb-2">Errors</div>
+          <div className="text-3xl font-bold text-red-9">
             {overview.errorCount}
           </div>
         </div>
@@ -76,28 +76,29 @@ export function ToolOverview({ overview }: ToolOverviewProps) {
       {/* Charts */}
       <div className="grid grid-cols-2 gap-6">
         {/* Usage by task */}
-        <div className="bg-background-secondary rounded-lg p-6 border border-foreground-muted/20">
-          <h3 className="text-lg font-semibold mb-4">Top 10 Tasks</h3>
+        <div className="bg-gray-1 rounded-lg p-6 border border-gray-4 hover:border-gray-5 transition-colors">
+          <h3 className="text-lg font-semibold text-gray-12 mb-4">Top 10 Tasks</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={topTasks} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#222222" />
               <XAxis 
                 type="number" 
-                stroke="#666"
-                tick={{ fill: '#a1a1a1', fontSize: 12 }}
+                stroke="#606060"
+                tick={{ fill: '#b4b4b4', fontSize: 12 }}
               />
               <YAxis 
                 type="category" 
                 dataKey="taskName" 
-                stroke="#666"
-                tick={{ fill: '#a1a1a1', fontSize: 11 }}
+                stroke="#606060"
+                tick={{ fill: '#b4b4b4', fontSize: 11 }}
                 width={150}
               />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: '#0a0a0a', 
-                  border: '1px solid #333',
-                  borderRadius: '8px'
+                  border: '1px solid #222222',
+                  borderRadius: '8px',
+                  color: '#eeeeee'
                 }}
               />
               <Bar dataKey="count" fill="#0070f3" />
@@ -106,8 +107,8 @@ export function ToolOverview({ overview }: ToolOverviewProps) {
         </div>
 
         {/* Success/Error breakdown */}
-        <div className="bg-background-secondary rounded-lg p-6 border border-foreground-muted/20">
-          <h3 className="text-lg font-semibold mb-4">Success vs Errors</h3>
+        <div className="bg-gray-1 rounded-lg p-6 border border-gray-4 hover:border-gray-5 transition-colors">
+          <h3 className="text-lg font-semibold text-gray-12 mb-4">Success vs Errors</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -120,14 +121,15 @@ export function ToolOverview({ overview }: ToolOverviewProps) {
                 fill="#8884d8"
                 dataKey="value"
               >
-                <Cell fill="#50e3c2" />
-                <Cell fill="#ee0000" />
+                <Cell fill="#46a758" />
+                <Cell fill="#e5484d" />
               </Pie>
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: '#0a0a0a', 
-                  border: '1px solid #333',
-                  borderRadius: '8px'
+                  border: '1px solid #222222',
+                  borderRadius: '8px',
+                  color: '#eeeeee'
                 }}
               />
             </PieChart>
@@ -136,19 +138,19 @@ export function ToolOverview({ overview }: ToolOverviewProps) {
       </div>
 
       {/* Task List */}
-      <div className="bg-background-secondary rounded-lg p-6 border border-foreground-muted/20">
-        <h3 className="text-lg font-semibold mb-4">All Tasks Using This Tool</h3>
+      <div className="bg-gray-1 rounded-lg p-6 border border-gray-4 hover:border-gray-5 transition-colors">
+        <h3 className="text-lg font-semibold text-gray-12 mb-4">All Tasks Using This Tool</h3>
         <div className="space-y-2">
           {overview.usageByTask.map((item) => (
             <button
               key={item.taskId}
               onClick={() => router.push(`/trace/${item.taskId}`)}
-              className="w-full flex items-center justify-between p-3 bg-background-tertiary rounded hover:bg-background-tertiary/70 transition-colors"
+              className="w-full flex items-center justify-between p-3 bg-gray-2 rounded hover:bg-gray-3 transition-colors border border-gray-4"
             >
               <div className="flex items-center gap-3">
-                <div className="font-mono text-sm">{item.taskName}</div>
+                <div className="font-mono text-sm text-gray-12">{item.taskName}</div>
               </div>
-              <div className="flex gap-6 text-sm text-foreground-secondary">
+              <div className="flex gap-6 text-sm text-gray-11">
                 <span>{item.count} calls</span>
                 <span>{item.avgDuration.toFixed(0)}ms avg</span>
               </div>

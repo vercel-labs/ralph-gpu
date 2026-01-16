@@ -6,21 +6,21 @@
   :root {
     /* Geist Design System Colors */
     --background: #000000;
-    --background-secondary: #0a0a0a;   /* gray-1 */
-    --background-tertiary: #111111;    /* gray-2 */
-    
-    --foreground: #eeeeee;             /* gray-12 */
-    --foreground-secondary: #b4b4b4;   /* gray-11 */
-    --foreground-muted: #606060;       /* gray-9 */
-    
-    --border: #222222;                 /* gray-4 */
-    --border-hover: #2a2a2a;           /* gray-5 */
-    
-    --accent-blue: #0070f3;            /* blue-9 */
-    --accent-blue-hover: #3b9eff;      /* blue-10 */
-    --accent-green: #46a758;           /* green-9 */
-    --accent-amber: #ffc53d;           /* amber-9 */
-    --accent-red: #e5484d;             /* red-9 */
+    --background-secondary: #0a0a0a; /* gray-1 */
+    --background-tertiary: #111111; /* gray-2 */
+
+    --foreground: #eeeeee; /* gray-12 */
+    --foreground-secondary: #b4b4b4; /* gray-11 */
+    --foreground-muted: #606060; /* gray-9 */
+
+    --border: #222222; /* gray-4 */
+    --border-hover: #2a2a2a; /* gray-5 */
+
+    --accent-blue: #0070f3; /* blue-9 */
+    --accent-blue-hover: #3b9eff; /* blue-10 */
+    --accent-green: #46a758; /* green-9 */
+    --accent-amber: #ffc53d; /* amber-9 */
+    --accent-red: #e5484d; /* red-9 */
   }
 
   body {
@@ -74,15 +74,15 @@ html {
     width: 6px;
     height: 6px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
     @apply bg-gray-6 rounded-full;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-7;
   }

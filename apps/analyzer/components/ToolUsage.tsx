@@ -8,7 +8,7 @@ interface ToolUsageProps {
   events: TraceEvent[];
 }
 
-const COLORS = ['#0070f3', '#50e3c2', '#7928ca', '#f5a623', '#ee0000', '#ff6b35'];
+const COLORS = ['#0070f3', '#46a758', '#6e56cf', '#ffc53d', '#e5484d', '#f76b15'];
 
 export function ToolUsage({ events }: ToolUsageProps) {
   const router = useRouter();
@@ -47,11 +47,11 @@ export function ToolUsage({ events }: ToolUsageProps) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold">Tool Usage</h2>
+      <h2 className="text-xl font-bold text-gray-12">Tool Usage</h2>
       
       <div className="grid grid-cols-2 gap-6">
-        <div className="bg-background-secondary rounded-lg p-4 border border-foreground-muted/20">
-          <h3 className="text-sm font-semibold mb-4 text-foreground-secondary">Call Distribution</h3>
+        <div className="bg-gray-1 rounded-lg p-4 border border-gray-4 hover:border-gray-5 transition-colors">
+          <h3 className="text-sm font-semibold mb-4 text-gray-11">Call Distribution</h3>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie
@@ -71,36 +71,38 @@ export function ToolUsage({ events }: ToolUsageProps) {
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: '#0a0a0a', 
-                  border: '1px solid #333',
-                  borderRadius: '8px'
+                  border: '1px solid #222222',
+                  borderRadius: '8px',
+                  color: '#eeeeee'
                 }}
               />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-background-secondary rounded-lg p-4 border border-foreground-muted/20">
-          <h3 className="text-sm font-semibold mb-4 text-foreground-secondary">Total Duration (ms)</h3>
+        <div className="bg-gray-1 rounded-lg p-4 border border-gray-4 hover:border-gray-5 transition-colors">
+          <h3 className="text-sm font-semibold mb-4 text-gray-11">Total Duration (ms)</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={durationData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#222222" />
               <XAxis 
                 type="number" 
-                stroke="#666"
-                tick={{ fill: '#a1a1a1', fontSize: 12 }}
+                stroke="#606060"
+                tick={{ fill: '#b4b4b4', fontSize: 12 }}
               />
               <YAxis 
                 type="category" 
                 dataKey="tool" 
-                stroke="#666"
-                tick={{ fill: '#a1a1a1', fontSize: 12 }}
+                stroke="#606060"
+                tick={{ fill: '#b4b4b4', fontSize: 12 }}
                 width={100}
               />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: '#0a0a0a', 
-                  border: '1px solid #333',
-                  borderRadius: '8px'
+                  border: '1px solid #222222',
+                  borderRadius: '8px',
+                  color: '#eeeeee'
                 }}
               />
               <Bar dataKey="totalDuration" fill="#0070f3" />
@@ -109,8 +111,8 @@ export function ToolUsage({ events }: ToolUsageProps) {
         </div>
       </div>
 
-      <div className="bg-background-secondary rounded-lg p-4 border border-foreground-muted/20">
-        <h3 className="text-sm font-semibold mb-3 text-foreground-secondary">Tool Statistics</h3>
+      <div className="bg-gray-1 rounded-lg p-4 border border-gray-4 hover:border-gray-5 transition-colors">
+        <h3 className="text-sm font-semibold mb-3 text-gray-11">Tool Statistics</h3>
         <div className="grid grid-cols-3 gap-4">
           {Object.entries(toolCounts)
             .sort((a, b) => b[1] - a[1])
@@ -124,10 +126,10 @@ export function ToolUsage({ events }: ToolUsageProps) {
                 <button
                   key={tool}
                   onClick={() => router.push(`/tool/${tool}`)}
-                  className="bg-background-tertiary rounded p-3 hover:bg-background-tertiary/70 transition-colors text-left"
+                  className="bg-gray-2 rounded p-3 hover:bg-gray-3 transition-colors text-left border border-gray-4"
                 >
-                  <div className="font-mono text-sm font-semibold text-accent-blue">{tool}</div>
-                  <div className="mt-2 space-y-1 text-xs text-foreground-secondary">
+                  <div className="font-mono text-sm font-semibold text-blue-9">{tool}</div>
+                  <div className="mt-2 space-y-1 text-xs text-gray-11">
                     <div>{count} calls</div>
                     <div>{avgDuration.toFixed(0)}ms avg</div>
                   </div>

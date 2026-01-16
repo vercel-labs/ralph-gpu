@@ -35,35 +35,35 @@ export function RecentActivity({ stats }: RecentActivityProps) {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Recent Activity</h3>
+      <h3 className="text-lg font-semibold text-gray-12">Recent Activity</h3>
       
-      <div className="bg-background-secondary rounded-lg p-4 border border-foreground-muted/20">
+      <div className="bg-gray-1 rounded-lg p-4 border border-gray-4 hover:border-gray-5 transition-colors">
         <div className="space-y-2">
           {stats.recentExecutions.map((execution, idx) => (
             <button
               key={idx}
               onClick={() => router.push(`/trace/${execution.taskId}`)}
-              className="w-full flex items-center gap-3 p-3 bg-background-tertiary rounded hover:bg-background-tertiary/70 transition-colors"
+              className="w-full flex items-center gap-3 p-3 bg-gray-2 rounded hover:bg-gray-3 transition-colors border border-gray-4"
             >
               {execution.completed ? (
-                <CheckCircle className="w-5 h-5 text-accent-green flex-shrink-0" />
+                <CheckCircle className="w-5 h-5 text-green-9 flex-shrink-0" />
               ) : (
-                <XCircle className="w-5 h-5 text-accent-red flex-shrink-0" />
+                <XCircle className="w-5 h-5 text-red-9 flex-shrink-0" />
               )}
               
               <div className="flex-1 text-left">
-                <div className="font-mono text-sm font-semibold">{execution.taskName}</div>
-                <div className="flex gap-4 text-xs text-foreground-secondary mt-1">
+                <div className="font-mono text-sm font-semibold text-gray-12">{execution.taskName}</div>
+                <div className="flex gap-4 text-xs text-gray-11 mt-1">
                   <span>{formatTime(execution.duration)}</span>
                   <span>${execution.cost.toFixed(4)}</span>
-                  <span className="text-foreground-muted">{formatRelativeTime(execution.timestamp)}</span>
+                  <span className="text-gray-9">{formatRelativeTime(execution.timestamp)}</span>
                 </div>
               </div>
 
               <div className={`text-xs px-2 py-1 rounded ${
                 execution.completed 
-                  ? 'bg-accent-green/20 text-accent-green' 
-                  : 'bg-accent-red/20 text-accent-red'
+                  ? 'bg-green-9/20 text-green-9' 
+                  : 'bg-red-9/20 text-red-9'
               }`}>
                 {execution.completed ? 'Done' : 'Incomplete'}
               </div>

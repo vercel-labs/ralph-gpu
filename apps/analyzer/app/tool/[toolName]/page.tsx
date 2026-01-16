@@ -43,44 +43,50 @@ export default function ToolPage({ params }: { params: { toolName: string } }) {
 
   if (loading) {
     return (
-      <div className="flex h-screen">
+      <>
         <TaskList tasks={allTasks} selectedTask={null} onSelectTask={(id) => router.push(`/trace/${id}`)} />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-blue mx-auto mb-4"></div>
-            <div className="text-foreground-secondary">Loading tool overview...</div>
+        <main className="pl-80">
+          <div className="flex items-center justify-center h-screen">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-9 mx-auto mb-4"></div>
+              <div className="text-gray-11">Loading tool overview...</div>
+            </div>
           </div>
-        </div>
-      </div>
+        </main>
+      </>
     );
   }
 
   if (error || !overview) {
     return (
-      <div className="flex h-screen">
+      <>
         <TaskList tasks={allTasks} selectedTask={null} onSelectTask={(id) => router.push(`/trace/${id}`)} />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md">
-            <div className="text-accent-red text-5xl mb-4">⚠</div>
-            <h1 className="text-xl font-bold mb-2">Tool Not Found</h1>
-            <p className="text-foreground-secondary">{error || 'No data for this tool'}</p>
+        <main className="pl-80">
+          <div className="flex items-center justify-center h-screen">
+            <div className="text-center max-w-md">
+              <div className="text-red-9 text-5xl mb-4">⚠</div>
+              <h1 className="text-xl font-bold text-gray-12 mb-2">Tool Not Found</h1>
+              <p className="text-gray-11">{error || 'No data for this tool'}</p>
+            </div>
           </div>
-        </div>
-      </div>
+        </main>
+      </>
     );
   }
 
   return (
-    <div className="flex h-screen">
+    <>
       <TaskList 
         tasks={allTasks} 
         selectedTask={null} 
         onSelectTask={(id) => router.push(`/trace/${id}`)} 
       />
       
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <ToolOverviewComponent overview={overview} />
-      </div>
-    </div>
+      <main className="pl-80">
+        <div className="min-h-screen">
+          <ToolOverviewComponent overview={overview} />
+        </div>
+      </main>
+    </>
   );
 }
