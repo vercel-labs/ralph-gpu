@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { ExampleCanvas } from './ExampleCanvas';
+import { PreviewFrame } from './PreviewFrame';
 import { Example } from '@/lib/examples';
 
 const MonacoEditor = dynamic(() => import('./MonacoEditor').then(mod => mod.MonacoEditor), { ssr: false });
@@ -11,11 +11,84 @@ interface ShaderPlaygroundProps {
   initialExample: Example;
 }
 
+type UniformValue = number | number[];
+type Uniforms = Record<string, { value: UniformValue }>;
+
+// Try to parse uniform values from the code
+// Looks for patterns like: amplitude: 0.3, or color: [0.2, 0.8, 1.0]
+function extractUniformsFromCode(code: string): Uniforms | null {
+  try {
+    // Look for const params = { ... } or similar object literal with uniform values
+    const paramsMatch = code.match(/const\s+params\s*=\s*\{([^}]+)\}/);
+    if (!paramsMatch) return null;
+
+    const paramsContent = paramsMatch[1];
+    const uniforms: Uniforms = {};
+
+    // Match key: value pairs (numbers or arrays)
+    const propertyRegex = /(\w+)\s*:\s*(\[[^\]]+\]|[\d.]+)/g;
+    let match;
+    
+    while ((match = propertyRegex.exec(paramsContent)) !== null) {
+      const key = match[1];
+      const valueStr = match[2];
+      
+      let value: UniformValue;
+      if (valueStr.startsWith('[')) {
+        // Parse array: [0.2, 0.8, 1.0]
+        value = JSON.parse(valueStr);
+      } else {
+        // Parse number
+        value = parseFloat(valueStr);
+      }
+      
+      uniforms[key] = { value };
+    }
+
+    return Object.keys(uniforms).length > 0 ? uniforms : null;
+  } catch {
+    return null;
+  }
+}
+
+// Generate runtime code for legacy shader examples
+function generateRuntimeCode(shader: string, uniforms?: Uniforms, animated?: boolean): string {
+  const uniformsStr = uniforms ? JSON.stringify(uniforms) : 'undefined';
+  return `
+const canvas = document.getElementById('canvas');
+const ctx = await gpu.init(canvas, { dpr: Math.min(devicePixelRatio, 2) });
+
+const pass = ctx.pass(\`${shader.replace(/`/g, '\\`')}\`${uniforms ? `, { uniforms: ${uniformsStr} }` : ''});
+
+const onResize = () => {
+  const rect = canvas.getBoundingClientRect();
+  ctx.resize(rect.width, rect.height);
+};
+window.addEventListener('resize', onResize);
+onResize();
+
+function frame() {
+  pass.draw();
+  ${animated ? 'requestAnimationFrame(frame);' : ''}
+}
+frame();
+`;
+}
+
 export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
   const [code, setCode] = useState(initialExample.code);
-  const [activeCode, setActiveCode] = useState(initialExample.shader);
+  const [activeCode, setActiveCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [platform, setPlatform] = useState<'mac' | 'other'>('other');
+
+  // Run initial code on mount
+  useEffect(() => {
+    if (initialExample.executable) {
+      setActiveCode(initialExample.code);
+    } else if (initialExample.shader) {
+      setActiveCode(generateRuntimeCode(initialExample.shader, initialExample.uniforms, initialExample.animated));
+    }
+  }, [initialExample.executable, initialExample.shader, initialExample.code, initialExample.uniforms, initialExample.animated]);
 
   useEffect(() => {
     if (typeof navigator !== 'undefined') {
@@ -26,18 +99,24 @@ export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
   }, []);
 
   const handleRun = useCallback(() => {
-    // Extract the shader from the full API code for rendering
-    // We look for ctx.pass(`...`)
-    const match = code.match(/ctx\.pass\(`([\s\S]*?)`\)/);
-    if (match && match[1]) {
-      setActiveCode(match[1]);
-    } else {
-      // Fallback: if we can't find the template literal, just use the whole code
-      // though it will likely fail if it's TS code.
-      setActiveCode(code);
-    }
     setError(null);
-  }, [code]);
+    
+    // For executable examples, run the full code
+    if (initialExample.executable) {
+      setActiveCode(code);
+      return;
+    }
+    
+    // Legacy: Extract the shader from the full API code for rendering
+    const match = code.match(/ctx\.pass\(`([\s\S]*?)`[,)]/);
+    if (match && match[1]) {
+      const extractedShader = match[1];
+      const extractedUniforms = extractUniformsFromCode(code);
+      setActiveCode(generateRuntimeCode(extractedShader, extractedUniforms || initialExample.uniforms, initialExample.animated));
+    } else {
+      setError('Could not extract shader code. Make sure the code contains ctx.pass(`...`)');
+    }
+  }, [code, initialExample.uniforms, initialExample.animated, initialExample.executable]);
 
   const handleError = useCallback((err: string | null) => {
     setError(err);
@@ -46,27 +125,27 @@ export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
   const runLabel = platform === 'mac' ? 'Run ⌘↵' : 'Run Ctrl+↵';
 
   return (
-    <div className="flex flex-col h-full min-h-[500px] border border-slate-800 rounded-xl overflow-hidden bg-slate-900 shadow-2xl">
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-950 border-b border-slate-800">
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-            Full API Editor
-          </span>
-        </div>
+    <div className="flex flex-col h-full bg-black">
+      {/* Minimal Vercel-style toolbar */}
+      <div className="flex items-center justify-between px-3 py-1.5 bg-[#0a0a0a] border-b border-[#333] shrink-0">
+        <span className="text-[11px] font-normal text-[#666] tracking-wide">
+          index.ts
+        </span>
         <button 
           onClick={handleRun}
-          className="flex items-center gap-2 px-4 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-md text-sm font-bold transition-all shadow-lg shadow-primary-500/20 active:scale-95"
+          className="flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-[#e5e5e5] text-black rounded-md text-[11px] font-medium transition-colors"
         >
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M4 2l10 6-10 6V2z" />
           </svg>
           {runLabel}
         </button>
       </div>
       
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      {/* Editor and Preview side by side */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
         {/* Editor Pane */}
-        <div className="flex-1 min-h-[300px] lg:min-h-0 border-b lg:border-b-0 lg:border-r border-slate-800">
+        <div className="h-[40vh] lg:h-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-[#333]">
           <MonacoEditor 
             code={code} 
             onChange={setCode} 
@@ -75,24 +154,22 @@ export function ShaderPlayground({ initialExample }: ShaderPlaygroundProps) {
           />
         </div>
 
-        {/* Preview Pane */}
-        <div className="flex-1 min-h-[300px] lg:min-h-0 relative bg-black">
-          <ExampleCanvas 
-            shader={activeCode} 
-            uniforms={initialExample.uniforms}
-            animated={initialExample.animated}
+        {/* Preview Pane - isolated iframe execution */}
+        <div className="flex-1 lg:w-1/2 relative bg-black">
+          <PreviewFrame 
+            code={activeCode}
             onError={handleError}
           />
           
           {error && (
-            <div className="absolute inset-x-0 bottom-0 p-6 bg-red-950/95 border-t border-red-500/50 text-red-200 text-sm font-mono overflow-auto max-h-[40%] backdrop-blur-sm">
-              <div className="flex items-center gap-2 mb-2 text-red-400 font-bold">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div className="absolute inset-x-0 bottom-0 p-3 bg-[#1a0000] border-t border-[#ee0000]/30 text-[#ff6666] text-xs font-mono overflow-auto max-h-[30%]">
+              <div className="flex items-center gap-1.5 mb-1 text-[#ee0000] font-medium text-xs">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 5a1 1 0 112 0v3a1 1 0 11-2 0V5zm1 7a1 1 0 100-2 1 1 0 000 2z" />
                 </svg>
-                Compilation Error
+                Error
               </div>
-              <div className="whitespace-pre-wrap pl-7 border-l-2 border-red-500/30">
+              <div className="whitespace-pre-wrap pl-4 border-l border-[#ee0000]/20 text-[#a1a1a1]">
                 {error}
               </div>
             </div>

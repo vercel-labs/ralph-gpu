@@ -4,13 +4,88 @@ import { useEffect, useRef, useState } from 'react';
 import { gpu, GPUContext, Pass } from 'ralph-gpu';
 
 interface ExampleCanvasProps {
-  shader: string;
+  // Legacy: single shader string (for simple examples)
+  shader?: string;
   uniforms?: Record<string, { value: number | number[] }>;
+  // New: full executable code
+  code?: string;
   animated?: boolean;
   onError?: (error: string | null) => void;
 }
 
-export function ExampleCanvas({ shader, uniforms, animated = true, onError }: ExampleCanvasProps) {
+// Execute user code with gpu and canvas in scope
+async function executeCode(
+  code: string,
+  canvas: HTMLCanvasElement,
+  signal: { disposed: boolean; visible: boolean }
+): Promise<{ cleanup: () => void }> {
+  // Track all contexts created during execution for cleanup
+  const contexts: GPUContext[] = [];
+  let animationId: number | null = null;
+  
+  // Create a wrapped gpu object that intercepts init() to track contexts
+  const wrappedGpu = {
+    ...gpu,
+    init: async (...args: Parameters<typeof gpu.init>) => {
+      const ctx = await gpu.init(...args);
+      contexts.push(ctx);
+      return ctx;
+    },
+  };
+  
+  // Save originals
+  const origGetById = document.getElementById.bind(document);
+  const origRAF = window.requestAnimationFrame.bind(window);
+  
+  // Override document.getElementById to return our canvas
+  document.getElementById = (id) => {
+    if (id === 'canvas') return canvas;
+    return origGetById(id);
+  };
+  
+  // Wrap requestAnimationFrame to track and check disposed/visible
+  window.requestAnimationFrame = (cb) => {
+    if (signal.disposed) return 0;
+    animationId = origRAF((t) => {
+      if (signal.disposed) return;
+      // Skip frame if not visible (but keep the loop alive)
+      if (!signal.visible) {
+        animationId = origRAF(cb);
+        return;
+      }
+      cb(t);
+    });
+    return animationId;
+  };
+  
+  try {
+    // eslint-disable-next-line no-new-func
+    const fn = new Function('gpu', 'canvas', 'signal', `
+      return (async () => {
+        ${code}
+      })();
+    `);
+    await fn(wrappedGpu, canvas, signal);
+  } finally {
+    // Restore originals
+    document.getElementById = origGetById;
+    window.requestAnimationFrame = origRAF;
+  }
+  
+  return {
+    cleanup: () => {
+      if (animationId) cancelAnimationFrame(animationId);
+      // Dispose ALL contexts that were created
+      for (const ctx of contexts) {
+        if (typeof ctx.dispose === 'function') {
+          ctx.dispose();
+        }
+      }
+    }
+  };
+}
+
+export function ExampleCanvas({ shader, uniforms, code, animated = true, onError }: ExampleCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [internalError, setInternalError] = useState<string | null>(null);
   const [supported, setSupported] = useState<boolean | null>(null);
@@ -26,37 +101,73 @@ export function ExampleCanvas({ shader, uniforms, animated = true, onError }: Ex
     let ctx: GPUContext | null = null;
     let pass: Pass;
     let animationId: number;
-    let disposed = false;
+    let codeCleanup: (() => void) | null = null;
+    let resizeHandler: (() => void) | null = null;
+    const signal = { disposed: false, visible: true };
+    let observer: IntersectionObserver | null = null;
 
     async function init() {
       if (!canvasRef.current) return;
+
+      // Set up visibility observer to pause rendering when off-screen
+      observer = new IntersectionObserver(
+        (entries) => {
+          signal.visible = entries[0]?.isIntersecting ?? true;
+        },
+        { threshold: 0 }
+      );
+      observer.observe(canvasRef.current);
 
       try {
         setInternalError(null);
         onError?.(null);
         
+        // If full code is provided, execute it
+        if (code) {
+          try {
+            const result = await executeCode(code, canvasRef.current, signal);
+            // Only store cleanup if we haven't been disposed during init
+            if (!signal.disposed) {
+              codeCleanup = result.cleanup;
+            } else {
+              // Already disposed, clean up immediately
+              result.cleanup();
+            }
+          } catch (e) {
+            if (!signal.disposed) {
+              throw e;
+            }
+          }
+          return;
+        }
+        
+        // Legacy: simple shader mode
+        if (!shader) {
+          throw new Error('Either shader or code must be provided');
+        }
+        
         ctx = await gpu.init(canvasRef.current, {
           dpr: Math.min(window.devicePixelRatio, 2),
         });
 
-        if (disposed) {
+        if (signal.disposed) {
           ctx.dispose();
           return;
         }
 
         pass = ctx.pass(shader, uniforms ? { uniforms } : undefined);
 
-        const onResize = () => {
+        resizeHandler = () => {
           if (!ctx || !canvasRef.current) return;
           const rect = canvasRef.current.getBoundingClientRect();
           ctx.resize(rect.width, rect.height);
         };
 
-        window.addEventListener('resize', onResize);
-        onResize();
+        window.addEventListener('resize', resizeHandler);
+        resizeHandler();
 
         function frame() {
-          if (disposed) return;
+          if (signal.disposed) return;
           pass.draw();
           if (animated) {
             animationId = requestAnimationFrame(frame);
@@ -73,11 +184,16 @@ export function ExampleCanvas({ shader, uniforms, animated = true, onError }: Ex
     init();
 
     return () => {
-      disposed = true;
+      signal.disposed = true;
       cancelAnimationFrame(animationId);
+      observer?.disconnect();
+      if (resizeHandler) {
+        window.removeEventListener('resize', resizeHandler);
+      }
+      codeCleanup?.();
       ctx?.dispose();
     };
-  }, [shader, uniforms, animated, onError]);
+  }, [shader, uniforms, code, animated, onError]);
 
   if (supported === false) {
     return (
