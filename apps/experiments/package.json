@@ -7,14 +7,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:thumbnails": "tsx scripts/generate-thumbnails.ts"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "leva": "^0.9.35",
     "next": "^14.2.23",
+    "ralph-gpu": "workspace:*",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "ralph-gpu": "workspace:*"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

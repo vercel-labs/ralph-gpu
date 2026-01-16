@@ -154,60 +154,60 @@ uniforms.color.value = [0.2, 1.0, 0.5];`;
 export default function ConceptsPage() {
   return (
     <div className="px-4 py-8 lg:px-8 lg:py-12 max-w-4xl mx-auto">
-      <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
+      <h1 className="text-3xl md:text-4xl font-semibold text-gray-12 mb-4">
         Core Concepts
       </h1>
-      <p className="text-xl text-neutral-400 mb-12">
+      <p className="text-xl text-gray-10 mb-12">
         Understanding the key abstractions in ralph-gpu.
       </p>
 
       {/* Overview Diagram */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4">Overview</h2>
-        <p className="text-neutral-300 mb-6">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4">Overview</h2>
+        <p className="text-gray-11 mb-6">
           ralph-gpu provides a small set of composable primitives that cover most GPU graphics needs:
         </p>
         
-        <div className="p-6 rounded-lg bg-neutral-900 border border-neutral-800 mb-6">
+        <div className="p-6 rounded-lg bg-gray-1 border border-gray-4 mb-6">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-center">
-            <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-800">
-              <div className="text-blue-400 font-mono text-lg mb-2">ctx</div>
-              <div className="text-neutral-400 text-sm">GPU Context</div>
+            <div className="p-4 rounded-lg bg-gray-2 border border-gray-4">
+              <div className="text-blue-9 font-mono text-lg mb-2">ctx</div>
+              <div className="text-gray-10 text-sm">GPU Context</div>
             </div>
-            <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-800">
-              <div className="text-blue-400 font-mono text-lg mb-2">pass</div>
-              <div className="text-neutral-400 text-sm">Fullscreen Shader</div>
+            <div className="p-4 rounded-lg bg-gray-2 border border-gray-4">
+              <div className="text-blue-9 font-mono text-lg mb-2">pass</div>
+              <div className="text-gray-10 text-sm">Fullscreen Shader</div>
             </div>
-            <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-800">
-              <div className="text-blue-400 font-mono text-lg mb-2">material</div>
-              <div className="text-neutral-400 text-sm">Custom Vertex</div>
+            <div className="p-4 rounded-lg bg-gray-2 border border-gray-4">
+              <div className="text-blue-9 font-mono text-lg mb-2">material</div>
+              <div className="text-gray-10 text-sm">Custom Vertex</div>
             </div>
-            <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-800">
-              <div className="text-blue-400 font-mono text-lg mb-2">target</div>
-              <div className="text-neutral-400 text-sm">Render Target</div>
+            <div className="p-4 rounded-lg bg-gray-2 border border-gray-4">
+              <div className="text-blue-9 font-mono text-lg mb-2">target</div>
+              <div className="text-gray-10 text-sm">Render Target</div>
             </div>
-            <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-800">
-              <div className="text-blue-400 font-mono text-lg mb-2">pingPong</div>
-              <div className="text-neutral-400 text-sm">Double Buffer</div>
+            <div className="p-4 rounded-lg bg-gray-2 border border-gray-4">
+              <div className="text-blue-9 font-mono text-lg mb-2">pingPong</div>
+              <div className="text-gray-10 text-sm">Double Buffer</div>
             </div>
-            <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-800">
-              <div className="text-blue-400 font-mono text-lg mb-2">compute</div>
-              <div className="text-neutral-400 text-sm">GPU Compute</div>
+            <div className="p-4 rounded-lg bg-gray-2 border border-gray-4">
+              <div className="text-blue-9 font-mono text-lg mb-2">compute</div>
+              <div className="text-gray-10 text-sm">GPU Compute</div>
             </div>
-            <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-800">
-              <div className="text-blue-400 font-mono text-lg mb-2">storage</div>
-              <div className="text-neutral-400 text-sm">Storage Buffer</div>
+            <div className="p-4 rounded-lg bg-gray-2 border border-gray-4">
+              <div className="text-blue-9 font-mono text-lg mb-2">storage</div>
+              <div className="text-gray-10 text-sm">Storage Buffer</div>
             </div>
-            <div className="p-4 rounded-lg bg-neutral-950 border border-neutral-800">
-              <div className="text-blue-400 font-mono text-lg mb-2">sampler</div>
-              <div className="text-neutral-400 text-sm">Texture Sampler</div>
+            <div className="p-4 rounded-lg bg-gray-2 border border-gray-4">
+              <div className="text-blue-9 font-mono text-lg mb-2">sampler</div>
+              <div className="text-gray-10 text-sm">Texture Sampler</div>
             </div>
           </div>
         </div>
 
         {/* Data Flow Diagram */}
-        <div className="p-6 rounded-lg bg-neutral-900 border border-neutral-800">
-          <h3 className="font-semibold text-white mb-4">Typical Data Flow</h3>
+        <div className="p-6 rounded-lg bg-gray-1 border border-gray-4">
+          <h3 className="font-semibold text-gray-12 mb-4">Typical Data Flow</h3>
           <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-sm">
             <div className="px-4 py-2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
               Storage Buffer
@@ -230,30 +230,30 @@ export default function ConceptsPage() {
 
       {/* GPUContext */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="context">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="context">
           GPUContext (ctx)
         </h2>
-        <p className="text-neutral-300 mb-4">
+        <p className="text-gray-11 mb-4">
           The context is your entry point to ralph-gpu. It manages the WebGPU device, canvas, and provides factory methods for all other primitives.
         </p>
         <CodeBlock code={contextCode} language="typescript" />
-        <div className="mt-4 p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-          <h3 className="font-semibold text-white mb-2">Context Responsibilities</h3>
-          <ul className="text-neutral-400 space-y-1 text-sm">
+        <div className="mt-4 p-4 rounded-lg bg-gray-1 border border-gray-4">
+          <h3 className="font-semibold text-gray-12 mb-2">Context Responsibilities</h3>
+          <ul className="text-gray-10 space-y-1 text-sm">
             <li>• Manages the WebGPU device and canvas</li>
             <li>• Tracks time and updates the globals uniform</li>
             <li>• Creates shaders, targets, and compute pipelines</li>
-            <li>• Handles resource cleanup with <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">dispose()</code></li>
+            <li>• Handles resource cleanup with <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">dispose()</code></li>
           </ul>
         </div>
       </section>
 
       {/* Pass */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="pass">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="pass">
           Pass (Fullscreen Shader)
         </h2>
-        <p className="text-neutral-300 mb-4">
+        <p className="text-gray-11 mb-4">
           A <strong>pass</strong> is the simplest way to draw something — just write a fragment shader and it renders fullscreen. Perfect for backgrounds, post-processing, and visual effects.
         </p>
         <CodeBlock code={passCode} language="typescript" />
@@ -264,10 +264,10 @@ export default function ConceptsPage() {
 
       {/* Material */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="material">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="material">
           Material (Custom Geometry)
         </h2>
-        <p className="text-neutral-300 mb-4">
+        <p className="text-gray-11 mb-4">
           A <strong>material</strong> gives you full control over the vertex and fragment stages. Use it for particles, instanced geometry, or any custom rendering.
         </p>
         <CodeBlock code={materialCode} language="typescript" />
@@ -275,10 +275,10 @@ export default function ConceptsPage() {
 
       {/* Render Target */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="target">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="target">
           Render Target
         </h2>
-        <p className="text-neutral-300 mb-4">
+        <p className="text-gray-11 mb-4">
           A <strong>target</strong> is an offscreen texture you can render to. Use it for multi-pass effects, blur, reflections, or any technique that needs intermediate results.
         </p>
         <CodeBlock code={targetCode} language="typescript" />
@@ -286,16 +286,16 @@ export default function ConceptsPage() {
 
       {/* Ping-Pong */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="ping-pong">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="ping-pong">
           Ping-Pong Buffers
         </h2>
-        <p className="text-neutral-300 mb-4">
+        <p className="text-gray-11 mb-4">
           <strong>Ping-pong</strong> is a pair of render targets used for iterative effects. You read from one while writing to the other, then swap them. Essential for fluid simulation, blur, and any feedback effect.
         </p>
         <CodeBlock code={pingPongCode} language="typescript" />
-        <div className="mt-4 p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-          <h4 className="font-semibold text-white mb-2">Why ping-pong?</h4>
-          <p className="text-neutral-400 text-sm">
+        <div className="mt-4 p-4 rounded-lg bg-gray-1 border border-gray-4">
+          <h4 className="font-semibold text-gray-12 mb-2">Why ping-pong?</h4>
+          <p className="text-gray-10 text-sm">
             GPUs can&apos;t read from and write to the same texture in a single pass. Ping-pong gives you two textures that trade roles each frame: one is the source, one is the destination.
           </p>
         </div>
@@ -303,24 +303,24 @@ export default function ConceptsPage() {
 
       {/* Compute */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="compute">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="compute">
           Compute Shaders
         </h2>
-        <p className="text-neutral-300 mb-4">
+        <p className="text-gray-11 mb-4">
           <strong>Compute shaders</strong> run parallel computations on the GPU without rendering anything. Use them for physics, particle updates, or any data processing.
         </p>
         <CodeBlock code={computeCode} language="typescript" />
         <Callout type="warning">
-          <strong>Workgroup size:</strong> The <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">@workgroup_size(64)</code> annotation defines how many threads run together. When dispatching, divide your total count by the workgroup size.
+          <strong>Workgroup size:</strong> The <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">@workgroup_size(64)</code> annotation defines how many threads run together. When dispatching, divide your total count by the workgroup size.
         </Callout>
       </section>
 
       {/* Storage */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="storage">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="storage">
           Storage Buffers
         </h2>
-        <p className="text-neutral-300 mb-4">
+        <p className="text-gray-11 mb-4">
           <strong>Storage buffers</strong> hold large amounts of data on the GPU. Unlike uniforms (which are limited in size), storage buffers can hold millions of items.
         </p>
         <CodeBlock code={storageCode} language="typescript" />
@@ -328,94 +328,94 @@ export default function ConceptsPage() {
 
       {/* Auto-Injected Globals */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="globals">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="globals">
           Auto-Injected Globals
         </h2>
-        <p className="text-neutral-300 mb-4">
-          Every shader automatically has access to the <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-sm">globals</code> uniform. You don&apos;t need to declare it — ralph-gpu injects it for you.
+        <p className="text-gray-11 mb-4">
+          Every shader automatically has access to the <code className="bg-gray-2 px-1.5 py-0.5 rounded text-sm">globals</code> uniform. You don&apos;t need to declare it — ralph-gpu injects it for you.
         </p>
         <CodeBlock code={globalsCode} language="wgsl" />
       </section>
 
       {/* Custom Uniforms */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="uniforms">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="uniforms">
           Custom Uniforms
         </h2>
-        <p className="text-neutral-300 mb-4">
-          Pass custom data to your shaders using the <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-sm">{`{ value: X }`}</code> pattern. Changes to <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-sm">.value</code> are automatically uploaded to the GPU.
+        <p className="text-gray-11 mb-4">
+          Pass custom data to your shaders using the <code className="bg-gray-2 px-1.5 py-0.5 rounded text-sm">{`{ value: X }`}</code> pattern. Changes to <code className="bg-gray-2 px-1.5 py-0.5 rounded text-sm">.value</code> are automatically uploaded to the GPU.
         </p>
         <CodeBlock code={uniformsCode} language="typescript" />
       </section>
 
       {/* Important Notes */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="important-notes">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="important-notes">
           Important Notes
         </h2>
-        <p className="text-neutral-300 mb-6">
+        <p className="text-gray-11 mb-6">
           A few things to keep in mind when working with ralph-gpu:
         </p>
 
         {/* Reading Pixels */}
-        <div className="mb-6 p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-          <h3 className="font-semibold text-white mb-2">Reading Pixels from Screen</h3>
-          <p className="text-neutral-400 text-sm mb-3">
+        <div className="mb-6 p-4 rounded-lg bg-gray-1 border border-gray-4">
+          <h3 className="font-semibold text-gray-12 mb-2">Reading Pixels from Screen</h3>
+          <p className="text-gray-10 text-sm mb-3">
             <strong className="text-orange-400">You cannot read pixels from the screen</strong> (swap chain texture). 
             For pixel readback, render to a RenderTarget first:
           </p>
-          <div className="text-sm font-mono bg-neutral-950 p-3 rounded border border-neutral-800">
+          <div className="text-sm font-mono bg-gray-2 p-3 rounded border border-gray-4">
             <div className="text-red-400">// ❌ Won&apos;t work - screen can&apos;t be read</div>
-            <div className="text-neutral-400">ctx.setTarget(null);</div>
-            <div className="text-neutral-400">await ctx.readPixels(); // Returns zeros!</div>
+            <div className="text-gray-10">ctx.setTarget(null);</div>
+            <div className="text-gray-10">await ctx.readPixels(); // Returns zeros!</div>
             <div className="mt-2 text-green-400">// ✅ Works - render to a RenderTarget</div>
-            <div className="text-neutral-400">const target = ctx.target(256, 256);</div>
-            <div className="text-neutral-400">ctx.setTarget(target);</div>
-            <div className="text-neutral-400">await target.readPixels(); // Actual data!</div>
+            <div className="text-gray-10">const target = ctx.target(256, 256);</div>
+            <div className="text-gray-10">ctx.setTarget(target);</div>
+            <div className="text-gray-10">await target.readPixels(); // Actual data!</div>
           </div>
         </div>
 
         {/* Globals Binding */}
-        <div className="mb-6 p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-          <h3 className="font-semibold text-white mb-2">Globals Binding</h3>
-          <p className="text-neutral-400 text-sm">
-            The <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">globals</code> struct is auto-injected at <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">@group(0)</code>. 
-            User uniforms are always at <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">@group(1)</code>. 
-            If your shader doesn&apos;t use <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">globals.time</code>, <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">globals.resolution</code>, etc., 
+        <div className="mb-6 p-4 rounded-lg bg-gray-1 border border-gray-4">
+          <h3 className="font-semibold text-gray-12 mb-2">Globals Binding</h3>
+          <p className="text-gray-10 text-sm">
+            The <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">globals</code> struct is auto-injected at <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">@group(0)</code>. 
+            User uniforms are always at <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">@group(1)</code>. 
+            If your shader doesn&apos;t use <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">globals.time</code>, <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">globals.resolution</code>, etc., 
             the WGSL optimizer may remove unused bindings internally — the library handles this automatically.
           </p>
         </div>
 
         {/* Particles Helper */}
-        <div className="mb-6 p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-          <h3 className="font-semibold text-white mb-2">Particles Helper Functions</h3>
-          <p className="text-neutral-400 text-sm mb-3">
-            When using <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">ctx.particles()</code>, these WGSL functions are <strong className="text-blue-400">auto-injected</strong>:
+        <div className="mb-6 p-4 rounded-lg bg-gray-1 border border-gray-4">
+          <h3 className="font-semibold text-gray-12 mb-2">Particles Helper Functions</h3>
+          <p className="text-gray-10 text-sm mb-3">
+            When using <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">ctx.particles()</code>, these WGSL functions are <strong className="text-blue-9">auto-injected</strong>:
           </p>
-          <div className="text-sm font-mono bg-neutral-950 p-3 rounded border border-neutral-800 mb-3">
-            <div className="text-neutral-400">fn quadOffset(vid: u32) -&gt; vec2f  // -0.5 to 0.5</div>
-            <div className="text-neutral-400">fn quadUV(vid: u32) -&gt; vec2f      // 0 to 1</div>
+          <div className="text-sm font-mono bg-gray-2 p-3 rounded border border-gray-4 mb-3">
+            <div className="text-gray-10">fn quadOffset(vid: u32) -&gt; vec2f  // -0.5 to 0.5</div>
+            <div className="text-gray-10">fn quadUV(vid: u32) -&gt; vec2f      // 0 to 1</div>
           </div>
-          <p className="text-neutral-400 text-sm">
+          <p className="text-gray-10 text-sm">
             <strong className="text-orange-400">Do NOT redefine these</strong> in your shader — use them directly. Redefining will cause duplicate function errors.
           </p>
         </div>
 
         {/* Texture Formats */}
-        <div className="p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-          <h3 className="font-semibold text-white mb-2">Texture Formats</h3>
-          <p className="text-neutral-400 text-sm mb-3">
+        <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+          <h3 className="font-semibold text-gray-12 mb-2">Texture Formats</h3>
+          <p className="text-gray-10 text-sm mb-3">
             Default formats differ between targets:
           </p>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-700">
-                <th className="text-left py-2 text-neutral-300">Target</th>
-                <th className="text-left py-2 text-neutral-300">Default Format</th>
+              <tr className="border-b border-gray-5">
+                <th className="text-left py-2 text-gray-11">Target</th>
+                <th className="text-left py-2 text-gray-11">Default Format</th>
               </tr>
             </thead>
-            <tbody className="text-neutral-400">
-              <tr className="border-b border-neutral-800">
+            <tbody className="text-gray-10">
+              <tr className="border-b border-gray-4">
                 <td className="py-2">Canvas (screen)</td>
                 <td className="py-2 font-mono text-xs">bgra8unorm</td>
               </tr>
@@ -430,23 +430,23 @@ export default function ConceptsPage() {
 
       {/* Next Steps */}
       <section>
-        <h2 className="text-2xl font-bold text-white mb-4">Next Steps</h2>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4">Next Steps</h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <a
             href="/api"
-            className="p-4 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-blue-500/50 transition-colors"
+            className="p-4 rounded-lg bg-gray-1 border border-gray-4 hover:border-gray-5 transition-colors"
           >
-            <h3 className="font-semibold text-white mb-2">API Reference →</h3>
-            <p className="text-neutral-400 text-sm">
+            <h3 className="font-semibold text-gray-12 mb-2">API Reference →</h3>
+            <p className="text-gray-10 text-sm">
               Complete documentation of all methods and properties.
             </p>
           </a>
           <a
             href="/examples"
-            className="p-4 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-blue-500/50 transition-colors"
+            className="p-4 rounded-lg bg-gray-1 border border-gray-4 hover:border-gray-5 transition-colors"
           >
-            <h3 className="font-semibold text-white mb-2">Examples →</h3>
-            <p className="text-neutral-400 text-sm">
+            <h3 className="font-semibold text-gray-12 mb-2">Examples →</h3>
+            <p className="text-gray-10 text-sm">
               Interactive demos with live code.
             </p>
           </a>

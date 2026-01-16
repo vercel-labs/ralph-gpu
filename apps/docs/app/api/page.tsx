@@ -510,77 +510,77 @@ const uniformTypesCode = `// Scalar → f32
 export default function ApiPage() {
   return (
     <div className="px-4 py-8 lg:px-8 lg:py-12 max-w-4xl mx-auto">
-      <h1 className="text-3xl md:text-4xl font-bold text-gray-100 mb-4">
+      <h1 className="text-3xl md:text-4xl font-semibold text-gray-12 mb-4">
         API Reference
       </h1>
-      <p className="text-xl text-gray-400 mb-8">
+      <p className="text-xl text-gray-10 mb-8">
         Complete documentation of all ralph-gpu methods and properties.
       </p>
 
       {/* Table of Contents */}
-      <nav className="mb-12 p-4 rounded-lg bg-gray-900 border border-gray-800">
-        <h2 className="text-lg font-semibold text-gray-100 mb-3">Contents</h2>
+      <nav className="mb-12 p-4 rounded-lg bg-gray-1 border border-gray-4">
+        <h2 className="text-lg font-semibold text-gray-12 mb-3">Contents</h2>
         <ul className="grid sm:grid-cols-2 gap-2 text-sm">
-          <li><a href="#module" className="text-primary-400 hover:text-primary-300">gpu Module</a></li>
-          <li><a href="#context" className="text-primary-400 hover:text-primary-300">GPUContext</a></li>
-          <li><a href="#pass" className="text-primary-400 hover:text-primary-300">Pass</a></li>
-          <li><a href="#material" className="text-primary-400 hover:text-primary-300">Material</a></li>
-          <li><a href="#compute" className="text-primary-400 hover:text-primary-300">ComputeShader</a></li>
-          <li><a href="#target" className="text-primary-400 hover:text-primary-300">RenderTarget</a></li>
-          <li><a href="#pingpong" className="text-primary-400 hover:text-primary-300">PingPongTarget</a></li>
-          <li><a href="#mrt" className="text-primary-400 hover:text-primary-300">MultiRenderTarget</a></li>
-          <li><a href="#storage" className="text-primary-400 hover:text-primary-300">StorageBuffer</a></li>
-          <li><a href="#particles" className="text-primary-400 hover:text-primary-300">Particles</a></li>
-          <li><a href="#sampler" className="text-primary-400 hover:text-primary-300">Sampler</a></li>
-          <li><a href="#blend" className="text-primary-400 hover:text-primary-300">Blend Modes</a></li>
-          <li><a href="#globals" className="text-primary-400 hover:text-primary-300">Auto-Injected Globals</a></li>
-          <li><a href="#uniforms" className="text-primary-400 hover:text-primary-300">Uniform Types</a></li>
-          <li><a href="#textures" className="text-primary-400 hover:text-primary-300">Texture Bindings</a></li>
-          <li><a href="#errors" className="text-primary-400 hover:text-primary-300">Errors</a></li>
+          <li><a href="#module" className="text-blue-9 hover:text-blue-10">gpu Module</a></li>
+          <li><a href="#context" className="text-blue-9 hover:text-blue-10">GPUContext</a></li>
+          <li><a href="#pass" className="text-blue-9 hover:text-blue-10">Pass</a></li>
+          <li><a href="#material" className="text-blue-9 hover:text-blue-10">Material</a></li>
+          <li><a href="#compute" className="text-blue-9 hover:text-blue-10">ComputeShader</a></li>
+          <li><a href="#target" className="text-blue-9 hover:text-blue-10">RenderTarget</a></li>
+          <li><a href="#pingpong" className="text-blue-9 hover:text-blue-10">PingPongTarget</a></li>
+          <li><a href="#mrt" className="text-blue-9 hover:text-blue-10">MultiRenderTarget</a></li>
+          <li><a href="#storage" className="text-blue-9 hover:text-blue-10">StorageBuffer</a></li>
+          <li><a href="#particles" className="text-blue-9 hover:text-blue-10">Particles</a></li>
+          <li><a href="#sampler" className="text-blue-9 hover:text-blue-10">Sampler</a></li>
+          <li><a href="#blend" className="text-blue-9 hover:text-blue-10">Blend Modes</a></li>
+          <li><a href="#globals" className="text-blue-9 hover:text-blue-10">Auto-Injected Globals</a></li>
+          <li><a href="#uniforms" className="text-blue-9 hover:text-blue-10">Uniform Types</a></li>
+          <li><a href="#textures" className="text-blue-9 hover:text-blue-10">Texture Bindings</a></li>
+          <li><a href="#errors" className="text-blue-9 hover:text-blue-10">Errors</a></li>
         </ul>
       </nav>
 
       {/* gpu Module */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center gap-3" id="module">
-          <span className="px-2 py-1 bg-primary-500/20 rounded text-primary-400 font-mono text-sm">module</span>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4 flex items-center gap-3" id="module">
+          <span className="px-2 py-1 bg-primary-500/20 rounded text-blue-9 font-mono text-sm">module</span>
           gpu
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           The main entry point for initializing WebGPU.
         </p>
         <CodeBlock code={moduleApiCode} language="typescript" />
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Init Options</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Init Options</h3>
         <CodeBlock code={initOptionsCode} language="typescript" />
       </section>
 
       {/* GPUContext */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center gap-3" id="context">
-          <span className="px-2 py-1 bg-primary-500/20 rounded text-primary-400 font-mono text-sm">class</span>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4 flex items-center gap-3" id="context">
+          <span className="px-2 py-1 bg-primary-500/20 rounded text-blue-9 font-mono text-sm">class</span>
           GPUContext
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           The main context object returned by <code>gpu.init()</code>. Creates and manages all GPU resources.
         </p>
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Factory Methods</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Factory Methods</h3>
         <CodeBlock code={contextCreationCode} language="typescript" />
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">State Management</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">State Management</h3>
         <CodeBlock code={contextStateCode} language="typescript" />
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Properties</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Properties</h3>
         <CodeBlock code={contextPropertiesCode} language="typescript" />
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Time Control</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Time Control</h3>
         <CodeBlock code={timeControlCode} language="typescript" />
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Cleanup</h3>
-        <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-          <code className="text-primary-400">ctx.dispose()</code>
-          <p className="text-gray-400 text-sm mt-2">
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Cleanup</h3>
+        <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+          <code className="text-blue-9">ctx.dispose()</code>
+          <p className="text-gray-9 text-sm mt-2">
             Releases all GPU resources created by this context. Call this when unmounting a component or destroying the canvas.
           </p>
         </div>
@@ -588,48 +588,48 @@ export default function ApiPage() {
 
       {/* Pass */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center gap-3" id="pass">
-          <span className="px-2 py-1 bg-primary-500/20 rounded text-primary-400 font-mono text-sm">class</span>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4 flex items-center gap-3" id="pass">
+          <span className="px-2 py-1 bg-primary-500/20 rounded text-blue-9 font-mono text-sm">class</span>
           Pass
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           A fullscreen shader pass. Renders a fragment shader to the entire render target using an internal quad.
         </p>
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Creation Options</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Creation Options</h3>
         <CodeBlock code={passOptionsCode} language="typescript" />
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Methods & Properties</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Methods & Properties</h3>
         <CodeBlock code={passMethodsCode} language="typescript" />
       </section>
 
       {/* Material */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center gap-3" id="material">
-          <span className="px-2 py-1 bg-primary-500/20 rounded text-primary-400 font-mono text-sm">class</span>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4 flex items-center gap-3" id="material">
+          <span className="px-2 py-1 bg-primary-500/20 rounded text-blue-9 font-mono text-sm">class</span>
           Material
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           A shader with custom vertex code. Use for particles, instanced geometry, or any non-fullscreen rendering.
         </p>
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Creation Options</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Creation Options</h3>
         <CodeBlock code={materialOptionsCode} language="typescript" />
 
-        <div className="mt-4 p-4 rounded-lg bg-gray-900 border border-gray-800">
-          <p className="text-gray-400 text-sm">
-            <strong className="text-gray-100">Note:</strong> Material has the same methods as Pass (<code>draw()</code>, <code>storage()</code>, <code>dispose()</code>, etc.)
+        <div className="mt-4 p-4 rounded-lg bg-gray-1 border border-gray-4">
+          <p className="text-gray-9 text-sm">
+            <strong className="text-gray-12">Note:</strong> Material has the same methods as Pass (<code>draw()</code>, <code>storage()</code>, <code>dispose()</code>, etc.)
           </p>
         </div>
       </section>
 
       {/* ComputeShader */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center gap-3" id="compute">
-          <span className="px-2 py-1 bg-primary-500/20 rounded text-primary-400 font-mono text-sm">class</span>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4 flex items-center gap-3" id="compute">
+          <span className="px-2 py-1 bg-primary-500/20 rounded text-blue-9 font-mono text-sm">class</span>
           ComputeShader
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           A compute shader for GPU-parallel computation. Supports storage buffers, texture sampling, and storage texture writes.
         </p>
         <CodeBlock code={computeCode} language="typescript" />
@@ -646,24 +646,24 @@ export default function ApiPage() {
 
       {/* RenderTarget */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center gap-3" id="target">
-          <span className="px-2 py-1 bg-primary-500/20 rounded text-primary-400 font-mono text-sm">class</span>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4 flex items-center gap-3" id="target">
+          <span className="px-2 py-1 bg-primary-500/20 rounded text-blue-9 font-mono text-sm">class</span>
           RenderTarget
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           An offscreen texture that can be rendered to and sampled from.
         </p>
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Creation Options</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Creation Options</h3>
         <CodeBlock code={targetOptionsCode} language="typescript" />
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Properties & Methods</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Properties & Methods</h3>
         <CodeBlock code={targetPropertiesCode} language="typescript" />
 
         <div className="mt-4 grid sm:grid-cols-2 gap-4">
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-semibold text-gray-100 mb-2">Formats</h4>
-            <ul className="text-gray-400 text-sm space-y-1">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-semibold text-gray-12 mb-2">Formats</h4>
+            <ul className="text-gray-9 text-sm space-y-1">
               <li><code>rgba8unorm</code> — Standard 8-bit color</li>
               <li><code>rgba16float</code> — HDR, negative values</li>
               <li><code>r16float</code> — Single channel float</li>
@@ -671,17 +671,17 @@ export default function ApiPage() {
               <li><code>r32float</code> — High precision single channel</li>
             </ul>
           </div>
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-semibold text-gray-100 mb-2">Usage Modes</h4>
-            <ul className="text-gray-400 text-sm space-y-1">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-semibold text-gray-12 mb-2">Usage Modes</h4>
+            <ul className="text-gray-9 text-sm space-y-1">
               <li><code>render</code> — Render to & sample (default)</li>
               <li><code>storage</code> — Compute shader writes</li>
               <li><code>both</code> — All operations</li>
             </ul>
           </div>
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800 sm:col-span-2">
-            <h4 className="font-semibold text-gray-100 mb-2">Read Pixels</h4>
-            <p className="text-gray-400 text-sm">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4 sm:col-span-2">
+            <h4 className="font-semibold text-gray-12 mb-2">Read Pixels</h4>
+            <p className="text-gray-9 text-sm">
               Returns <code>Uint8Array</code> for 8-bit formats, <code>Float32Array</code> for float formats. This is a GPU→CPU transfer and may be slow.
             </p>
           </div>
@@ -690,18 +690,18 @@ export default function ApiPage() {
 
       {/* PingPongTarget */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center gap-3" id="pingpong">
-          <span className="px-2 py-1 bg-primary-500/20 rounded text-primary-400 font-mono text-sm">class</span>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4 flex items-center gap-3" id="pingpong">
+          <span className="px-2 py-1 bg-primary-500/20 rounded text-blue-9 font-mono text-sm">class</span>
           PingPongTarget
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           A pair of render targets for iterative effects. Read from one, write to the other, then swap.
         </p>
         <CodeBlock code={pingPongCode} language="typescript" />
 
-        <div className="mt-4 p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-semibold text-gray-100 mb-2">Usage Pattern</h4>
-            <ol className="text-gray-400 text-sm space-y-1 list-decimal list-inside">
+        <div className="mt-4 p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-semibold text-gray-12 mb-2">Usage Pattern</h4>
+            <ol className="text-gray-9 text-sm space-y-1 list-decimal list-inside">
               <li>Read from <code>pingPong.read.texture</code> in your shader</li>
               <li>Set target to <code>pingPong.write</code></li>
               <li>Draw your pass</li>
@@ -713,19 +713,19 @@ export default function ApiPage() {
 
       {/* MultiRenderTarget */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center gap-3" id="mrt">
-          <span className="px-2 py-1 bg-primary-500/20 rounded text-primary-400 font-mono text-sm">class</span>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4 flex items-center gap-3" id="mrt">
+          <span className="px-2 py-1 bg-primary-500/20 rounded text-blue-9 font-mono text-sm">class</span>
           MultiRenderTarget
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           Multiple render targets (MRT) for deferred rendering, G-buffers, or any technique requiring simultaneous output to multiple textures.
         </p>
         <CodeBlock code={mrtCode} language="typescript" />
 
         <div className="mt-4 space-y-4">
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-semibold text-gray-100 mb-2">Common Use Cases</h4>
-            <ul className="text-gray-400 text-sm space-y-1">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-semibold text-gray-12 mb-2">Common Use Cases</h4>
+            <ul className="text-gray-9 text-sm space-y-1">
               <li>• <strong>Deferred rendering</strong> — Store albedo, normals, depth in separate buffers</li>
               <li>• <strong>G-buffer</strong> — Multiple material properties for post-processing</li>
               <li>• <strong>Multi-output effects</strong> — Generate multiple textures in one pass</li>
@@ -739,45 +739,45 @@ export default function ApiPage() {
 
       {/* StorageBuffer */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center gap-3" id="storage">
-          <span className="px-2 py-1 bg-primary-500/20 rounded text-primary-400 font-mono text-sm">class</span>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4 flex items-center gap-3" id="storage">
+          <span className="px-2 py-1 bg-primary-500/20 rounded text-blue-9 font-mono text-sm">class</span>
           StorageBuffer
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           A GPU buffer for large data sets. Used with compute shaders and materials for particles, simulations, etc.
         </p>
         <CodeBlock code={storageCode} language="typescript" />
 
-        <div className="mt-4 p-4 rounded-lg bg-gray-900 border border-gray-800">
-          <p className="text-gray-400 text-sm">
-            <strong className="text-gray-100">Size calculation:</strong> Multiply the number of items by bytes per item. A <code>vec4f</code> is 16 bytes (4 floats × 4 bytes). For 1000 particles with position and velocity (2 × vec2f), that&apos;s <code>1000 × 16 = 16000</code> bytes.
+        <div className="mt-4 p-4 rounded-lg bg-gray-1 border border-gray-4">
+          <p className="text-gray-9 text-sm">
+            <strong className="text-gray-12">Size calculation:</strong> Multiply the number of items by bytes per item. A <code>vec4f</code> is 16 bytes (4 floats × 4 bytes). For 1000 particles with position and velocity (2 × vec2f), that&apos;s <code>1000 × 16 = 16000</code> bytes.
           </p>
         </div>
       </section>
 
       {/* Particles */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center gap-3" id="particles">
-          <span className="px-2 py-1 bg-primary-500/20 rounded text-primary-400 font-mono text-sm">class</span>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4 flex items-center gap-3" id="particles">
+          <span className="px-2 py-1 bg-primary-500/20 rounded text-blue-9 font-mono text-sm">class</span>
           Particles
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           A helper for instanced quad rendering with full shader control. User provides vertex and fragment shaders — 
           no built-in colors, shapes, or assumptions about data layout.
         </p>
         <CodeBlock code={particlesCode} language="typescript" />
 
         <div className="mt-4 space-y-4">
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-semibold text-gray-100 mb-2">Built-in WGSL Helpers</h4>
-            <ul className="text-gray-400 text-sm space-y-1">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-semibold text-gray-12 mb-2">Built-in WGSL Helpers</h4>
+            <ul className="text-gray-9 text-sm space-y-1">
               <li>• <code>quadOffset(vid: u32) → vec2f</code> — Quad corner position (-0.5 to 0.5)</li>
               <li>• <code>quadUV(vid: u32) → vec2f</code> — UV coordinates (0 to 1)</li>
             </ul>
           </div>
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-semibold text-gray-100 mb-2">What You Control</h4>
-            <ul className="text-gray-400 text-sm space-y-1">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-semibold text-gray-12 mb-2">What You Control</h4>
+            <ul className="text-gray-9 text-sm space-y-1">
               <li>• <strong>Particle struct layout</strong> — Any data you need (position, size, color, age, etc.)</li>
               <li>• <strong>Vertex shader</strong> — Position, size, rotation, billboarding, etc.</li>
               <li>• <strong>Fragment shader</strong> — Shape via SDF, color, effects (squares, circles, triangles)</li>
@@ -792,25 +792,25 @@ export default function ApiPage() {
 
       {/* Sampler */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4 flex items-center gap-3" id="sampler">
-          <span className="px-2 py-1 bg-primary-500/20 rounded text-primary-400 font-mono text-sm">class</span>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4 flex items-center gap-3" id="sampler">
+          <span className="px-2 py-1 bg-primary-500/20 rounded text-blue-9 font-mono text-sm">class</span>
           Sampler
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           A texture sampler with explicit control over filtering and wrapping modes. Samplers can be reused across multiple textures and shaders for consistency and performance.
         </p>
         <CodeBlock code={samplerCode} language="typescript" />
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Sampler Options</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Sampler Options</h3>
         <CodeBlock code={samplerOptionsCode} language="typescript" />
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Properties & Methods</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Properties & Methods</h3>
         <CodeBlock code={samplerPropertiesCode} language="typescript" />
 
         <div className="mt-4 space-y-4">
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-semibold text-gray-100 mb-2">Common Patterns</h4>
-            <ul className="text-gray-400 text-sm space-y-2">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-semibold text-gray-12 mb-2">Common Patterns</h4>
+            <ul className="text-gray-9 text-sm space-y-2">
               <li>• <strong>Linear Clamp</strong> — Blur, postprocessing, smooth sampling at edges</li>
               <li>• <strong>Nearest Repeat</strong> — Pixel art, tiling textures, retro effects</li>
               <li>• <strong>Mirror Repeat</strong> — Seamless tiling without visible seams</li>
@@ -824,79 +824,79 @@ export default function ApiPage() {
 
       {/* Blend Modes */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4" id="blend">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="blend">
           Blend Modes
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           Control how colors are combined when rendering.
         </p>
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Presets & Custom</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Presets & Custom</h3>
         <CodeBlock code={blendModesCode} language="typescript" />
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Blend Factors & Operations</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Blend Factors & Operations</h3>
         <CodeBlock code={blendFactorsCode} language="typescript" />
 
         <div className="mt-4 grid sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800 text-center">
-            <h4 className="font-semibold text-gray-100 mb-2">alpha</h4>
-            <p className="text-gray-400 text-xs">Standard transparency</p>
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4 text-center">
+            <h4 className="font-semibold text-gray-12 mb-2">alpha</h4>
+            <p className="text-gray-9 text-xs">Standard transparency</p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800 text-center">
-            <h4 className="font-semibold text-gray-100 mb-2">additive</h4>
-            <p className="text-gray-400 text-xs">Glow, fire, bright effects</p>
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4 text-center">
+            <h4 className="font-semibold text-gray-12 mb-2">additive</h4>
+            <p className="text-gray-9 text-xs">Glow, fire, bright effects</p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800 text-center">
-            <h4 className="font-semibold text-gray-100 mb-2">multiply</h4>
-            <p className="text-gray-400 text-xs">Darken, shadows</p>
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4 text-center">
+            <h4 className="font-semibold text-gray-12 mb-2">multiply</h4>
+            <p className="text-gray-9 text-xs">Darken, shadows</p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800 text-center">
-            <h4 className="font-semibold text-gray-100 mb-2">screen</h4>
-            <p className="text-gray-400 text-xs">Lighten, highlights</p>
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4 text-center">
+            <h4 className="font-semibold text-gray-12 mb-2">screen</h4>
+            <p className="text-gray-9 text-xs">Lighten, highlights</p>
           </div>
         </div>
       </section>
 
       {/* Auto-Injected Globals */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4" id="globals">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="globals">
           Auto-Injected Globals
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           Every shader automatically has access to the <code>globals</code> uniform — no declaration needed.
         </p>
         <CodeBlock code={globalsStructCode} language="wgsl" />
 
         <div className="mt-4 grid sm:grid-cols-2 gap-4">
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-mono text-primary-400 mb-2">resolution</h4>
-            <p className="text-gray-400 text-sm">Width and height of current render target in pixels.</p>
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-mono text-blue-9 mb-2">resolution</h4>
+            <p className="text-gray-9 text-sm">Width and height of current render target in pixels.</p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-mono text-primary-400 mb-2">time</h4>
-            <p className="text-gray-400 text-sm">Seconds since init. Affected by <code>timeScale</code> and <code>paused</code>.</p>
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-mono text-blue-9 mb-2">time</h4>
+            <p className="text-gray-9 text-sm">Seconds since init. Affected by <code>timeScale</code> and <code>paused</code>.</p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-mono text-primary-400 mb-2">deltaTime</h4>
-            <p className="text-gray-400 text-sm">Seconds since last frame. Use for frame-rate independent animation.</p>
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-mono text-blue-9 mb-2">deltaTime</h4>
+            <p className="text-gray-9 text-sm">Seconds since last frame. Use for frame-rate independent animation.</p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-mono text-primary-400 mb-2">frame</h4>
-            <p className="text-gray-400 text-sm">Integer frame count. Useful for alternating effects or debugging.</p>
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-mono text-blue-9 mb-2">frame</h4>
+            <p className="text-gray-9 text-sm">Integer frame count. Useful for alternating effects or debugging.</p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800 sm:col-span-2">
-            <h4 className="font-mono text-primary-400 mb-2">aspect</h4>
-            <p className="text-gray-400 text-sm">Resolution width divided by height. Use to correct for non-square pixels.</p>
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4 sm:col-span-2">
+            <h4 className="font-mono text-blue-9 mb-2">aspect</h4>
+            <p className="text-gray-9 text-sm">Resolution width divided by height. Use to correct for non-square pixels.</p>
           </div>
         </div>
       </section>
 
       {/* Uniform Types */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4" id="uniforms">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="uniforms">
           Uniform Types
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           JavaScript values are automatically converted to WGSL types.
         </p>
         <CodeBlock code={uniformTypesCode} language="typescript" />
@@ -908,23 +908,23 @@ export default function ApiPage() {
 
       {/* Texture Bindings */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4" id="textures">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="textures">
           Texture Bindings
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           ralph-gpu supports flexible ways to pass textures and samplers to shaders.
         </p>
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Binding Patterns</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Binding Patterns</h3>
         <CodeBlock code={textureBindingsCode} language="typescript" />
 
         <div className="mt-4 space-y-4">
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-semibold text-gray-100 mb-2">Sampler Naming Convention</h4>
-            <p className="text-gray-400 text-sm mb-2">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-semibold text-gray-12 mb-2">Sampler Naming Convention</h4>
+            <p className="text-gray-9 text-sm mb-2">
               The system automatically matches samplers to textures:
             </p>
-            <ul className="text-gray-400 text-sm space-y-1">
+            <ul className="text-gray-9 text-sm space-y-1">
               <li>• <code>myTexture</code> → looks for <code>myTextureSampler</code></li>
               <li>• <code>inputTex</code> → looks for <code>inputSampler</code> or <code>inputTexSampler</code></li>
               <li>• <code>someTexture</code> → looks for <code>someSampler</code> or <code>someTextureSampler</code></li>
@@ -932,22 +932,22 @@ export default function ApiPage() {
           </div>
         </div>
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-8 mb-3">Compute Shaders with Textures</h3>
-        <p className="text-gray-300 mb-4">
+        <h3 className="text-lg font-semibold text-gray-12 mt-8 mb-3">Compute Shaders with Textures</h3>
+        <p className="text-gray-11 mb-4">
           Compute shaders can now sample from textures for advanced GPU-accelerated effects.
         </p>
         <CodeBlock code={computeTexturesCode} language="typescript" />
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-8 mb-3">Storage Textures (Write Operations)</h3>
-        <p className="text-gray-300 mb-4">
+        <h3 className="text-lg font-semibold text-gray-12 mt-8 mb-3">Storage Textures (Write Operations)</h3>
+        <p className="text-gray-11 mb-4">
           Use storage textures to write directly to textures from compute shaders.
         </p>
         <CodeBlock code={storageTexturesCode} language="typescript" />
 
         <div className="mt-4 space-y-4">
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-semibold text-gray-100 mb-2">Usage Modes</h4>
-            <ul className="text-gray-400 text-sm space-y-1">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-semibold text-gray-12 mb-2">Usage Modes</h4>
+            <ul className="text-gray-9 text-sm space-y-1">
               <li>• <code>"render"</code> (default) — For rendering and sampling</li>
               <li>• <code>"storage"</code> — For compute shader write operations</li>
               <li>• <code>"both"</code> — For both rendering and storage operations</li>
@@ -961,30 +961,30 @@ export default function ApiPage() {
 
       {/* Errors */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4" id="errors">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="errors">
           Error Types
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           ralph-gpu exports typed errors for better error handling.
         </p>
         <CodeBlock code={errorsCode} language="typescript" />
 
         <div className="mt-4 space-y-4">
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
             <h4 className="font-semibold text-red-400 mb-2">WebGPUNotSupportedError</h4>
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-9 text-sm">
               Thrown when <code>navigator.gpu</code> is undefined. The browser doesn&apos;t support WebGPU. Show a fallback UI.
             </p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
             <h4 className="font-semibold text-red-400 mb-2">DeviceCreationError</h4>
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-9 text-sm">
               Thrown when the GPU device couldn&apos;t be created. May happen with unsupported hardware or driver issues.
             </p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
             <h4 className="font-semibold text-red-400 mb-2">ShaderCompileError</h4>
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-9 text-sm">
               Thrown when WGSL code has syntax errors. Includes <code>line</code>, <code>column</code>, and <code>message</code> properties for debugging.
             </p>
           </div>
@@ -993,23 +993,23 @@ export default function ApiPage() {
 
       {/* Next Steps */}
       <section>
-        <h2 className="text-2xl font-bold text-gray-100 mb-4">Next Steps</h2>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4">Next Steps</h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <a
             href="/examples"
-            className="p-4 rounded-lg bg-gray-900 border border-gray-800 hover:border-primary-500/50 transition-colors"
+            className="p-4 rounded-lg bg-gray-1 border border-gray-4 hover:border-gray-5 transition-colors"
           >
-            <h3 className="font-semibold text-gray-100 mb-2">Examples →</h3>
-            <p className="text-gray-400 text-sm">
+            <h3 className="font-semibold text-gray-12 mb-2">Examples →</h3>
+            <p className="text-gray-9 text-sm">
               See the API in action with live demos.
             </p>
           </a>
           <a
             href="/concepts"
-            className="p-4 rounded-lg bg-gray-900 border border-gray-800 hover:border-primary-500/50 transition-colors"
+            className="p-4 rounded-lg bg-gray-1 border border-gray-4 hover:border-gray-5 transition-colors"
           >
-            <h3 className="font-semibold text-gray-100 mb-2">Core Concepts →</h3>
-            <p className="text-gray-400 text-sm">
+            <h3 className="font-semibold text-gray-12 mb-2">Core Concepts →</h3>
+            <p className="text-gray-9 text-sm">
               Understand the architecture and patterns.
             </p>
           </a>

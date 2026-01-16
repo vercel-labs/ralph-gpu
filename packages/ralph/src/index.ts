@@ -35,6 +35,7 @@ export {
   gitCheckpointRule,
   debugRule,
   completionRule,
+  processManagementRule,
 } from "./rules";
 
 // Types

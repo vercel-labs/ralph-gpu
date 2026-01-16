@@ -107,23 +107,23 @@ export default ShaderCanvas;`;
 export default function GettingStartedPage() {
   return (
     <div className="px-4 py-8 lg:px-8 lg:py-12 max-w-4xl mx-auto">
-      <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
+      <h1 className="text-3xl md:text-4xl font-bold text-gray-12 mb-4">
         Getting Started
       </h1>
-      <p className="text-xl text-neutral-400 mb-12">
+      <p className="text-xl text-gray-10 mb-12">
         Get up and running with ralph-gpu in minutes.
       </p>
 
       {/* Installation */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="installation">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="installation">
           Installation
         </h2>
-        <p className="text-neutral-300 mb-4">
+        <p className="text-gray-11 mb-4">
           Install ralph-gpu using your preferred package manager:
         </p>
         <CodeBlock code={installCode} language="bash" />
-        <p className="text-neutral-300 mt-4 mb-4">
+        <p className="text-gray-11 mt-4 mb-4">
           For better TypeScript support, also install WebGPU types:
         </p>
         <CodeBlock code={typesCode} language="bash" />
@@ -131,41 +131,41 @@ export default function GettingStartedPage() {
 
       {/* Browser Support */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="browser-support">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="browser-support">
           Browser Support
         </h2>
-        <p className="text-neutral-300 mb-4">
+        <p className="text-gray-11 mb-4">
           WebGPU is a modern API and requires a compatible browser:
         </p>
         <div className="grid sm:grid-cols-2 gap-4 mb-4">
-          <div className="p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-            <h3 className="font-semibold text-white mb-2">✅ Supported</h3>
-            <ul className="text-neutral-400 text-sm space-y-1">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h3 className="font-semibold text-gray-12 mb-2">✅ Supported</h3>
+            <ul className="text-gray-9 text-sm space-y-1">
               <li>Chrome 113+ (desktop)</li>
               <li>Chrome 121+ (Android)</li>
               <li>Edge 113+</li>
               <li>Safari 17+ (macOS Sonoma, iOS 17)</li>
             </ul>
           </div>
-          <div className="p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-            <h3 className="font-semibold text-white mb-2">⚠️ Limited</h3>
-            <ul className="text-neutral-400 text-sm space-y-1">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h3 className="font-semibold text-gray-12 mb-2">⚠️ Limited</h3>
+            <ul className="text-gray-9 text-sm space-y-1">
               <li>Firefox Nightly (behind flag)</li>
               <li>Older browser versions</li>
             </ul>
           </div>
         </div>
         <Callout type="warning">
-          Always check <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-sm">gpu.isSupported()</code> before initializing to handle unsupported browsers gracefully.
+          Always check <code className="bg-gray-2 px-1.5 py-0.5 rounded text-sm">gpu.isSupported()</code> before initializing to handle unsupported browsers gracefully.
         </Callout>
       </section>
 
       {/* Basic Setup */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="basic-setup">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="basic-setup">
           Basic Setup
         </h2>
-        <p className="text-neutral-300 mb-4">
+        <p className="text-gray-11 mb-4">
           Here&apos;s how to properly initialize ralph-gpu with error handling:
         </p>
         <CodeBlock code={basicSetupCode} language="typescript" />
@@ -173,27 +173,27 @@ export default function GettingStartedPage() {
 
       {/* First Shader */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="first-shader">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="first-shader">
           Your First Shader
         </h2>
-        <p className="text-neutral-300 mb-4">
+        <p className="text-gray-11 mb-4">
           Let&apos;s create a simple animated gradient shader. This demonstrates the basics of creating a pass and running an animation loop:
         </p>
         <CodeBlock code={firstShaderCode} language="typescript" />
-        <div className="mt-4 p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-          <h3 className="font-semibold text-white mb-2">What&apos;s happening here?</h3>
-          <ul className="text-neutral-400 space-y-2">
+        <div className="mt-4 p-4 rounded-lg bg-gray-1 border border-gray-4">
+          <h3 className="font-semibold text-gray-12 mb-2">What&apos;s happening here?</h3>
+          <ul className="text-gray-9 space-y-2">
             <li>
-              <strong className="text-neutral-200">Line 5:</strong> We create a <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-sm">pass</code> — a fullscreen fragment shader.
+              <strong className="text-gray-11">Line 5:</strong> We create a <code className="bg-gray-2 px-1.5 py-0.5 rounded text-sm">pass</code> — a fullscreen fragment shader.
             </li>
             <li>
-              <strong className="text-neutral-200">Line 8:</strong> <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-sm">globals.resolution</code> gives us the canvas size.
+              <strong className="text-gray-11">Line 8:</strong> <code className="bg-gray-2 px-1.5 py-0.5 rounded text-sm">globals.resolution</code> gives us the canvas size.
             </li>
             <li>
-              <strong className="text-neutral-200">Line 9:</strong> <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-sm">globals.time</code> is automatically updated each frame.
+              <strong className="text-gray-11">Line 9:</strong> <code className="bg-gray-2 px-1.5 py-0.5 rounded text-sm">globals.time</code> is automatically updated each frame.
             </li>
             <li>
-              <strong className="text-neutral-200">Line 15:</strong> <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-sm">draw()</code> renders the shader to the screen.
+              <strong className="text-gray-11">Line 15:</strong> <code className="bg-gray-2 px-1.5 py-0.5 rounded text-sm">draw()</code> renders the shader to the screen.
             </li>
           </ul>
         </div>
@@ -201,55 +201,55 @@ export default function GettingStartedPage() {
 
       {/* React Integration */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="react-integration">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="react-integration">
           React Integration
         </h2>
-        <p className="text-neutral-300 mb-4">
+        <p className="text-gray-11 mb-4">
           Here&apos;s a complete React component with proper initialization, cleanup, and resize handling:
         </p>
         <CodeBlock code={reactCode} language="tsx" filename="ShaderCanvas.tsx" showLineNumbers />
         <Callout type="info">
           <strong>Key patterns:</strong>
           <ul className="mt-2 space-y-1 text-sm">
-            <li>• Use a <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">disposed</code> flag to prevent rendering after unmount</li>
-            <li>• Clean up with <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">ctx.dispose()</code> in the effect cleanup</li>
-            <li>• Use <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">autoResize: true</code> to handle canvas sizing and DPR automatically</li>
+            <li>• Use a <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">disposed</code> flag to prevent rendering after unmount</li>
+            <li>• Clean up with <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">ctx.dispose()</code> in the effect cleanup</li>
+            <li>• Use <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">autoResize: true</code> to handle canvas sizing and DPR automatically</li>
           </ul>
         </Callout>
       </section>
 
       {/* Common Issues */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4" id="common-issues">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="common-issues">
           Common Setup Issues
         </h2>
         
         <div className="space-y-4">
-          <div className="p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-            <h3 className="font-semibold text-white mb-2">❓ Canvas is blank</h3>
-            <p className="text-neutral-400 text-sm">
-              Make sure you&apos;re calling <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">draw()</code> in a loop with <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">requestAnimationFrame</code>. Also check that the canvas has explicit dimensions.
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h3 className="font-semibold text-gray-12 mb-2">❓ Canvas is blank</h3>
+            <p className="text-gray-9 text-sm">
+              Make sure you&apos;re calling <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">draw()</code> in a loop with <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">requestAnimationFrame</code>. Also check that the canvas has explicit dimensions.
             </p>
           </div>
           
-          <div className="p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-            <h3 className="font-semibold text-white mb-2">❓ WebGPU not supported error</h3>
-            <p className="text-neutral-400 text-sm">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h3 className="font-semibold text-gray-12 mb-2">❓ WebGPU not supported error</h3>
+            <p className="text-gray-9 text-sm">
               Check your browser version. Chrome 113+ and Safari 17+ are required. On Firefox, WebGPU must be enabled in about:config.
             </p>
           </div>
           
-          <div className="p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-            <h3 className="font-semibold text-white mb-2">❓ Shader compilation errors</h3>
-            <p className="text-neutral-400 text-sm">
-              WGSL is strictly typed. Make sure all variables have explicit types and function return types are specified. Enable <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">debug: true</code> for detailed errors.
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h3 className="font-semibold text-gray-12 mb-2">❓ Shader compilation errors</h3>
+            <p className="text-gray-9 text-sm">
+              WGSL is strictly typed. Make sure all variables have explicit types and function return types are specified. Enable <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">debug: true</code> for detailed errors.
             </p>
           </div>
           
-          <div className="p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-            <h3 className="font-semibold text-white mb-2">❓ Low frame rate / poor performance</h3>
-            <p className="text-neutral-400 text-sm">
-              Limit the device pixel ratio with <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-xs">dpr: Math.min(window.devicePixelRatio, 2)</code> to avoid rendering at 4x resolution on high-DPI displays.
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h3 className="font-semibold text-gray-12 mb-2">❓ Low frame rate / poor performance</h3>
+            <p className="text-gray-9 text-sm">
+              Limit the device pixel ratio with <code className="bg-gray-2 px-1.5 py-0.5 rounded text-xs">dpr: Math.min(window.devicePixelRatio, 2)</code> to avoid rendering at 4x resolution on high-DPI displays.
             </p>
           </div>
         </div>
@@ -257,23 +257,23 @@ export default function GettingStartedPage() {
 
       {/* Next Steps */}
       <section>
-        <h2 className="text-2xl font-bold text-white mb-4">Next Steps</h2>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4">Next Steps</h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <a
             href="/concepts"
-            className="p-4 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-blue-500/50 transition-colors"
+            className="p-4 rounded-lg bg-gray-1 border border-gray-4 hover:border-gray-5 transition-colors"
           >
-            <h3 className="font-semibold text-white mb-2">Core Concepts →</h3>
-            <p className="text-neutral-400 text-sm">
+            <h3 className="font-semibold text-gray-12 mb-2">Core Concepts →</h3>
+            <p className="text-gray-9 text-sm">
               Learn about passes, materials, targets, and more.
             </p>
           </a>
           <a
             href="/api"
-            className="p-4 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-blue-500/50 transition-colors"
+            className="p-4 rounded-lg bg-gray-1 border border-gray-4 hover:border-gray-5 transition-colors"
           >
-            <h3 className="font-semibold text-white mb-2">API Reference →</h3>
-            <p className="text-neutral-400 text-sm">
+            <h3 className="font-semibold text-gray-12 mb-2">API Reference →</h3>
+            <p className="text-gray-9 text-sm">
               Complete documentation of all methods.
             </p>
           </a>

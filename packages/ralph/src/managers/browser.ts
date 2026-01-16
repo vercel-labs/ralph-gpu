@@ -22,6 +22,14 @@ interface ImageToolResult {
 }
 
 /**
+ * Simple result without screenshot
+ */
+interface ActionResult {
+  success: boolean;
+  [key: string]: unknown;
+}
+
+/**
  * Compress/resize image to reduce token usage.
  * Playwright screenshots can be quite large, we resize to max 800px and use JPEG.
  */
@@ -96,6 +104,7 @@ export class BrowserManager {
   /**
    * Open a browser and navigate to a URL.
    * Returns screenshot in AI SDK v6 content format for proper image handling.
+   * ALWAYS runs headless by default for reliability and performance.
    */
   async open(options: {
     url: string;
@@ -107,7 +116,7 @@ export class BrowserManager {
       url,
       name = "main",
       viewport = { width: 1280, height: 720 },
-      headless = false, // Default to headed mode for WebGPU support
+      headless = true, // ALWAYS headless by default - do not change unless explicitly required
     } = options;
 
     // Close existing browser with same name
@@ -203,18 +212,20 @@ export class BrowserManager {
     return createImageResult(imageData, {
       url: managed.page.url(),
       selector: selector || null,
+      consoleErrors: [...managed.consoleErrors],
     });
   }
 
   /**
    * Click an element.
-   * Returns screenshot in AI SDK v6 content format for proper image handling.
+   * Screenshot is optional (default: false) to save tokens.
    */
   async click(options: {
     selector: string;
     name?: string;
-  }): Promise<ImageToolResult> {
-    const { selector, name = "main" } = options;
+    screenshot?: boolean;
+  }): Promise<ActionResult | ImageToolResult> {
+    const { selector, name = "main", screenshot = false } = options;
 
     const managed = this.browsers.get(name);
     if (!managed) {
@@ -224,24 +235,33 @@ export class BrowserManager {
     await managed.page.click(selector);
     await managed.page.waitForLoadState("networkidle").catch(() => {});
 
-    const imageData = await compressScreenshot(managed.page);
+    if (screenshot) {
+      const imageData = await compressScreenshot(managed.page);
+      return createImageResult(imageData, {
+        success: true,
+        clicked: selector,
+        url: managed.page.url(),
+      });
+    }
 
-    return createImageResult(imageData, {
+    return {
+      success: true,
       clicked: selector,
       url: managed.page.url(),
-    });
+    };
   }
 
   /**
    * Type text into an input.
-   * Returns screenshot in AI SDK v6 content format for proper image handling.
+   * Screenshot is optional (default: false) to save tokens.
    */
   async type(options: {
     selector: string;
     text: string;
     name?: string;
-  }): Promise<ImageToolResult> {
-    const { selector, text, name = "main" } = options;
+    screenshot?: boolean;
+  }): Promise<ActionResult | ImageToolResult> {
+    const { selector, text, name = "main", screenshot = false } = options;
 
     const managed = this.browsers.get(name);
     if (!managed) {
@@ -250,25 +270,35 @@ export class BrowserManager {
 
     await managed.page.fill(selector, text);
 
-    const imageData = await compressScreenshot(managed.page);
+    if (screenshot) {
+      const imageData = await compressScreenshot(managed.page);
+      return createImageResult(imageData, {
+        success: true,
+        typed: text,
+        selector,
+        url: managed.page.url(),
+      });
+    }
 
-    return createImageResult(imageData, {
+    return {
+      success: true,
       typed: text,
       selector,
       url: managed.page.url(),
-    });
+    };
   }
 
   /**
    * Scroll the page.
-   * Returns screenshot in AI SDK v6 content format for proper image handling.
+   * Screenshot is optional (default: false) to save tokens.
    */
   async scroll(options: {
     direction: "up" | "down";
     amount?: number;
     name?: string;
-  }): Promise<ImageToolResult> {
-    const { direction, amount = 500, name = "main" } = options;
+    screenshot?: boolean;
+  }): Promise<ActionResult | ImageToolResult> {
+    const { direction, amount = 500, name = "main", screenshot = false } = options;
 
     const managed = this.browsers.get(name);
     if (!managed) {
@@ -281,24 +311,34 @@ export class BrowserManager {
       (globalThis as any).scrollBy(0, y);
     }, scrollAmount);
 
-    const imageData = await compressScreenshot(managed.page);
+    if (screenshot) {
+      const imageData = await compressScreenshot(managed.page);
+      return createImageResult(imageData, {
+        success: true,
+        scrolled: amount,
+        direction,
+        url: managed.page.url(),
+      });
+    }
 
-    return createImageResult(imageData, {
+    return {
+      success: true,
       scrolled: amount,
       direction,
       url: managed.page.url(),
-    });
+    };
   }
 
   /**
    * Navigate to a new URL.
-   * Returns screenshot in AI SDK v6 content format for proper image handling.
+   * Screenshot is optional (default: true for navigation since seeing the new page is useful).
    */
   async navigate(options: {
     url: string;
     name?: string;
-  }): Promise<ImageToolResult> {
-    const { url, name = "main" } = options;
+    screenshot?: boolean;
+  }): Promise<ActionResult | ImageToolResult> {
+    const { url, name = "main", screenshot = true } = options;
 
     const managed = this.browsers.get(name);
     if (!managed) {
@@ -308,12 +348,21 @@ export class BrowserManager {
     await managed.page.goto(url, { waitUntil: "networkidle" });
     managed.info.url = url;
 
-    const imageData = await compressScreenshot(managed.page);
+    if (screenshot) {
+      const imageData = await compressScreenshot(managed.page);
+      return createImageResult(imageData, {
+        success: true,
+        url,
+        navigatedTo: url,
+        consoleErrors: [...managed.consoleErrors],
+      });
+    }
 
-    return createImageResult(imageData, {
+    return {
+      success: true,
       url,
       navigatedTo: url,
-    });
+    };
   }
 
   /**
@@ -325,6 +374,357 @@ export class BrowserManager {
       return [];
     }
     return [...managed.consoleErrors];
+  }
+
+  /**
+   * Execute arbitrary JavaScript in the page context.
+   * This is powerful - use for custom automation that other tools don't cover.
+   */
+  async evaluate(options: {
+    script: string;
+    name?: string;
+    takeScreenshot?: boolean;
+  }): Promise<{ result: unknown; consoleErrors: string[] } | ImageToolResult> {
+    const { script, name = "main", takeScreenshot = false } = options;
+
+    const managed = this.browsers.get(name);
+    if (!managed) {
+      throw new Error(`Browser "${name}" not found. Call openBrowser first.`);
+    }
+
+    // Execute the script
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await managed.page.evaluate((code: string) => {
+      // Create a function from the code and execute it
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func
+      const fn = new Function(code);
+      return fn();
+    }, script);
+
+    if (takeScreenshot) {
+      const imageData = await compressScreenshot(managed.page);
+      return createImageResult(imageData, {
+        result,
+        consoleErrors: [...managed.consoleErrors],
+      });
+    }
+
+    return {
+      result,
+      consoleErrors: [...managed.consoleErrors],
+    };
+  }
+
+  /**
+   * Wait for a selector to appear on the page.
+   */
+  async waitForSelector(options: {
+    selector: string;
+    name?: string;
+    timeout?: number;
+    state?: "attached" | "detached" | "visible" | "hidden";
+  }): Promise<{ found: boolean; selector: string }> {
+    const { selector, name = "main", timeout = 10000, state = "visible" } = options;
+
+    const managed = this.browsers.get(name);
+    if (!managed) {
+      throw new Error(`Browser "${name}" not found. Call openBrowser first.`);
+    }
+
+    try {
+      await managed.page.waitForSelector(selector, { timeout, state });
+      return { found: true, selector };
+    } catch {
+      return { found: false, selector };
+    }
+  }
+
+  /**
+   * Wait for specific text to appear on the page.
+   */
+  async waitForText(options: {
+    text: string;
+    name?: string;
+    timeout?: number;
+  }): Promise<{ found: boolean; text: string }> {
+    const { text, name = "main", timeout = 10000 } = options;
+
+    const managed = this.browsers.get(name);
+    if (!managed) {
+      throw new Error(`Browser "${name}" not found. Call openBrowser first.`);
+    }
+
+    try {
+      // Use getByText which is built-in to Playwright and handles the DOM access
+      await managed.page.getByText(text, { exact: false }).first().waitFor({ timeout, state: "visible" });
+      return { found: true, text };
+    } catch {
+      return { found: false, text };
+    }
+  }
+
+  /**
+   * Get text content or HTML from the page or a specific element.
+   */
+  async getContent(options: {
+    selector?: string;
+    name?: string;
+    type?: "text" | "html" | "value";
+  }): Promise<{ content: string; selector: string | null }> {
+    const { selector, name = "main", type = "text" } = options;
+
+    const managed = this.browsers.get(name);
+    if (!managed) {
+      throw new Error(`Browser "${name}" not found. Call openBrowser first.`);
+    }
+
+    let content: string;
+
+    if (selector) {
+      const element = await managed.page.$(selector);
+      if (!element) {
+        throw new Error(`Element "${selector}" not found`);
+      }
+
+      if (type === "html") {
+        content = await element.innerHTML();
+      } else if (type === "value") {
+        content = await element.inputValue().catch(() => "");
+      } else {
+        content = await element.innerText();
+      }
+    } else {
+      if (type === "html") {
+        content = await managed.page.content();
+      } else {
+        content = await managed.page.innerText("body");
+      }
+    }
+
+    return { content, selector: selector || null };
+  }
+
+  /**
+   * Hover over an element.
+   * Screenshot is optional (default: false) to save tokens.
+   */
+  async hover(options: {
+    selector: string;
+    name?: string;
+    screenshot?: boolean;
+  }): Promise<ActionResult | ImageToolResult> {
+    const { selector, name = "main", screenshot = false } = options;
+
+    const managed = this.browsers.get(name);
+    if (!managed) {
+      throw new Error(`Browser "${name}" not found. Call openBrowser first.`);
+    }
+
+    await managed.page.hover(selector);
+
+    if (screenshot) {
+      const imageData = await compressScreenshot(managed.page);
+      return createImageResult(imageData, {
+        success: true,
+        hovered: selector,
+        url: managed.page.url(),
+      });
+    }
+
+    return {
+      success: true,
+      hovered: selector,
+      url: managed.page.url(),
+    };
+  }
+
+  /**
+   * Press a keyboard key or key combination.
+   * Screenshot is optional (default: false) to save tokens.
+   */
+  async pressKey(options: {
+    key: string;
+    name?: string;
+    screenshot?: boolean;
+  }): Promise<ActionResult | ImageToolResult> {
+    const { key, name = "main", screenshot = false } = options;
+
+    const managed = this.browsers.get(name);
+    if (!managed) {
+      throw new Error(`Browser "${name}" not found. Call openBrowser first.`);
+    }
+
+    await managed.page.keyboard.press(key);
+
+    if (screenshot) {
+      const imageData = await compressScreenshot(managed.page);
+      return createImageResult(imageData, {
+        success: true,
+        pressed: key,
+        url: managed.page.url(),
+      });
+    }
+
+    return {
+      success: true,
+      pressed: key,
+      url: managed.page.url(),
+    };
+  }
+
+  /**
+   * Select an option in a dropdown/select element.
+   * Screenshot is optional (default: false) to save tokens.
+   */
+  async selectOption(options: {
+    selector: string;
+    value?: string;
+    label?: string;
+    index?: number;
+    name?: string;
+    screenshot?: boolean;
+  }): Promise<ActionResult | ImageToolResult> {
+    const { selector, value, label, index, name = "main", screenshot = false } = options;
+
+    const managed = this.browsers.get(name);
+    if (!managed) {
+      throw new Error(`Browser "${name}" not found. Call openBrowser first.`);
+    }
+
+    let selectOptions: { value?: string; label?: string; index?: number };
+    if (value !== undefined) {
+      selectOptions = { value };
+    } else if (label !== undefined) {
+      selectOptions = { label };
+    } else if (index !== undefined) {
+      selectOptions = { index };
+    } else {
+      throw new Error("Must provide value, label, or index to select");
+    }
+
+    await managed.page.selectOption(selector, selectOptions);
+
+    if (screenshot) {
+      const imageData = await compressScreenshot(managed.page);
+      return createImageResult(imageData, {
+        success: true,
+        selected: selectOptions,
+        selector,
+        url: managed.page.url(),
+      });
+    }
+
+    return {
+      success: true,
+      selected: selectOptions,
+      selector,
+      url: managed.page.url(),
+    };
+  }
+
+  /**
+   * Reload the current page.
+   * Screenshot is optional (default: true since seeing the reloaded page is useful).
+   */
+  async reload(options: {
+    name?: string;
+    screenshot?: boolean;
+  }): Promise<ActionResult | ImageToolResult> {
+    const { name = "main", screenshot = true } = options;
+
+    const managed = this.browsers.get(name);
+    if (!managed) {
+      throw new Error(`Browser "${name}" not found. Call openBrowser first.`);
+    }
+
+    // Clear console errors before reload
+    managed.consoleErrors.length = 0;
+
+    await managed.page.reload({ waitUntil: "networkidle" });
+
+    if (screenshot) {
+      const imageData = await compressScreenshot(managed.page);
+      return createImageResult(imageData, {
+        success: true,
+        reloaded: true,
+        url: managed.page.url(),
+        consoleErrors: [...managed.consoleErrors],
+      });
+    }
+
+    return {
+      success: true,
+      reloaded: true,
+      url: managed.page.url(),
+    };
+  }
+
+  /**
+   * Focus an element (useful before typing or pressing keys).
+   */
+  async focus(options: {
+    selector: string;
+    name?: string;
+  }): Promise<{ focused: string }> {
+    const { selector, name = "main" } = options;
+
+    const managed = this.browsers.get(name);
+    if (!managed) {
+      throw new Error(`Browser "${name}" not found. Call openBrowser first.`);
+    }
+
+    await managed.page.focus(selector);
+
+    return { focused: selector };
+  }
+
+  /**
+   * Check if an element exists on the page.
+   */
+  async elementExists(options: {
+    selector: string;
+    name?: string;
+  }): Promise<{ exists: boolean; selector: string }> {
+    const { selector, name = "main" } = options;
+
+    const managed = this.browsers.get(name);
+    if (!managed) {
+      throw new Error(`Browser "${name}" not found. Call openBrowser first.`);
+    }
+
+    const element = await managed.page.$(selector);
+    return { exists: element !== null, selector };
+  }
+
+  /**
+   * Get all matching elements' text content.
+   */
+  async queryAll(options: {
+    selector: string;
+    name?: string;
+    attribute?: string;
+  }): Promise<{ count: number; items: string[] }> {
+    const { selector, name = "main", attribute } = options;
+
+    const managed = this.browsers.get(name);
+    if (!managed) {
+      throw new Error(`Browser "${name}" not found. Call openBrowser first.`);
+    }
+
+    const elements = await managed.page.$$(selector);
+    const items: string[] = [];
+
+    for (const el of elements) {
+      if (attribute) {
+        const attr = await el.getAttribute(attribute);
+        if (attr) items.push(attr);
+      } else {
+        const text = await el.innerText();
+        items.push(text);
+      }
+    }
+
+    return { count: elements.length, items };
   }
 
   /**

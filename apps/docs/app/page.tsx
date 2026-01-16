@@ -111,36 +111,36 @@ export default function HomePage() {
       <section className="max-w-4xl mx-auto text-center mb-24">
         {/* Badges */}
         <div className="mb-8 flex flex-wrap justify-center gap-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-blue/10 border border-accent-blue/20 text-accent-blue text-sm font-medium">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-1 border border-blue-4 text-blue-9 text-sm font-medium">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
             {bundleSize.gzipDisplay} gzipped
           </div>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-bg-tertiary border border-border-default text-text-secondary text-sm">
-            <span className="w-2 h-2 rounded-full bg-accent-green"></span>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-2 border border-gray-4 text-gray-10 text-sm">
+            <span className="w-2 h-2 rounded-full bg-green-9"></span>
             WebGPU Ready
           </div>
         </div>
         
-        <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-text-primary mb-6 tracking-tight">
+        <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-12 mb-6 tracking-tight">
           ralph-gpu
         </h1>
         
-        <p className="text-lg md:text-xl text-text-secondary mb-10 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-lg md:text-xl text-gray-10 mb-10 max-w-2xl mx-auto leading-relaxed">
           A minimal, ergonomic WebGPU shader library for creative coding and real-time graphics.
         </p>
         
         <div className="flex flex-wrap justify-center gap-4 mb-16">
           <Link
             href="/getting-started"
-            className="px-5 py-2.5 rounded-lg bg-text-primary text-bg-primary font-medium text-sm hover:bg-text-secondary transition-colors"
+            className="px-5 py-2.5 rounded-lg bg-gray-12 text-black font-medium text-sm hover:bg-text-secondary transition-colors"
           >
             Get Started
           </Link>
           <Link
             href="/examples"
-            className="px-5 py-2.5 rounded-lg bg-bg-tertiary text-text-primary font-medium text-sm border border-border-default hover:border-border-hover hover:bg-bg-secondary transition-colors"
+            className="px-5 py-2.5 rounded-lg bg-gray-2 text-gray-12 font-medium text-sm border border-gray-4 hover:border-gray-5 hover:bg-gray-1 transition-colors"
           >
             View Examples
           </Link>
@@ -154,10 +154,10 @@ export default function HomePage() {
 
       {/* Features Grid */}
       <section className="max-w-4xl mx-auto mb-24">
-        <h2 className="text-2xl md:text-3xl font-semibold text-text-primary text-center mb-4">
+        <h2 className="text-2xl md:text-3xl font-semibold text-gray-12 text-center mb-4">
           Everything You Need
         </h2>
-        <p className="text-text-secondary text-center mb-12 max-w-xl mx-auto">
+        <p className="text-gray-9 text-center mb-12 max-w-xl mx-auto">
           Built for creative coders who want to harness the power of WebGPU without the complexity.
         </p>
         
@@ -165,13 +165,13 @@ export default function HomePage() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="p-5 rounded-lg bg-bg-secondary border border-border-default hover:border-border-hover transition-colors group"
+              className="p-5 rounded-lg bg-gray-1 border border-gray-4 hover:border-gray-5 transition-colors group"
             >
-              <div className="w-9 h-9 rounded-md bg-bg-tertiary flex items-center justify-center text-text-secondary mb-4 group-hover:text-text-primary transition-colors">
+              <div className="w-9 h-9 rounded-md bg-gray-2 flex items-center justify-center text-gray-9 mb-4 group-hover:text-gray-12 transition-colors">
                 {feature.icon}
               </div>
-              <h3 className="text-sm font-semibold text-text-primary mb-2">{feature.title}</h3>
-              <p className="text-sm text-text-secondary leading-relaxed">{feature.description}</p>
+              <h3 className="text-sm font-semibold text-gray-12 mb-2">{feature.title}</h3>
+              <p className="text-sm text-gray-9 leading-relaxed">{feature.description}</p>
             </div>
           ))}
         </div>
@@ -179,75 +179,75 @@ export default function HomePage() {
 
       {/* Quick Links */}
       <section className="max-w-4xl mx-auto">
-        <h2 className="text-2xl md:text-3xl font-semibold text-text-primary text-center mb-12">
+        <h2 className="text-2xl md:text-3xl font-semibold text-gray-12 text-center mb-12">
           Explore the Docs
         </h2>
         
         <div className="grid md:grid-cols-2 gap-4">
           <Link
             href="/getting-started"
-            className="group p-6 rounded-lg bg-bg-secondary border border-border-default hover:border-border-hover transition-all"
+            className="group p-6 rounded-lg bg-gray-1 border border-gray-4 hover:border-gray-5 transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-text-primary group-hover:text-accent-blue transition-colors">
+              <h3 className="font-semibold text-gray-12 group-hover:text-blue-9 transition-colors">
                 Getting Started
               </h3>
-              <svg className="w-4 h-4 text-text-muted group-hover:text-accent-blue group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-gray-9 group-hover:text-blue-9 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
-            <p className="text-sm text-text-secondary">
+            <p className="text-sm text-gray-9">
               Installation, setup, and your first shader in minutes.
             </p>
           </Link>
           
           <Link
             href="/concepts"
-            className="group p-6 rounded-lg bg-bg-secondary border border-border-default hover:border-border-hover transition-all"
+            className="group p-6 rounded-lg bg-gray-1 border border-gray-4 hover:border-gray-5 transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-text-primary group-hover:text-accent-blue transition-colors">
+              <h3 className="font-semibold text-gray-12 group-hover:text-blue-9 transition-colors">
                 Core Concepts
               </h3>
-              <svg className="w-4 h-4 text-text-muted group-hover:text-accent-blue group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-gray-9 group-hover:text-blue-9 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
-            <p className="text-sm text-text-secondary">
+            <p className="text-sm text-gray-9">
               Learn about contexts, passes, materials, and more.
             </p>
           </Link>
           
           <Link
             href="/api"
-            className="group p-6 rounded-lg bg-bg-secondary border border-border-default hover:border-border-hover transition-all"
+            className="group p-6 rounded-lg bg-gray-1 border border-gray-4 hover:border-gray-5 transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-text-primary group-hover:text-accent-blue transition-colors">
+              <h3 className="font-semibold text-gray-12 group-hover:text-blue-9 transition-colors">
                 API Reference
               </h3>
-              <svg className="w-4 h-4 text-text-muted group-hover:text-accent-blue group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-gray-9 group-hover:text-blue-9 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
-            <p className="text-sm text-text-secondary">
+            <p className="text-sm text-gray-9">
               Complete documentation of all methods and properties.
             </p>
           </Link>
           
           <Link
             href="/examples"
-            className="group p-6 rounded-lg bg-bg-secondary border border-border-default hover:border-border-hover transition-all"
+            className="group p-6 rounded-lg bg-gray-1 border border-gray-4 hover:border-gray-5 transition-all"
           >
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-text-primary group-hover:text-accent-blue transition-colors">
+              <h3 className="font-semibold text-gray-12 group-hover:text-blue-9 transition-colors">
                 Examples
               </h3>
-              <svg className="w-4 h-4 text-text-muted group-hover:text-accent-blue group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-gray-9 group-hover:text-blue-9 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
-            <p className="text-sm text-text-secondary">
+            <p className="text-sm text-gray-9">
               Interactive demos with live code.
             </p>
           </Link>

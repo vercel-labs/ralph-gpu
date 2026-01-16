@@ -274,40 +274,40 @@ export default function ProfilerDemo() {
 export default function ProfilerPage() {
   return (
     <div className="px-4 py-8 lg:px-8 lg:py-12 max-w-4xl mx-auto">
-      <h1 className="text-3xl md:text-4xl font-bold text-gray-100 mb-4">
+      <h1 className="text-3xl md:text-4xl font-semibold text-gray-12 mb-4">
         Profiler & Debug System
       </h1>
-      <p className="text-xl text-gray-400 mb-8">
+      <p className="text-xl text-gray-10 mb-8">
         Built-in performance monitoring and event system for debugging GPU operations.
       </p>
 
       {/* Table of Contents */}
-      <nav className="mb-12 p-4 rounded-lg bg-gray-900 border border-gray-800">
-        <h2 className="text-lg font-semibold text-gray-100 mb-3">Contents</h2>
+      <nav className="mb-12 p-4 rounded-lg bg-gray-1 border border-gray-4">
+        <h2 className="text-lg font-semibold text-gray-12 mb-3">Contents</h2>
         <ul className="grid sm:grid-cols-2 gap-2 text-sm">
-          <li><a href="#enabling" className="text-primary-400 hover:text-primary-300">Enabling Events</a></li>
-          <li><a href="#profiler" className="text-primary-400 hover:text-primary-300">Using the Profiler</a></li>
-          <li><a href="#regions" className="text-primary-400 hover:text-primary-300">Region Profiling</a></li>
-          <li><a href="#frame-stats" className="text-primary-400 hover:text-primary-300">Frame Statistics</a></li>
-          <li><a href="#events" className="text-primary-400 hover:text-primary-300">Event Listeners</a></li>
-          <li><a href="#event-types" className="text-primary-400 hover:text-primary-300">Event Types</a></li>
-          <li><a href="#example" className="text-primary-400 hover:text-primary-300">Full Example</a></li>
+          <li><a href="#enabling" className="text-blue-9 hover:text-blue-10">Enabling Events</a></li>
+          <li><a href="#profiler" className="text-blue-9 hover:text-blue-10">Using the Profiler</a></li>
+          <li><a href="#regions" className="text-blue-9 hover:text-blue-10">Region Profiling</a></li>
+          <li><a href="#frame-stats" className="text-blue-9 hover:text-blue-10">Frame Statistics</a></li>
+          <li><a href="#events" className="text-blue-9 hover:text-blue-10">Event Listeners</a></li>
+          <li><a href="#event-types" className="text-blue-9 hover:text-blue-10">Event Types</a></li>
+          <li><a href="#example" className="text-blue-9 hover:text-blue-10">Full Example</a></li>
         </ul>
       </nav>
 
       {/* Enabling Events */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4" id="enabling">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="enabling">
           Enabling Events
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           Enable the event system when initializing the GPU context. You can optionally filter which event types to track.
         </p>
         <CodeBlock code={enableEventsCode} language="typescript" />
 
-        <div className="mt-4 p-4 rounded-lg bg-gray-900 border border-gray-800">
-          <h4 className="font-semibold text-gray-100 mb-2">Event Options</h4>
-          <ul className="text-gray-400 text-sm space-y-1">
+        <div className="mt-4 p-4 rounded-lg bg-gray-1 border border-gray-4">
+          <h4 className="font-semibold text-gray-12 mb-2">Event Options</h4>
+          <ul className="text-gray-10 text-sm space-y-1">
             <li>• <code>enabled</code> — Enable/disable event emission</li>
             <li>• <code>types</code> — Array of event types to track (omit for all)</li>
             <li>• <code>historySize</code> — Max events to keep in history (default: 1000)</li>
@@ -317,15 +317,15 @@ export default function ProfilerPage() {
 
       {/* Using the Profiler */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4" id="profiler">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="profiler">
           Using the Profiler
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           The Profiler class provides a high-level API for tracking performance. It automatically subscribes to context events.
         </p>
         <CodeBlock code={basicProfilerCode} language="typescript" />
 
-        <h3 className="text-lg font-semibold text-gray-100 mt-6 mb-3">Profiler API</h3>
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Profiler API</h3>
         <CodeBlock code={profilerApiCode} language="typescript" />
 
         <div className="mt-4 p-4 rounded-lg bg-primary-500/10 border border-primary-500/20 text-primary-200">
@@ -336,26 +336,26 @@ export default function ProfilerPage() {
 
       {/* Region Profiling */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4" id="regions">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="regions">
           Region Profiling
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           Use <code>begin()</code> and <code>end()</code> to measure specific code sections.
         </p>
         <CodeBlock code={regionStatsCode} language="typescript" />
 
         <div className="mt-4 grid sm:grid-cols-2 gap-4">
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-semibold text-gray-100 mb-2">Best Practices</h4>
-            <ul className="text-gray-400 text-sm space-y-1">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-semibold text-gray-12 mb-2">Best Practices</h4>
+            <ul className="text-gray-10 text-sm space-y-1">
               <li>• Use descriptive region names</li>
               <li>• Always pair begin/end calls</li>
               <li>• Nest regions for hierarchical timing</li>
             </ul>
           </div>
-          <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
-            <h4 className="font-semibold text-gray-100 mb-2">Common Regions</h4>
-            <ul className="text-gray-400 text-sm space-y-1">
+          <div className="p-4 rounded-lg bg-gray-1 border border-gray-4">
+            <h4 className="font-semibold text-gray-12 mb-2">Common Regions</h4>
+            <ul className="text-gray-10 text-sm space-y-1">
               <li>• <code>physics</code> — Simulation updates</li>
               <li>• <code>render</code> — Drawing passes</li>
               <li>• <code>postprocess</code> — Effects</li>
@@ -366,17 +366,17 @@ export default function ProfilerPage() {
 
       {/* Frame Statistics */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4" id="frame-stats">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="frame-stats">
           Frame Statistics
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           Get aggregated statistics about frame timing.
         </p>
         <CodeBlock code={frameStatsCode} language="typescript" />
 
-        <div className="mt-4 p-4 rounded-lg bg-gray-900 border border-gray-800">
-          <h4 className="font-semibold text-gray-100 mb-2">Frame Time vs Render Time</h4>
-          <p className="text-gray-400 text-sm">
+        <div className="mt-4 p-4 rounded-lg bg-gray-1 border border-gray-4">
+          <h4 className="font-semibold text-gray-12 mb-2">Frame Time vs Render Time</h4>
+          <p className="text-gray-10 text-sm">
             <strong>Frame time</strong> is the interval between frames (includes vsync wait). 
             <strong>Render time</strong> is just the GPU work duration.
             Use <code>getAverageFrameTime()</code> for FPS calculations and <code>getAverageRenderTime()</code> to measure GPU load.
@@ -386,10 +386,10 @@ export default function ProfilerPage() {
 
       {/* Event Listeners */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4" id="events">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="events">
           Event Listeners
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           Subscribe to GPU events directly on the context for custom debugging or visualization.
         </p>
         <CodeBlock code={eventListenersCode} language="typescript" />
@@ -397,10 +397,10 @@ export default function ProfilerPage() {
 
       {/* Event Types */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4" id="event-types">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="event-types">
           Event Types
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           Available event types and their data structures.
         </p>
         <CodeBlock code={eventTypesCode} language="typescript" />
@@ -408,37 +408,37 @@ export default function ProfilerPage() {
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-800">
-                <th className="text-left py-2 px-4 text-gray-100">Event Type</th>
-                <th className="text-left py-2 px-4 text-gray-100">Description</th>
+              <tr className="border-b border-gray-4">
+                <th className="text-left py-2 px-4 text-gray-12">Event Type</th>
+                <th className="text-left py-2 px-4 text-gray-12">Description</th>
               </tr>
             </thead>
-            <tbody className="text-gray-400">
-              <tr className="border-b border-gray-800">
+            <tbody className="text-gray-10">
+              <tr className="border-b border-gray-4">
                 <td className="py-2 px-4"><code>draw</code></td>
                 <td className="py-2 px-4">Draw call (pass, material, particles)</td>
               </tr>
-              <tr className="border-b border-gray-800">
+              <tr className="border-b border-gray-4">
                 <td className="py-2 px-4"><code>compute</code></td>
                 <td className="py-2 px-4">Compute shader dispatch</td>
               </tr>
-              <tr className="border-b border-gray-800">
+              <tr className="border-b border-gray-4">
                 <td className="py-2 px-4"><code>frame</code></td>
                 <td className="py-2 px-4">Frame start/end with timing</td>
               </tr>
-              <tr className="border-b border-gray-800">
+              <tr className="border-b border-gray-4">
                 <td className="py-2 px-4"><code>shader_compile</code></td>
                 <td className="py-2 px-4">Shader compilation</td>
               </tr>
-              <tr className="border-b border-gray-800">
+              <tr className="border-b border-gray-4">
                 <td className="py-2 px-4"><code>memory</code></td>
                 <td className="py-2 px-4">Buffer/texture allocate/free/resize</td>
               </tr>
-              <tr className="border-b border-gray-800">
+              <tr className="border-b border-gray-4">
                 <td className="py-2 px-4"><code>target</code></td>
                 <td className="py-2 px-4">Render target set/clear</td>
               </tr>
-              <tr className="border-b border-gray-800">
+              <tr className="border-b border-gray-4">
                 <td className="py-2 px-4"><code>pipeline</code></td>
                 <td className="py-2 px-4">Pipeline creation (with cache hit info)</td>
               </tr>
@@ -453,10 +453,10 @@ export default function ProfilerPage() {
 
       {/* Full Example */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-100 mb-4" id="example">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="example">
           Full Example
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-11 mb-4">
           A complete React component demonstrating the profiler with live FPS and region stats.
         </p>
         <CodeBlock code={fullExampleCode} language="typescript" />
@@ -464,23 +464,23 @@ export default function ProfilerPage() {
 
       {/* Next Steps */}
       <section>
-        <h2 className="text-2xl font-bold text-gray-100 mb-4">Next Steps</h2>
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4">Next Steps</h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <a
             href="/examples"
-            className="p-4 rounded-lg bg-gray-900 border border-gray-800 hover:border-primary-500/50 transition-colors"
+            className="p-4 rounded-lg bg-gray-1 border border-gray-4 hover:border-gray-5 transition-colors"
           >
-            <h3 className="font-semibold text-gray-100 mb-2">Examples →</h3>
-            <p className="text-gray-400 text-sm">
+            <h3 className="font-semibold text-gray-12 mb-2">Examples →</h3>
+            <p className="text-gray-10 text-sm">
               See live demos including the debug profiler example.
             </p>
           </a>
           <a
             href="/api"
-            className="p-4 rounded-lg bg-gray-900 border border-gray-800 hover:border-primary-500/50 transition-colors"
+            className="p-4 rounded-lg bg-gray-1 border border-gray-4 hover:border-gray-5 transition-colors"
           >
-            <h3 className="font-semibold text-gray-100 mb-2">API Reference →</h3>
-            <p className="text-gray-400 text-sm">
+            <h3 className="font-semibold text-gray-12 mb-2">API Reference →</h3>
+            <p className="text-gray-10 text-sm">
               Complete documentation of all ralph-gpu methods.
             </p>
           </a>
