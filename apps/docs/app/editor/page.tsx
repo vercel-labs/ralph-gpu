@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 
+// Predetermined skeleton line widths to avoid hydration mismatch
+const SKELETON_WIDTHS = [65, 45, 70, 55, 80, 50, 75, 60, 40, 68, 58, 72, 48, 62, 77];
+
 export default function EditorPage() {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const isUpdatingFromParentRef = useRef(false);
@@ -179,12 +182,58 @@ declare module 'ralph-gpu' {
   }, [isReady]);
 
   return (
-    <div style={{ width: '100%', height: '100vh', margin: 0, padding: 0 }}>
+    <div style={{ width: '100%', height: '100vh', margin: 0, padding: 0, position: 'relative' }}>
+      {!isReady && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: '#000000',
+          padding: '16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}>
+          {/* Line number column skeleton */}
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <div style={{ width: '32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {Array.from({ length: 15 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    height: '14px',
+                    backgroundColor: '#1a1a1a',
+                    borderRadius: '2px',
+                    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    animationDelay: `${i * 0.05}s`,
+                  }}
+                />
+              ))}
+            </div>
+            {/* Code lines skeleton */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {SKELETON_WIDTHS.map((width, i) => (
+                <div
+                  key={i}
+                  style={{
+                    height: '14px',
+                    backgroundColor: '#1a1a1a',
+                    borderRadius: '2px',
+                    width: `${width}%`,
+                    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    animationDelay: `${i * 0.05}s`,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       <Editor
         defaultValue=""
         language="typescript"
         theme="vercel-dark"
         onMount={handleEditorDidMount}
+        loading={null}
         options={{
           minimap: { enabled: false },
           fontSize: 13,
@@ -211,6 +260,16 @@ declare module 'ralph-gpu' {
           },
         }}
       />
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.4;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -13,8 +13,6 @@ export const gradient: Example = {
 `,
   code: `import { gpu } from 'ralph-gpu';
 
-  console.log("Started")
-
 // Initialize WebGPU context
 const canvas = document.getElementById('canvas');
 const ctx = await gpu.init(canvas, { autoResize: true });
