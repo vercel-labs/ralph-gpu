@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 
 /**
- * Copy Distribution Files to Docs
- * 
+ * Copy Core Package Distribution Files
+ *
  * Copies the entire dist/ directory from packages/core to apps/docs/public/dist
- * so both the Monaco editor and preview iframe can access types and bundles.
+ * This ensures the dist files are available even when the core package build is cached.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const SOURCE_DIST_DIR = path.join(__dirname, '..', 'dist');
-const TARGET_DIST_DIR = path.join(__dirname, '..', '..', '..', 'apps', 'docs', 'public', 'dist');
+const SOURCE_DIST_DIR = path.join(__dirname, '..', '..', '..', 'packages', 'core', 'dist');
+const TARGET_DIST_DIR = path.join(__dirname, '..', 'public', 'dist');
 
 function copyDirectory(src, dest) {
   // Create destination directory
@@ -37,7 +37,7 @@ function copyDirectory(src, dest) {
 function copyDist() {
   // Check if source dist directory exists
   if (!fs.existsSync(SOURCE_DIST_DIR)) {
-    console.error('⚠ dist/ directory not found. Run build first.');
+    console.error('⚠ Core package dist/ directory not found. Build the core package first.');
     process.exit(1);
   }
 
@@ -54,7 +54,7 @@ function copyDist() {
   const typeFiles = allFiles.filter((f) => f.endsWith('.d.ts'));
   const mjsFiles = allFiles.filter((f) => f.endsWith('.mjs'));
 
-  console.log(`✓ Copied dist/ to apps/docs/public/dist/`);
+  console.log(`✓ Copied core dist/ to docs/public/dist/`);
   console.log(`  - ${typeFiles.length} type definition files`);
   console.log(`  - ${mjsFiles.length} module bundle(s)`);
   console.log(`  - ${allFiles.length} total files`);
