@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef } from 'react';
 
 interface EditorFrameProps {
   initialCode: string;
-  code: string;
   onChange?: (value: string) => void;
   onRun?: () => void;
 }
@@ -13,7 +12,7 @@ interface EditorFrameProps {
  * Renders Monaco editor in an iframe to avoid Shadow DOM issues with keyboard events.
  * Communicates with the editor iframe via postMessage for bidirectional updates.
  */
-export function EditorFrame({ initialCode, code, onChange, onRun }: EditorFrameProps) {
+export function EditorFrame({ initialCode, onChange, onRun }: EditorFrameProps) {
   const isReadyRef = useRef(false);
   const iframeElementRef = useRef<HTMLIFrameElement | null>(null);
   const onChangeRef = useRef(onChange);
@@ -32,16 +31,16 @@ export function EditorFrame({ initialCode, code, onChange, onRun }: EditorFrameP
   // Ref callback to handle iframe mounting and loading
   const iframeRef = useCallback((iframe: HTMLIFrameElement | null) => {
     if (!iframe) return;
-    
+
     iframeElementRef.current = iframe;
-    
+
     const handleLoad = () => {
       isReadyRef.current = true;
       // Initial code will be sent when we receive 'ready' message from iframe
     };
-    
+
     iframe.addEventListener('load', handleLoad);
-    
+
     // Check if already loaded
     if (iframe.contentDocument?.readyState === 'complete') {
       handleLoad();
@@ -52,7 +51,7 @@ export function EditorFrame({ initialCode, code, onChange, onRun }: EditorFrameP
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const { type, code: newCode } = event.data || {};
-      
+
       if (type === 'ready') {
         // Editor is ready, send initial code
         if (iframeElementRef.current?.contentWindow) {
@@ -74,18 +73,6 @@ export function EditorFrame({ initialCode, code, onChange, onRun }: EditorFrameP
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [initialCode]);
-
-  // Handle external code changes (e.g., switching examples)
-  useEffect(() => {
-    if (!isReadyRef.current || !iframeElementRef.current?.contentWindow) return;
-    if (code === lastReceivedCodeRef.current) return;
-    
-    lastReceivedCodeRef.current = code;
-    iframeElementRef.current.contentWindow.postMessage(
-      { type: 'setCode', code },
-      '*'
-    );
-  }, [code]);
 
   return (
     <iframe
