@@ -54,6 +54,9 @@
 
     const canvas = document.getElementById('canvas');
 
+    // Track GPU context for cleanup
+    let currentContext = null;
+
     // Check WebGPU support
     if (!gpu.isSupported()) {
       document.body.innerHTML = '<div class="error unsupported">WebGPU not supported. Try Chrome 113+, Edge 113+, or Safari 17+.</div>';
@@ -69,23 +72,49 @@
       document.body.appendChild(div);
     }
 
+    // Cleanup function to properly dispose GPU resources
+    function cleanup() {
+      if (currentContext) {
+        try {
+          currentContext.dispose();
+          console.log('GPU context disposed');
+        } catch (e) {
+          console.error('Error disposing GPU context:', e);
+        }
+        currentContext = null;
+      }
+    }
+
     const executeCode = async (code) => {
       // Hide any previous error
       const errorEl = document.querySelector('.error');
       if (errorEl) errorEl.remove();
       canvas.style.display = 'block';
 
+      // Clean up previous context before running new code
+      cleanup();
+
       try {
         // Strip import statement since gpu is already in scope
         const codeWithoutImport = code.replace(/import\s+\{[^}]+\}\s+from\s+['"][^'"]+['"];?\s*/g, '');
 
-        // Execute code with gpu and canvas in scope
+        // Create a wrapped gpu object that tracks the context
+        const wrappedGpu = {
+          ...gpu,
+          init: async (...args) => {
+            const ctx = await gpu.init(...args);
+            currentContext = ctx;
+            return ctx;
+          }
+        };
+
+        // Execute code with wrapped gpu and canvas in scope
         const fn = new Function('gpu', 'canvas', `
           return (async () => {
             ${codeWithoutImport}
           })();
         `);
-        await fn(gpu, canvas);
+        await fn(wrappedGpu, canvas);
         window.parent.postMessage({ type: 'success' }, '*');
       } catch (e) {
         const msg = e.message || 'Execution failed';
@@ -101,6 +130,11 @@
         executeCode(code);
       }
     });
+
+    // Clean up GPU context when page is being unloaded
+    window.addEventListener('beforeunload', cleanup);
+    window.addEventListener('pagehide', cleanup);
+    window.addEventListener('unload', cleanup);
 
     // Signal that we're ready to receive messages
     window.parent.postMessage({ type: 'preview-iframe-ready' }, '*');
