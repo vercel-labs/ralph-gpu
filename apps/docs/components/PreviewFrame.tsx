@@ -12,46 +12,46 @@ interface PreviewFrameProps {
  * Communicates with the preview page via postMessage.
  */
 export function PreviewFrame({ code, onError }: PreviewFrameProps) {
-  const isLoadedRef = useRef(false);
+  const iframeElementRef = useRef<HTMLIFrameElement | null>(null);
+  const hasRunRef = useRef(false);
 
-  // Track latest code
-  const latestCodeRef = useRef<string | null>(null);
-  latestCodeRef.current = code;
-  
-  // Ref callback to handle iframe mounting and loading
-  const iframeRef = useCallback((iframe: HTMLIFrameElement | null) => {
-    if (!iframe) return;
-    
-    const handleLoad = () => {
-      isLoadedRef.current = true;
-      // Small delay to ensure iframe's message listener is set up
-      setTimeout(() => {
-        if (latestCodeRef.current) {
-          runCodeDirect(iframe, latestCodeRef.current);
-        }
-      }, 100);
-    };
-    
-    // Add load event listener
-    iframe.addEventListener('load', handleLoad);
-    
-    // Also check if already loaded
-    if (iframe.contentDocument?.readyState === 'complete') {
-      handleLoad();
-    }
-  }, []);
-
-  // Direct send function (doesn't depend on ref)
+  // Direct send function
   const runCodeDirect = useCallback((iframe: HTMLIFrameElement, codeToRun: string) => {
     if (!iframe?.contentWindow) return;
     iframe.contentWindow.postMessage({ type: 'run', code: codeToRun }, '*');
   }, []);
 
+  // Ref callback to handle iframe mounting and loading
+  const iframeRef = useCallback((iframe: HTMLIFrameElement | null) => {
+    if (!iframe) return;
+
+    iframeElementRef.current = iframe;
+    hasRunRef.current = false; // Reset run flag on new iframe mount
+
+    const handleLoad = () => {
+      // Small delay to ensure iframe's message listener is set up
+      setTimeout(() => {
+        if (!hasRunRef.current && code && iframe.contentWindow) {
+          hasRunRef.current = true;
+          runCodeDirect(iframe, code);
+        }
+      }, 100);
+    };
+
+    // Add load event listener
+    iframe.addEventListener('load', handleLoad);
+
+    // Also check if already loaded
+    if (iframe.contentDocument?.readyState === 'complete') {
+      handleLoad();
+    }
+  }, [code, runCodeDirect]);
+
   // Handle messages from iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const { type, message } = event.data || {};
-      
+
       if (type === 'error') {
         onError?.(message);
       } else if (type === 'success') {
@@ -63,22 +63,9 @@ export function PreviewFrame({ code, onError }: PreviewFrameProps) {
     return () => window.removeEventListener('message', handleMessage);
   }, [onError]);
 
-  // Store iframe element for effects
-  const iframeElementRef = useRef<HTMLIFrameElement | null>(null);
-  const setIframeRef = useCallback((iframe: HTMLIFrameElement | null) => {
-    iframeElementRef.current = iframe;
-    iframeRef(iframe);
-  }, [iframeRef]);
-  
-  // Run code when it changes (if iframe is loaded)
-  useEffect(() => {
-    if (code === null || !isLoadedRef.current || !iframeElementRef.current) return;
-    runCodeDirect(iframeElementRef.current, code);
-  }, [code, runCodeDirect]);
-
   return (
     <iframe
-      ref={setIframeRef}
+      ref={iframeRef}
       src="/preview.html"
       className="w-full h-full border-0"
       sandbox="allow-scripts allow-same-origin"
