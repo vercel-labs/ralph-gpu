@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "@webgpu/types": "^0.1.68",
+    "tsx": "^4.21.0",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2"
   },
