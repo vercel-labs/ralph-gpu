@@ -485,6 +485,40 @@ fn main(@builtin(position) fragCoord: vec4f) -> @location(0) vec4f {
 `.trim(),
   },
   {
+    slug: "transparent-canvas",
+    title: "Transparent Canvas",
+    description: "Demonstrates transparent canvas with premultiplied alpha blending over CSS background.",
+    category: "features",
+    shaderCode: `
+@fragment
+fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  let uv = (pos.xy - 0.5 * globals.resolution) / min(globals.resolution.x, globals.resolution.y);
+
+  // Create animated circle
+  let center = vec2f(0.0, 0.0);
+  let dist = length(uv - center);
+  let radius = 0.3 + sin(globals.time * 2.0) * 0.1;
+
+  // Smooth circle edge
+  let circle = smoothstep(radius + 0.02, radius - 0.02, dist);
+
+  // Animated color
+  let hue = globals.time * 0.3;
+  let color = vec3f(
+    0.5 + 0.5 * cos(hue),
+    0.5 + 0.5 * cos(hue + 2.094),
+    0.5 + 0.5 * cos(hue + 4.189)
+  );
+
+  // Pulsing alpha
+  let alpha = circle * (0.7 + 0.3 * sin(globals.time * 3.0));
+
+  // IMPORTANT: Premultiply RGB by alpha for correct transparency
+  return vec4f(color * alpha, alpha);
+}
+`.trim(),
+  },
+  {
     slug: "lines",
     title: "SDF Lines",
     description: "Anti-aliased lines and shapes rendered using Signed Distance Functions.",

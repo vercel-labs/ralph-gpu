@@ -87,7 +87,7 @@ export interface RenderTargetOptions {
  * GPU context initialization options
  */
 export interface GPUContextOptions {
-  /** 
+  /**
    * Device pixel ratio for high-DPR displays
    * - number: Fixed DPR (overrides device DPR when autoResize enabled)
    * - [min, max]: Clamp device DPR to this range when autoResize enabled
@@ -105,6 +105,13 @@ export interface GPUContextOptions {
     historySize?: number;   // Max events to keep (default: 1000)
     enableGPUTiming?: boolean; // Use timestamp queries (default: false)
   };
+  /**
+   * Canvas alpha mode for transparency support
+   * - "opaque": Canvas is always opaque, no transparency (better performance)
+   * - "premultiplied": RGB values are premultiplied by alpha, enables transparent canvas
+   * @default "premultiplied"
+   */
+  alphaMode?: "opaque" | "premultiplied";
 }
 
 /**

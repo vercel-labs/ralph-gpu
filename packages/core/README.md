@@ -103,6 +103,48 @@ The `dpr` option controls device pixel ratio handling:
   - Prevents texture size limits on high-DPI displays (4K+)
 - **Default**: `Math.min(devicePixelRatio, 2)` when `autoResize: true`, otherwise `1`
 
+#### Transparent Canvas
+
+By default, the canvas uses **premultiplied alpha mode** which allows transparency with the page background:
+
+```typescript
+const ctx = await gpu.init(canvas, {
+  alphaMode: "premultiplied", // Default - enables transparency
+});
+
+// Set transparent clear color
+ctx.clearColor = [0, 0, 0, 0]; // Fully transparent
+
+// When rendering, use premultiplied alpha in shaders
+const pass = ctx.pass(
+  /* wgsl */ `
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let color = vec3f(1.0, 0.0, 0.0); // Red
+    let alpha = 0.5;
+    // IMPORTANT: Premultiply RGB by alpha!
+    return vec4f(color * alpha, alpha);
+  }
+`,
+  { blend: "alpha" }
+);
+```
+
+For **opaque rendering** (better performance when transparency isn't needed):
+
+```typescript
+const ctx = await gpu.init(canvas, {
+  alphaMode: "opaque", // No transparency
+});
+```
+
+**Important**: With `alphaMode: "premultiplied"`, you must multiply RGB values by alpha in your shaders:
+
+- ✅ **Correct**: `vec4f(color * alpha, alpha)`
+- ❌ **Wrong**: `vec4f(color, alpha)` - will show black instead of CSS background
+
+This is because premultiplied alpha mode expects RGB values to already be multiplied by alpha for correct compositing with the page.
+
 ### 2. Create a Fullscreen Pass
 
 ```typescript

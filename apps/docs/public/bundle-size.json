@@ -1,17 +1,17 @@
 {
-  "timestamp": "2026-01-19T17:58:24.154Z",
+  "timestamp": "2026-02-03T19:58:46.570Z",
   "gzipKb": 10.9,
   "gzipDisplay": "~11kB",
   "bundles": {
     "index.js": {
-      "raw": 45435,
-      "gzip": 11388,
-      "brotli": 10173
+      "raw": 45488,
+      "gzip": 11401,
+      "brotli": 10180
     },
     "index.mjs": {
-      "raw": 44913,
-      "gzip": 11189,
-      "brotli": 9984
+      "raw": 44966,
+      "gzip": 11204,
+      "brotli": 9997
     }
   }
 }

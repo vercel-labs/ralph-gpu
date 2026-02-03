@@ -61,6 +61,7 @@ export class GPUContext {
   private _dprConfig: number | [number, number] | undefined;
   private _autoResize: boolean;
   private debug: boolean;
+  private alphaMode: GPUCanvasAlphaMode;
   private resizeObserver: ResizeObserver | null = null;
   private samplers: Set<Sampler> = new Set();
 
@@ -83,6 +84,7 @@ export class GPUContext {
     this._autoResize = options.autoResize || false;
     this._dpr = this.calculateEffectiveDpr();
     this.debug = options.debug || false;
+    this.alphaMode = options.alphaMode || "premultiplied";
     this.enableGPUTiming = options.events?.enableGPUTiming || false; // Initialize here
 
     // Initialize event system
@@ -145,7 +147,7 @@ export class GPUContext {
     context.configure({
       device,
       format,
-      alphaMode: "premultiplied",
+      alphaMode: this.alphaMode,
     });
 
     // Create globals buffer
