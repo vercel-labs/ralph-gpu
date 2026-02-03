@@ -6,7 +6,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/gzip-10.9kB-blue" alt="Bundle size: ~10.9kB gzipped" />
-  <img src="https://img.shields.io/badge/brotli-9.7kB-purple" alt="Brotli: ~9.7kB" />
+  <img src="https://img.shields.io/badge/brotli-9.8kB-purple" alt="Brotli: ~9.8kB" />
   <img src="https://img.shields.io/badge/WebGPU-ready-green" alt="WebGPU Ready" />
 </p>
 
@@ -863,8 +863,8 @@ pnpm run test:all
 
 | Format | Raw | Gzip | Brotli |
 |--------|-----|------|--------|
-| index.js | 44.18 kB | 11.08 kB | 9.89 kB |
-| index.mjs | 43.67 kB | 10.88 kB | 9.71 kB |
+| index.js | 44.42 kB | 11.13 kB | 9.94 kB |
+| index.mjs | 43.91 kB | 10.94 kB | 9.76 kB |
 
 > 📦 **~10.9 kB** gzipped (ESM)
 

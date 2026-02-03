@@ -1063,6 +1063,43 @@ ctx.timeScale = 2.0; // Fast forward
 ctx.time = 0; // Reset time
 ```
 
+## Transparent Canvas
+
+For transparent canvas backgrounds that blend with the page:
+
+```tsx
+const ctx = await gpu.init(canvas, {
+  alphaMode: "premultiplied", // Default - enables transparency
+});
+
+// Set transparent clear color
+ctx.clearColor = [0, 0, 0, 0]; // Fully transparent
+
+// In shader: MUST premultiply RGB by alpha
+const pass = ctx.pass(
+  /* wgsl */ `
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let color = vec3f(1.0, 0.0, 0.0); // Red
+    let alpha = 0.5;
+    // CRITICAL: Premultiply RGB by alpha!
+    return vec4f(color * alpha, alpha);
+  }
+`,
+  { blend: "alpha" }
+);
+```
+
+**Alpha Modes:**
+
+- `"premultiplied"` (default): Enables transparency, RGB must be premultiplied by alpha
+- `"opaque"`: No transparency, better performance when not needed
+
+**Important:** With premultiplied alpha, always multiply RGB by alpha in shaders:
+
+- ✅ Correct: `vec4f(color * alpha, alpha)`
+- ❌ Wrong: `vec4f(color, alpha)` - will show black instead of background
+
 ## Error Handling
 
 ```tsx

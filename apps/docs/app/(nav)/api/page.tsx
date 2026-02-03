@@ -9,15 +9,22 @@ gpu.isSupported()  // → boolean
 gpu.init(canvas, options?)  // → Promise<GPUContext>`;
 
 const initOptionsCode = `interface InitOptions {
-  autoResize?: boolean;  // Auto-resize from CSS size (default: false)
-  dpr?: number;          // Device pixel ratio (default: min(devicePixelRatio, 2))
-  debug?: boolean;       // Enable debug logging (default: false)
+  autoResize?: boolean;          // Auto-resize from CSS size (default: false)
+  dpr?: number;                  // Device pixel ratio (default: min(devicePixelRatio, 2))
+  debug?: boolean;               // Enable debug logging (default: false)
+  alphaMode?: "opaque" | "premultiplied";  // Canvas alpha mode (default: "premultiplied")
 }
 
 // Recommended: autoResize handles canvas sizing and DPR automatically
 const ctx = await gpu.init(canvas, {
   autoResize: true,
 });
+
+// For transparent canvas (default behavior)
+const ctx = await gpu.init(canvas, {
+  alphaMode: "premultiplied",  // Enables transparency with CSS background
+});
+ctx.clearColor = [0, 0, 0, 0];  // Set transparent clear color
 
 // Manual control:
 // If autoResize is false, library uses canvas.width/height directly
