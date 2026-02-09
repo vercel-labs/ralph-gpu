@@ -35,6 +35,8 @@ npm install -D @webgpu/types
 | `pingPong` | Pair of render targets for iterative effects |
 | `compute` | Compute shader for GPU-parallel computation |
 | `storage` | Storage buffer for large data (particles, simulations) |
+| `sampler` | Custom texture sampler with explicit filtering/wrapping |
+| `texture` | Load images, canvases, video, or raw data as GPU textures |
 
 ## Auto-Injected Globals
 
@@ -66,13 +68,13 @@ if (!gpu.isSupported()) {
 const ctx = await gpu.init(canvas, { autoResize: true });
 
 // Create fullscreen shader pass
-const pass = ctx.pass(`
+const pass = ctx.pass(\`
   @fragment
   fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
     let uv = pos.xy / globals.resolution;
     return vec4f(uv, sin(globals.time) * 0.5 + 0.5, 1.0);
   }
-`);
+\`);
 
 // Render loop
 function frame() {
@@ -163,12 +165,12 @@ particles.draw();
 ### Compute Shaders
 
 ```tsx
-const compute = ctx.compute(`
+const compute = ctx.compute(\`
   @compute @workgroup_size(64)
   fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     // GPU computation
   }
-`);
+\`);
 
 compute.storage("buffer", storageBuffer);
 compute.dispatch(Math.ceil(count / 64));
@@ -184,6 +186,40 @@ buffer.write(new Float32Array([...]));
 pass.storage("dataBuffer", buffer);
 ```
 
+### Texture Loading
+
+```tsx
+// From URL (async)
+const tex = await ctx.texture("image.png");
+
+// From canvas / video / ImageBitmap (sync)
+const tex = ctx.texture(canvas);
+
+// From raw pixel data (sync)
+const tex = ctx.texture(new Uint8Array(data), { width: 256, height: 256 });
+
+// Options
+const tex = await ctx.texture("photo.jpg", {
+  filter: "linear",     // "linear" | "nearest"
+  wrap: "repeat",       // "clamp" | "repeat" | "mirror"
+  format: "rgba8unorm", // GPU texture format
+  flipY: true,          // Flip vertically on load
+});
+
+// Bind to shader (manual mode)
+const pass = ctx.pass(shader, {
+  uniforms: {
+    uTex: { value: tex },  // .texture and .sampler auto-bound
+  }
+});
+
+// Update from live source (canvas, video)
+tex.update(videoElement);
+
+// Clean up
+tex.dispose();
+```
+
 ## Important Notes
 
 **WGSL Alignment**: `array<vec3f>` has 16-byte stride, not 12. Always pad to 16 bytes:
@@ -194,20 +230,24 @@ const buffer = ctx.storage(count * 16);
 
 **Particle Rendering**: Use instanced quads, not point-list (WebGPU points are always 1px)
 
-**Texture References**: Target references stay valid after resize - no need to update uniforms
+**Texture References**: Target references stay valid after resize — no need to update uniforms
 
 **Screen Readback**: Cannot read pixels from screen, only from render targets
 
 ## Examples
 
-For detailed code examples, see:
-- [examples-initialization.md](./examples-initialization.md) - Setup and React integration
-- [examples-passes.md](./examples-passes.md) - Fullscreen shader passes
-- [examples-rendering.md](./examples-rendering.md) - Render targets and ping-pong
-- [examples-particles.md](./examples-particles.md) - Particle systems
-- [examples-compute.md](./examples-compute.md) - Compute shaders
-- [examples-shaders.md](./examples-shaders.md) - WGSL patterns and SDFs
-- [examples-debugging.md](./examples-debugging.md) - Profiler and events
+Full working examples extracted from the docs app:
+
+- [Simple Gradient](./examples/gradient.md) — The simplest possible shader — map UV coordinates to colors. This creates a gradient from black (bottom-left) to cyan (top-right).
+- [Animated Wave](./examples/wave.md) — A glowing sine wave with custom uniforms. The wave animates over time using globals.time.
+- [Time-Based Color Cycling](./examples/color-cycle.md) — A hypnotic pattern that cycles through colors over time. Combines time, distance, and angle for a mesmerizing effect.
+- [Raymarching Sphere](./examples/raymarching.md) — A basic 3D sphere rendered using raymarching. This demonstrates how to create 3D shapes and lighting entirely within a fragment shader.
+- [Perlin-style Noise](./examples/noise.md) — Layered fractional Brownian motion (fBm) noise. This technique is fundamental for generating procedural textures, terrain, and natural-looking patterns.
+- [Metaballs](./examples/metaballs.md) — Organic-looking "blobs" that merge together based on an implicit surface. This effect uses a distance-based field and a threshold to create smooth blending.
+- [Mandelbrot Set](./examples/fractal.md) — The classic complex number fractal. This shader computes the set by iterating z = z² + c and mapping the escape time to vibrant colors.
+- [Alien Planet](./examples/alien-planet.md) — A procedurally generated alien world with atmospheric scattering and an orbiting moon. Uses raymarching with fBm noise for terrain detail.
+- [Fluid Simulation](./examples/fluid.md) — Real-time Navier-Stokes fluid simulation using ping-pong buffers, vorticity confinement, and pressure projection.
+- [Triangle Particles](./examples/triangle-particles.md) — GPU-driven particle system with SDF-based physics. 30,000 particles spawn on triangle edges and flow along a signed distance field with chromatic aberration postprocessing.
 
 ## Resources
 

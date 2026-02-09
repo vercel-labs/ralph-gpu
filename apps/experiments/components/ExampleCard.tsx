@@ -33,7 +33,7 @@ export default function ExampleCard({ slug, title, description, category }: Exam
 
   return (
     <Link
-      href={`/playground/${slug}`}
+      href={`/${slug}`}
       className="example-card"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

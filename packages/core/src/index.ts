@@ -17,6 +17,7 @@ export { MultiRenderTarget } from "./mrt";
 export { StorageBuffer } from "./storage";
 export { Particles } from "./particles";
 export { Sampler } from "./sampler";
+export { Texture } from "./texture";
 export { EventEmitter } from "./event-emitter";
 export { Profiler } from "./profiler";
 
@@ -52,6 +53,8 @@ export type {
 } from "./types";
 
 export type { SamplerDescriptor } from "./sampler";
+
+export type { TextureOptions, RawTextureData } from "./texture";
 
 export type {
   GPUEvent,

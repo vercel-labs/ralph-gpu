@@ -1,12 +1,12 @@
 # ralph-gpu
 
 <p align="center">
-  <strong>~10.9kB gzipped</strong> · WebGPU shader library for creative coding
+  <strong>~11.5kB gzipped</strong> · WebGPU shader library for creative coding
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/gzip-10.9kB-blue" alt="Bundle size: ~10.9kB gzipped" />
-  <img src="https://img.shields.io/badge/brotli-9.8kB-purple" alt="Brotli: ~9.8kB" />
+  <img src="https://img.shields.io/badge/gzip-11.5kB-blue" alt="Bundle size: ~11.5kB gzipped" />
+  <img src="https://img.shields.io/badge/brotli-10.3kB-purple" alt="Brotli: ~10.3kB" />
   <img src="https://img.shields.io/badge/WebGPU-ready-green" alt="WebGPU Ready" />
 </p>
 
@@ -44,6 +44,7 @@ frame();
 - **Storage buffers** — For particles, simulations, and custom data
 - **Blend modes** — Presets (`additive`, `alpha`, `multiply`) + custom configs
 - **Render targets** — Offscreen rendering with configurable format, filter, wrap, and storage usage
+- **Texture loading** — Load images from URLs, canvases, video, or raw pixel data as GPU textures
 
 ## Installation
 
@@ -736,6 +737,76 @@ sampler.dispose(); // Cleanup (currently no-op, kept for API consistency)
 }
 ```
 
+### Texture
+
+Load external images, canvases, video frames, or raw pixel data as GPU textures. The `Texture` class duck-types the same `{ texture, sampler }` shape as `RenderTarget`, so it works seamlessly with both simple and manual uniform modes.
+
+#### Loading from URL (async)
+
+```typescript
+const photo = await ctx.texture("/photo.jpg");
+const tiled = await ctx.texture("/bricks.png", { filter: "nearest", wrap: "repeat" });
+```
+
+#### Loading from Canvas / Video (sync)
+
+```typescript
+const canvasTex = ctx.texture(canvas2dElement);
+const videoTex = ctx.texture(videoElement);
+
+// Update each frame for live sources:
+videoTex.update(videoElement);
+```
+
+#### Loading from raw pixel data (sync)
+
+```typescript
+const data = new Uint8Array(256 * 256 * 4); // RGBA
+// ... fill data ...
+const dataTex = ctx.texture(data, { width: 256, height: 256, filter: "nearest" });
+```
+
+#### Using in manual uniforms mode
+
+```typescript
+const pass = ctx.pass(/* wgsl */ `
+  @group(1) @binding(0) var uTex: texture_2d<f32>;
+  @group(1) @binding(1) var uTexSampler: sampler;
+
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let uv = pos.xy / globals.resolution;
+    return textureSample(uTex, uTexSampler, uv);
+  }
+`, {
+  uniforms: {
+    uTex: { value: photo },
+  },
+});
+```
+
+#### Texture API
+
+```typescript
+texture.texture;   // GPUTexture (for the uniform system)
+texture.sampler;   // GPUSampler (derived from filter/wrap options)
+texture.width;     // Width in pixels
+texture.height;    // Height in pixels
+texture.update(source); // Re-upload from canvas/video/ImageBitmap
+texture.dispose();      // Destroy the underlying GPUTexture
+```
+
+**TextureOptions:**
+
+```typescript
+{
+  filter?: "linear" | "nearest",   // Default: "linear"
+  wrap?: "clamp" | "repeat" | "mirror", // Default: "clamp"
+  premultiply?: boolean,           // Default: true (for URL/ImageBitmap)
+  flipY?: boolean,                 // Default: false
+}
+```
+
 ## Exports
 
 ### Classes
@@ -754,6 +825,7 @@ import {
   StorageBuffer, // Storage buffer
   Particles, // Particle system helper
   Sampler, // Texture sampler
+  Texture, // Loaded GPU texture (from URL, canvas, video, or raw data)
 } from "ralph-gpu";
 ```
 
@@ -863,10 +935,10 @@ pnpm run test:all
 
 | Format | Raw | Gzip | Brotli |
 |--------|-----|------|--------|
-| index.js | 44.42 kB | 11.13 kB | 9.94 kB |
-| index.mjs | 43.91 kB | 10.94 kB | 9.76 kB |
+| index.js | 46.47 kB | 11.73 kB | 10.47 kB |
+| index.mjs | 45.96 kB | 11.53 kB | 10.29 kB |
 
-> 📦 **~10.9 kB** gzipped (ESM)
+> 📦 **~11.5 kB** gzipped (ESM)
 
 ## Browser Support
 

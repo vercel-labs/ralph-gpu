@@ -34,6 +34,7 @@ npm install -D @webgpu/types
 | `compute`  | Compute shader for GPU-parallel computation             |
 | `storage`  | Storage buffer for large data (particles, simulations)  |
 | `sampler`  | Custom texture sampler with explicit filtering/wrapping |
+| `texture`  | Load images, canvases, video, or raw data as GPU textures |
 
 ## Auto-Injected Globals
 
@@ -1273,6 +1274,69 @@ const pass = ctx.pass(shader, { uniforms });
 - **Performance**: Avoid recreating samplers with the same settings
 - **Explicit Control**: Choose exact filtering and wrapping behavior
 - **Consistency**: Ensure the same sampling behavior across effects
+
+### Texture Loading
+
+Load external images, canvases, video, or raw pixel data as GPU textures via `ctx.texture()`. The `Texture` class exposes `.texture` and `.sampler` properties, matching the same duck-type interface as `RenderTarget`.
+
+```tsx
+// From URL (async)
+const photo = await ctx.texture("/photo.jpg");
+const tiled = await ctx.texture("/bricks.png", { filter: "nearest", wrap: "repeat" });
+
+// From canvas/video (sync)
+const canvasTex = ctx.texture(canvas2dElement);
+const videoTex = ctx.texture(videoElement);
+
+// From raw pixel data (sync)
+const data = new Uint8Array(256 * 256 * 4);
+const dataTex = ctx.texture(data, { width: 256, height: 256 });
+
+// Use in manual uniforms mode
+const pass = ctx.pass(/* wgsl */ `
+  @group(1) @binding(0) var uTex: texture_2d<f32>;
+  @group(1) @binding(1) var uTexSampler: sampler;
+
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let uv = pos.xy / globals.resolution;
+    return textureSample(uTex, uTexSampler, uv);
+  }
+`, {
+  uniforms: {
+    uTex: { value: photo },
+  },
+});
+
+// Update live sources each frame
+videoTex.update(videoElement);
+canvasTex.update(canvas2dElement);
+
+// Cleanup
+photo.dispose();
+```
+
+**TextureOptions:**
+
+```tsx
+{
+  filter?: "linear" | "nearest",          // Default: "linear"
+  wrap?: "clamp" | "repeat" | "mirror",   // Default: "clamp"
+  premultiply?: boolean,                  // Default: true
+  flipY?: boolean,                        // Default: false
+}
+```
+
+**Texture API:**
+
+```tsx
+texture.texture;   // GPUTexture
+texture.sampler;   // GPUSampler
+texture.width;     // number
+texture.height;    // number
+texture.update(source); // Re-upload from canvas/video/ImageBitmap
+texture.dispose();      // Destroy GPU texture
+```
 
 ### Texture Binding Patterns
 
