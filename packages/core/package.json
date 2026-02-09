@@ -1,6 +1,6 @@
 {
   "name": "ralph-gpu",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Minimal WebGPU shader library",
   "author": "matiasngf",
   "homepage": "https://ralph-gpu.labs.vercel.dev/",
