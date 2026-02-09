@@ -81,11 +81,11 @@ export function TaskList({ tasks, selectedTask, onSelectTask }: TaskListProps) {
                           <span>{task.summary.totalToolCalls} tools</span>
                         </div>
                       )}
-                      {task.summary?.errorsEncountered > 0 && (
+                      {(task.summary?.errorsEncountered ?? 0) > 0 && (
                         <div className={`mt-1 text-xs ${
                           isActive ? 'text-red-10' : 'text-red-9'
                         }`}>
-                          {task.summary.errorsEncountered} error{task.summary.errorsEncountered !== 1 ? 's' : ''}
+                          {task.summary!.errorsEncountered} error{task.summary!.errorsEncountered !== 1 ? 's' : ''}
                         </div>
                       )}
                     </button>

@@ -60,7 +60,16 @@ ctx.storage(byteSize)                    // → StorageBuffer
 ctx.particles(count, options)            // → Particles
 
 // Create custom texture sampler
-ctx.createSampler(descriptor?)           // → Sampler`;
+ctx.createSampler(descriptor?)           // → Sampler
+
+// Load texture from URL (async)
+ctx.texture(url, options?)               // → Promise<Texture>
+
+// Load texture from canvas/video (sync)
+ctx.texture(source, options?)            // → Texture
+
+// Load texture from raw data (sync)
+ctx.texture(data, { width, height })     // → Texture`;
 
 const contextStateCode = `// Render target management
 ctx.setTarget(target)      // Set render target (pass null for screen)
@@ -315,6 +324,52 @@ particles.draw();
 // Access underlying resources
 particles.storageBuffer     // → StorageBuffer
 particles.underlyingMaterial // → Material`;
+
+const textureCode = `// Load from URL (async)
+const photo = await ctx.texture("/photo.jpg");
+const tiled = await ctx.texture("/bricks.png", { filter: "nearest", wrap: "repeat" });
+
+// Load from canvas/video (sync)
+const canvasTex = ctx.texture(canvas2dElement);
+const videoTex = ctx.texture(videoElement);
+
+// Load from raw pixel data (sync)
+const data = new Uint8Array(256 * 256 * 4);
+const dataTex = ctx.texture(data, { width: 256, height: 256 });
+
+// Use in manual uniforms mode
+const pass = ctx.pass(\`
+  @group(1) @binding(0) var uTex: texture_2d<f32>;
+  @group(1) @binding(1) var uTexSampler: sampler;
+
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let uv = pos.xy / globals.resolution;
+    return textureSample(uTex, uTexSampler, uv);
+  }
+\`, {
+  uniforms: { uTex: { value: photo } },
+});
+
+// Update live sources each frame
+videoTex.update(videoElement);
+
+// Cleanup
+photo.dispose();`;
+
+const textureOptionsCode = `interface TextureOptions {
+  filter?: "linear" | "nearest";          // Default: "linear"
+  wrap?: "clamp" | "repeat" | "mirror";   // Default: "clamp"
+  premultiply?: boolean;                  // Default: true
+  flipY?: boolean;                        // Default: false
+}`;
+
+const texturePropertiesCode = `texture.texture;        // GPUTexture
+texture.sampler;        // GPUSampler (from filter/wrap options)
+texture.width;          // number (pixels)
+texture.height;         // number (pixels)
+texture.update(source); // Re-upload from canvas/video/ImageBitmap
+texture.dispose();      // Destroy the underlying GPUTexture`;
 
 const samplerCode = `// Create custom samplers for explicit texture filtering control
 const linearClamp = ctx.createSampler({
@@ -827,6 +882,25 @@ export default function ApiPage() {
             <strong>Performance tip:</strong> Create samplers once during initialization and reuse them across multiple textures and shaders instead of recreating them every frame.
           </div>
         </div>
+      </section>
+
+      {/* Texture */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-semibold text-gray-12 mb-4" id="texture">
+          Texture
+        </h2>
+        <p className="text-gray-11 mb-4">
+          Load external images, canvases, video frames, or raw pixel data as GPU textures.
+          The <code>Texture</code> class duck-types the same shape as <code>RenderTarget</code>,
+          so it works seamlessly with both simple and manual uniform modes.
+        </p>
+        <CodeBlock code={textureCode} language="typescript" />
+
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Texture Options</h3>
+        <CodeBlock code={textureOptionsCode} language="typescript" />
+
+        <h3 className="text-lg font-semibold text-gray-12 mt-6 mb-3">Properties & Methods</h3>
+        <CodeBlock code={texturePropertiesCode} language="typescript" />
       </section>
 
       {/* Blend Modes */}

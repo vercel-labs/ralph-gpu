@@ -175,6 +175,9 @@ importers:
       next:
         specifier: ^14.2.23
         version: 14.2.35(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      playwright:
+        specifier: ^1.48.0
+        version: 1.57.0
       ralph-gpu:
         specifier: workspace:*
         version: link:../../packages/core

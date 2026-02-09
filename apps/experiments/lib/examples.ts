@@ -582,6 +582,61 @@ fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
 }
 `.trim(),
   },
+  {
+    slug: "image-texture",
+    title: "Image Texture (URL)",
+    description: "Load an image from URL via ctx.texture() with manual uniforms mode.",
+    category: "features",
+    shaderCode: `
+@group(1) @binding(0) var uTex: texture_2d<f32>;
+@group(1) @binding(1) var uTexSampler: sampler;
+
+struct Params {
+  uvScroll: vec2f,
+  uvScale: vec2f,
+}
+@group(1) @binding(2) var<uniform> params: Params;
+
+@fragment
+fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  var uv = pos.xy / globals.resolution;
+  uv = uv * params.uvScale + params.uvScroll;
+  return textureSample(uTex, uTexSampler, uv);
+}
+`.trim(),
+  },
+  {
+    slug: "canvas-texture",
+    title: "Canvas Texture (Live)",
+    description: "Stream a 2D OffscreenCanvas to the GPU every frame via tex.update().",
+    category: "features",
+    shaderCode: `
+@group(1) @binding(0) var uTex: texture_2d<f32>;
+@group(1) @binding(1) var uTexSampler: sampler;
+
+@fragment
+fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  let uv = pos.xy / globals.resolution;
+  return textureSample(uTex, uTexSampler, uv);
+}
+`.trim(),
+  },
+  {
+    slug: "data-texture",
+    title: "Data Texture (Procedural)",
+    description: "Create a checkerboard texture from raw Uint8Array pixel data.",
+    category: "features",
+    shaderCode: `
+@group(1) @binding(0) var uTex: texture_2d<f32>;
+@group(1) @binding(1) var uTexSampler: sampler;
+
+@fragment
+fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+  let uv = pos.xy / globals.resolution;
+  return textureSample(uTex, uTexSampler, uv);
+}
+`.trim(),
+  },
 ];
 
 export function getExampleBySlug(slug: string): ExampleMeta | undefined {

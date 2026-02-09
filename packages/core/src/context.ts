@@ -26,6 +26,13 @@ import { StorageBuffer } from "./storage";
 import { Particles } from "./particles";
 import { Sampler, SamplerDescriptor } from "./sampler";
 import {
+  Texture,
+  createTextureFromURL,
+  createTextureFromSource,
+  createTextureFromData,
+} from "./texture";
+import type { TextureOptions, RawTextureData } from "./texture";
+import {
   createGlobalsBuffer,
   updateGlobalsBuffer,
 } from "./uniforms";
@@ -260,6 +267,13 @@ export class GPUContext {
   }
 
   /**
+   * Get the underlying WebGPU device (for advanced operations like texture loading).
+   */
+  get gpuDevice(): GPUDevice {
+    return this.device;
+  }
+
+  /**
    * Get/set time
    */
   get time(): number {
@@ -312,13 +326,6 @@ export class GPUContext {
 
   set clearColor(value: [number, number, number, number]) {
     this._clearColor = [...value] as [number, number, number, number];
-  }
-
-  /**
-   * Get the GPU device
-   */
-  get gpuDevice(): GPUDevice {
-    return this.device;
   }
 
   /**
@@ -443,6 +450,74 @@ export class GPUContext {
     const w = width ?? this._width;
     const h = height ?? this._height;
     return new RenderTarget(this.device, w, h, options, this);
+  }
+
+  /**
+   * Load a texture from a URL (async).
+   *
+   * ```typescript
+   * const photo = await ctx.texture("/photo.jpg");
+   * const tiled = await ctx.texture("/bricks.png", { filter: "nearest", wrap: "repeat" });
+   * ```
+   */
+  texture(url: string, options?: TextureOptions): Promise<Texture>;
+
+  /**
+   * Create a texture from an HTMLCanvasElement, OffscreenCanvas,
+   * HTMLVideoElement or ImageBitmap (sync).
+   *
+   * ```typescript
+   * const vidTex  = ctx.texture(videoElement);
+   * const canvTex = ctx.texture(canvas2d);
+   * ```
+   */
+  texture(
+    source: HTMLCanvasElement | OffscreenCanvas | HTMLVideoElement | ImageBitmap,
+    options?: TextureOptions,
+  ): Texture;
+
+  /**
+   * Create a texture from raw pixel data (Uint8Array for rgba8unorm).
+   *
+   * ```typescript
+   * const dataTex = ctx.texture(rgbaBytes, { width: 256, height: 256 });
+   * ```
+   */
+  texture(
+    data: Uint8Array | Uint8ClampedArray | Float32Array,
+    options: TextureOptions & RawTextureData,
+  ): Texture;
+
+  // implementation
+  texture(
+    source: string | HTMLCanvasElement | OffscreenCanvas | HTMLVideoElement | ImageBitmap | Uint8Array | Uint8ClampedArray | Float32Array,
+    options?: TextureOptions & Partial<RawTextureData>,
+  ): Promise<Texture> | Texture {
+    if (typeof source === "string") {
+      return createTextureFromURL(this.device, source, options);
+    }
+
+    if (
+      source instanceof HTMLCanvasElement ||
+      source instanceof OffscreenCanvas ||
+      source instanceof HTMLVideoElement ||
+      source instanceof ImageBitmap
+    ) {
+      return createTextureFromSource(this.device, source, options);
+    }
+
+    // Typed array (raw data) – width & height required
+    const { width, height, ...texOpts } = options as TextureOptions & RawTextureData;
+    if (!width || !height) {
+      throw new Error("ctx.texture(data, opts): width and height are required for raw pixel data");
+    }
+    return createTextureFromData(
+      this.device,
+      source as Uint8Array | Uint8ClampedArray | Float32Array,
+      width,
+      height,
+      texOpts,
+    );
   }
 
   /**

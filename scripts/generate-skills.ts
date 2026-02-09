@@ -1,117 +1,24 @@
 #!/usr/bin/env node
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
-interface CodeExample {
-  code: string;
-  language: string;
-  context: string;
-}
+// Import examples directly from the docs app — the single source of truth
+import { examples } from "../apps/docs/lib/examples/index";
 
-interface CategoryExamples {
-  [category: string]: CodeExample[];
-}
+const skillsDir = path.join(process.cwd(), "SKILLS", "ralph-gpu");
+const examplesDir = path.join(skillsDir, "examples");
 
-// Read the source documentation
-const sourcePath = path.join(process.cwd(), '.cursor/rules/ralph-gpu.mdc');
-const sourceContent = fs.readFileSync(sourcePath, 'utf-8');
-
-// Extract frontmatter
-const frontmatterMatch = sourceContent.match(/^---\n([\s\S]*?)\n---\n/);
-const contentWithoutFrontmatter = frontmatterMatch
-  ? sourceContent.slice(frontmatterMatch[0].length)
-  : sourceContent;
-
-// Parse the markdown structure
-const lines = contentWithoutFrontmatter.split('\n');
-
-// Categories for examples
-const categories: CategoryExamples = {
-  initialization: [],
-  passes: [],
-  rendering: [],
-  particles: [],
-  compute: [],
-  shaders: [],
-  debugging: []
-};
-
-// Parse examples from markdown
-function extractExamples(): CategoryExamples {
-  let currentSection = '';
-  let currentSubsection = '';
-  let inCodeBlock = false;
-  let currentCode: string[] = [];
-  let currentLanguage = '';
-  let contextLines: string[] = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // Track sections
-    if (line.startsWith('##')) {
-      currentSection = line.replace(/^##\s+/, '').toLowerCase();
-      currentSubsection = '';
-    } else if (line.startsWith('###')) {
-      currentSubsection = line.replace(/^###\s+/, '').toLowerCase();
-    }
-
-    // Track code blocks
-    if (line.startsWith('```')) {
-      if (!inCodeBlock) {
-        // Starting a code block
-        inCodeBlock = true;
-        currentLanguage = line.slice(3).trim() || 'plaintext';
-        currentCode = [];
-        // Collect context from previous lines (headers, descriptions)
-        contextLines = [];
-        for (let j = Math.max(0, i - 5); j < i; j++) {
-          if (lines[j].trim() && !lines[j].startsWith('```')) {
-            contextLines.push(lines[j]);
-          }
-        }
-      } else {
-        // Ending a code block
-        inCodeBlock = false;
-
-        // Categorize the example
-        const example: CodeExample = {
-          code: currentCode.join('\n'),
-          language: currentLanguage,
-          context: contextLines.join('\n')
-        };
-
-        // Determine category based on section and content
-        const fullContext = `${currentSection} ${currentSubsection} ${example.code}`.toLowerCase();
-
-        if (fullContext.includes('init') || fullContext.includes('useeffect') || fullContext.includes('gpu.init')) {
-          categories.initialization.push(example);
-        } else if (fullContext.includes('pass') && (fullContext.includes('fullscreen') || fullContext.includes('fragment'))) {
-          categories.passes.push(example);
-        } else if (fullContext.includes('target') || fullContext.includes('pingpong') || fullContext.includes('mrt')) {
-          categories.rendering.push(example);
-        } else if (fullContext.includes('particle') || fullContext.includes('instance')) {
-          categories.particles.push(example);
-        } else if (fullContext.includes('compute') || fullContext.includes('@compute')) {
-          categories.compute.push(example);
-        } else if (fullContext.includes('wgsl') || fullContext.includes('@fragment') || fullContext.includes('@vertex') || fullContext.includes('sdf')) {
-          categories.shaders.push(example);
-        } else if (fullContext.includes('profiler') || fullContext.includes('event') || fullContext.includes('debug')) {
-          categories.debugging.push(example);
-        }
-      }
-    } else if (inCodeBlock) {
-      currentCode.push(line);
-    }
-  }
-
-  return categories;
-}
-
-// Generate SKILL.md content
+// ---------------------------------------------------------------------------
+// 1. Generate SKILL.md — core content with minimal inline examples
+// ---------------------------------------------------------------------------
 function generateMainSkill(): string {
-  const content = `---
+  // Build the examples link list
+  const exampleLinks = examples
+    .map((ex) => `- [${ex.title}](./examples/${ex.slug}.md) — ${ex.description}`)
+    .join("\n");
+
+  return `---
 name: ralph-gpu
 description: Minimal WebGPU shader library for creative coding and real-time graphics. Provides fullscreen passes, particles, compute shaders, render targets, and ping-pong buffers with automatic uniform bindings and global time/resolution tracking.
 ---
@@ -148,6 +55,8 @@ npm install -D @webgpu/types
 | \`pingPong\` | Pair of render targets for iterative effects |
 | \`compute\` | Compute shader for GPU-parallel computation |
 | \`storage\` | Storage buffer for large data (particles, simulations) |
+| \`sampler\` | Custom texture sampler with explicit filtering/wrapping |
+| \`texture\` | Load images, canvases, video, or raw data as GPU textures |
 
 ## Auto-Injected Globals
 
@@ -179,13 +88,13 @@ if (!gpu.isSupported()) {
 const ctx = await gpu.init(canvas, { autoResize: true });
 
 // Create fullscreen shader pass
-const pass = ctx.pass(\`
+const pass = ctx.pass(\\\`
   @fragment
   fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
     let uv = pos.xy / globals.resolution;
     return vec4f(uv, sin(globals.time) * 0.5 + 0.5, 1.0);
   }
-\`);
+\\\`);
 
 // Render loop
 function frame() {
@@ -276,12 +185,12 @@ particles.draw();
 ### Compute Shaders
 
 \`\`\`tsx
-const compute = ctx.compute(\`
+const compute = ctx.compute(\\\`
   @compute @workgroup_size(64)
   fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     // GPU computation
   }
-\`);
+\\\`);
 
 compute.storage("buffer", storageBuffer);
 compute.dispatch(Math.ceil(count / 64));
@@ -297,6 +206,40 @@ buffer.write(new Float32Array([...]));
 pass.storage("dataBuffer", buffer);
 \`\`\`
 
+### Texture Loading
+
+\`\`\`tsx
+// From URL (async)
+const tex = await ctx.texture("image.png");
+
+// From canvas / video / ImageBitmap (sync)
+const tex = ctx.texture(canvas);
+
+// From raw pixel data (sync)
+const tex = ctx.texture(new Uint8Array(data), { width: 256, height: 256 });
+
+// Options
+const tex = await ctx.texture("photo.jpg", {
+  filter: "linear",     // "linear" | "nearest"
+  wrap: "repeat",       // "clamp" | "repeat" | "mirror"
+  format: "rgba8unorm", // GPU texture format
+  flipY: true,          // Flip vertically on load
+});
+
+// Bind to shader (manual mode)
+const pass = ctx.pass(shader, {
+  uniforms: {
+    uTex: { value: tex },  // .texture and .sampler auto-bound
+  }
+});
+
+// Update from live source (canvas, video)
+tex.update(videoElement);
+
+// Clean up
+tex.dispose();
+\`\`\`
+
 ## Important Notes
 
 **WGSL Alignment**: \`array<vec3f>\` has 16-byte stride, not 12. Always pad to 16 bytes:
@@ -307,20 +250,15 @@ const buffer = ctx.storage(count * 16);
 
 **Particle Rendering**: Use instanced quads, not point-list (WebGPU points are always 1px)
 
-**Texture References**: Target references stay valid after resize - no need to update uniforms
+**Texture References**: Target references stay valid after resize — no need to update uniforms
 
 **Screen Readback**: Cannot read pixels from screen, only from render targets
 
 ## Examples
 
-For detailed code examples, see:
-- [examples-initialization.md](./examples-initialization.md) - Setup and React integration
-- [examples-passes.md](./examples-passes.md) - Fullscreen shader passes
-- [examples-rendering.md](./examples-rendering.md) - Render targets and ping-pong
-- [examples-particles.md](./examples-particles.md) - Particle systems
-- [examples-compute.md](./examples-compute.md) - Compute shaders
-- [examples-shaders.md](./examples-shaders.md) - WGSL patterns and SDFs
-- [examples-debugging.md](./examples-debugging.md) - Profiler and events
+Full working examples extracted from the docs app:
+
+${exampleLinks}
 
 ## Resources
 
@@ -328,82 +266,47 @@ For detailed code examples, see:
 - [API Documentation](https://ralph-gpu.dev/docs)
 - [WebGPU Specification](https://gpuweb.github.io/gpuweb/)
 `;
-
-  return content;
 }
 
-// Generate example file content
-function generateExampleFile(category: string, examples: CodeExample[]): string {
-  const titles: { [key: string]: string } = {
-    initialization: 'Initialization Examples',
-    passes: 'Fullscreen Pass Examples',
-    rendering: 'Render Target Examples',
-    particles: 'Particle System Examples',
-    compute: 'Compute Shader Examples',
-    shaders: 'WGSL Shader Examples',
-    debugging: 'Debugging and Profiling Examples'
-  };
-
-  let content = `# ${titles[category]}\n\n`;
-  content += `This file contains code examples for ${category} in ralph-gpu.\n\n`;
-
-  examples.forEach((example, index) => {
-    // Extract a meaningful title from context
-    const contextLine = example.context.split('\n').find(line =>
-      line.startsWith('#') || line.trim().length > 10
-    ) || `Example ${index + 1}`;
-
-    const title = contextLine.replace(/^#+\s*/, '').trim();
-
-    content += `## ${title}\n\n`;
-
-    // Add context if meaningful
-    const meaningfulContext = example.context
-      .split('\n')
-      .filter(line => !line.startsWith('#') && line.trim().length > 0)
-      .join('\n')
-      .trim();
-
-    if (meaningfulContext && meaningfulContext.length < 500) {
-      content += `${meaningfulContext}\n\n`;
-    }
-
-    content += `\`\`\`${example.language}\n${example.code}\n\`\`\`\n\n`;
-  });
-
-  return content;
+// ---------------------------------------------------------------------------
+// 2. Generate individual example markdown files
+// ---------------------------------------------------------------------------
+function generateExampleMarkdown(example: (typeof examples)[number]): string {
+  let md = `# ${example.title}\n\n`;
+  md += `${example.description}\n\n`;
+  md += `\`\`\`typescript\n${example.code.trim()}\n\`\`\`\n`;
+  return md;
 }
 
-// Main execution
-console.log('Parsing ralph-gpu.mdc...');
-const extractedExamples = extractExamples();
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+console.log("Generating ralph-gpu skills...\n");
+console.log(`Found ${examples.length} examples in docs app.\n`);
 
-// Create SKILLS directory
-const skillsDir = path.join(process.cwd(), 'SKILLS', 'ralph-gpu');
-if (!fs.existsSync(skillsDir)) {
-  fs.mkdirSync(skillsDir, { recursive: true });
+// Ensure directories exist
+fs.mkdirSync(examplesDir, { recursive: true });
+
+// Clean up old category-based example files
+const oldFiles = fs.readdirSync(skillsDir).filter((f) => f.startsWith("examples-") && f.endsWith(".md"));
+for (const file of oldFiles) {
+  const filePath = path.join(skillsDir, file);
+  fs.unlinkSync(filePath);
+  console.log(`  Removed old file: ${file}`);
 }
 
-console.log('Generating SKILL.md...');
-const mainSkillContent = generateMainSkill();
-fs.writeFileSync(path.join(skillsDir, 'SKILL.md'), mainSkillContent);
+// Generate SKILL.md
+const skillContent = generateMainSkill();
+fs.writeFileSync(path.join(skillsDir, "SKILL.md"), skillContent);
+console.log("  Generated: SKILL.md");
 
-console.log('Generating example files...');
-for (const [category, examples] of Object.entries(extractedExamples)) {
-  if (examples.length > 0) {
-    const filename = `examples-${category}.md`;
-    const content = generateExampleFile(category, examples);
-    fs.writeFileSync(path.join(skillsDir, filename), content);
-    console.log(`  - ${filename} (${examples.length} examples)`);
-  }
+// Generate individual example files
+for (const example of examples) {
+  const filename = `${example.slug}.md`;
+  const content = generateExampleMarkdown(example);
+  fs.writeFileSync(path.join(examplesDir, filename), content);
+  console.log(`  Generated: examples/${filename}`);
 }
 
-console.log('\nSkill generation complete!');
-console.log(`Output directory: ${skillsDir}`);
-console.log('\nGenerated files:');
-console.log('  - SKILL.md');
-Object.keys(extractedExamples).forEach(category => {
-  if (extractedExamples[category].length > 0) {
-    console.log(`  - examples-${category}.md`);
-  }
-});
+console.log(`\nDone! Generated SKILL.md + ${examples.length} example files.`);
+console.log(`Output: ${skillsDir}`);
