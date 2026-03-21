@@ -215,3 +215,11 @@ export interface ParticlesOptions {
   bufferSize: number;
   blend?: BlendMode | BlendConfig;
 }
+
+/**
+ * Headless GPU context initialization options
+ */
+export interface HeadlessGPUContextOptions extends GPUContextOptions {
+  gpu?: { requestAdapter(options?: GPURequestAdapterOptions): Promise<GPUAdapter | null> };
+  format?: GPUTextureFormat;
+}

@@ -4,6 +4,7 @@
 
 import type {
   GPUContextOptions,
+  HeadlessGPUContextOptions,
   PassOptions,
   MaterialOptions,
   ComputeOptions,
@@ -47,8 +48,8 @@ import { generateEventId } from "./events";
  */
 export class GPUContext {
   private device: GPUDevice;
-  private context: GPUCanvasContext;
-  private canvas: HTMLCanvasElement;
+  private context: GPUCanvasContext | null;
+  private canvas: HTMLCanvasElement | null;
   private format: GPUTextureFormat;
   private globalsBuffer: GPUBuffer;
   private globals: GlobalUniforms;
@@ -71,6 +72,8 @@ export class GPUContext {
   private alphaMode: GPUCanvasAlphaMode;
   private resizeObserver: ResizeObserver | null = null;
   private samplers: Set<Sampler> = new Set();
+  private headless: boolean = false;
+  private headlessTarget: RenderTarget | null = null;
 
   private eventEmitter?: EventEmitter;
   private frameCounter = 0;
@@ -78,15 +81,18 @@ export class GPUContext {
 
   constructor(
     device: GPUDevice,
-    context: GPUCanvasContext,
-    canvas: HTMLCanvasElement,
+    context: GPUCanvasContext | null,
+    canvas: HTMLCanvasElement | null,
     format: GPUTextureFormat,
-    options: GPUContextOptions = {}
+    options: GPUContextOptions = {},
+    headlessWidth?: number,
+    headlessHeight?: number
   ) {
     this.device = device;
     this.context = context;
     this.canvas = canvas;
     this.format = format;
+    this.headless = canvas === null;
     this._dprConfig = options.dpr;
     this._autoResize = options.autoResize || false;
     this._dpr = this.calculateEffectiveDpr();
@@ -102,60 +108,71 @@ export class GPUContext {
       });
     }
 
-    // Set canvas size based on display size or canvas attributes
-    if (options.autoResize) {
-      // Use display size (CSS size) for autoResize - apply DPR
-      const rect = canvas.getBoundingClientRect();
-      this._width = Math.floor(rect.width * this._dpr);
-      this._height = Math.floor(rect.height * this._dpr);
-      canvas.width = this._width;
-      canvas.height = this._height;
-      
-      // Setup ResizeObserver to track canvas size changes
-      this.resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          // Get CSS dimensions - prefer contentBoxSize but fall back to contentRect for older browsers
-          let cssWidth: number;
-          let cssHeight: number;
-          
-          const contentBoxSize = entry.contentBoxSize?.[0];
-          if (contentBoxSize) {
-            // Modern browsers: use contentBoxSize for accurate dimensions
-            cssWidth = contentBoxSize.inlineSize;
-            cssHeight = contentBoxSize.blockSize;
-          } else {
-            // Fallback for older browsers: use contentRect
-            cssWidth = entry.contentRect.width;
-            cssHeight = entry.contentRect.height;
-          }
-          
-          if (cssWidth > 0 && cssHeight > 0) {
-            // Recalculate effective DPR
-            this._dpr = this.calculateEffectiveDpr();
+    if (!this.headless) {
+      // Set canvas size based on display size or canvas attributes
+      if (options.autoResize) {
+        // Use display size (CSS size) for autoResize - apply DPR
+        const rect = canvas!.getBoundingClientRect();
+        this._width = Math.floor(rect.width * this._dpr);
+        this._height = Math.floor(rect.height * this._dpr);
+        canvas!.width = this._width;
+        canvas!.height = this._height;
+        
+        // Setup ResizeObserver to track canvas size changes
+        this.resizeObserver = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            // Get CSS dimensions - prefer contentBoxSize but fall back to contentRect for older browsers
+            let cssWidth: number;
+            let cssHeight: number;
             
-            // Set internal rendering resolution = CSS size * DPR
-            this._width = Math.floor(cssWidth * this._dpr);
-            this._height = Math.floor(cssHeight * this._dpr);
-            this.canvas.width = this._width;
-            this.canvas.height = this._height;
+            const contentBoxSize = entry.contentBoxSize?.[0];
+            if (contentBoxSize) {
+              // Modern browsers: use contentBoxSize for accurate dimensions
+              cssWidth = contentBoxSize.inlineSize;
+              cssHeight = contentBoxSize.blockSize;
+            } else {
+              // Fallback for older browsers: use contentRect
+              cssWidth = entry.contentRect.width;
+              cssHeight = entry.contentRect.height;
+            }
+            
+            if (cssWidth > 0 && cssHeight > 0) {
+              // Recalculate effective DPR
+              this._dpr = this.calculateEffectiveDpr();
+              
+              // Set internal rendering resolution = CSS size * DPR
+              this._width = Math.floor(cssWidth * this._dpr);
+              this._height = Math.floor(cssHeight * this._dpr);
+              this.canvas!.width = this._width;
+              this.canvas!.height = this._height;
+            }
           }
-        }
+        });
+        this.resizeObserver.observe(canvas!);
+      } else {
+        // When NOT using autoResize, use canvas.width/height directly as pixel dimensions
+        // User has already set the pixel size they want - don't multiply by DPR
+        // This avoids double-multiplication issues with React StrictMode remounts
+        this._width = canvas!.width;
+        this._height = canvas!.height;
+      }
+
+      // Configure context
+      context!.configure({
+        device,
+        format,
+        alphaMode: this.alphaMode,
       });
-      this.resizeObserver.observe(canvas);
     } else {
-      // When NOT using autoResize, use canvas.width/height directly as pixel dimensions
-      // User has already set the pixel size they want - don't multiply by DPR
-      // This avoids double-multiplication issues with React StrictMode remounts
-      this._width = canvas.width;
-      this._height = canvas.height;
+      // Headless mode: use provided dimensions directly
+      this._width = headlessWidth!;
+      this._height = headlessHeight!;
     }
 
-    // Configure context
-    context.configure({
-      device,
-      format,
-      alphaMode: this.alphaMode,
-    });
+    // Create headless render target as the backing "screen"
+    if (this.headless) {
+      this.headlessTarget = new RenderTarget(device, this._width, this._height, { format: format as any });
+    }
 
     // Create globals buffer
     this.globalsBuffer = createGlobalsBuffer(device);
@@ -238,13 +255,13 @@ export class GPUContext {
       if (Array.isArray(this._dprConfig)) {
         // Clamp device DPR to [min, max] range
         const [min, max] = this._dprConfig;
-        return Math.max(min, Math.min(max, window.devicePixelRatio));
+        return Math.max(min, Math.min(max, typeof window !== 'undefined' ? window.devicePixelRatio : 1));
       } else if (typeof this._dprConfig === "number") {
         // Fixed DPR overrides device DPR
         return this._dprConfig;
       } else {
         // Default: cap at 2
-        return Math.min(window.devicePixelRatio, 2);
+        return Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 1, 2);
       }
     } else {
       // When NOT using autoResize, DPR is not applied
@@ -723,7 +740,9 @@ export class GPUContext {
     
     if (clearTarget === null) {
       // Clear screen
-      const textureView = this.context.getCurrentTexture().createView();
+      const textureView = this.headless
+        ? this.headlessTarget!.view
+        : this.context!.getCurrentTexture().createView();
       const renderPassDescriptor: GPURenderPassDescriptor = {
         colorAttachments: [
           {
@@ -812,8 +831,14 @@ export class GPUContext {
   resize(width: number, height: number): void {
     this._width = Math.floor(width);
     this._height = Math.floor(height);
-    this.canvas.width = this._width;
-    this.canvas.height = this._height;
+    if (this.headless) {
+      if (this.headlessTarget) {
+        this.headlessTarget.resize(this._width, this._height);
+      }
+    } else {
+      this.canvas!.width = this._width;
+      this.canvas!.height = this._height;
+    }
   }
 
   /**
@@ -828,12 +853,14 @@ export class GPUContext {
    */
   set dpr(value: number) {
     this._dpr = value;
-    // Recalculate size based on display size
-    const rect = this.canvas.getBoundingClientRect();
-    this._width = Math.floor(rect.width * this._dpr);
-    this._height = Math.floor(rect.height * this._dpr);
-    this.canvas.width = this._width;
-    this.canvas.height = this._height;
+    if (!this.headless && this.canvas) {
+      // Recalculate size based on display size
+      const rect = this.canvas.getBoundingClientRect();
+      this._width = Math.floor(rect.width * this._dpr);
+      this._height = Math.floor(rect.height * this._dpr);
+      this.canvas.width = this._width;
+      this.canvas.height = this._height;
+    }
   }
 
   /**
@@ -849,6 +876,11 @@ export class GPUContext {
       return this.currentTarget.readPixels(x, y, width, height);
     }
 
+    // In headless mode, read from the headless render target
+    if (this.headless) {
+      return this.headlessTarget!.readPixels(x, y, width, height);
+    }
+
     // Read from screen
     const bytesPerRow = Math.ceil((width * 4) / 256) * 256;
     const bufferSize = bytesPerRow * height;
@@ -858,7 +890,7 @@ export class GPUContext {
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     });
 
-    const texture = this.context.getCurrentTexture();
+    const texture = this.context!.getCurrentTexture();
     const encoder = this.device.createCommandEncoder();
     encoder.copyTextureToBuffer(
       { texture, origin: { x, y, z: 0 } },
@@ -889,7 +921,11 @@ export class GPUContext {
     let loadOp: GPULoadOp = this._autoClear ? "clear" : "load";
 
     if (this.currentTarget === null) {
-      view = this.context.getCurrentTexture().createView();
+      if (this.headless) {
+        view = this.headlessTarget!.view;
+      } else {
+        view = this.context!.getCurrentTexture().createView();
+      }
       format = this.format;
     } else if (this.currentTarget instanceof RenderTarget) {
       view = this.currentTarget.view;
@@ -1006,9 +1042,16 @@ export class GPUContext {
     }
     this.samplers.clear();
     this.globalsBuffer.destroy();
-    // Unconfigure the canvas context before destroying the device
-    // This is required to allow re-initialization with a new device
-    this.context.unconfigure();
+    if (this.headless) {
+      if (this.headlessTarget) {
+        this.headlessTarget.dispose();
+        this.headlessTarget = null;
+      }
+    } else {
+      // Unconfigure the canvas context before destroying the device
+      // This is required to allow re-initialization with a new device
+      this.context!.unconfigure();
+    }
     this.device.destroy();
 
     if (this.eventEmitter) {
@@ -1029,6 +1072,44 @@ export const gpu = {
    */
   isSupported(): boolean {
     return typeof navigator !== "undefined" && "gpu" in navigator;
+  },
+
+  /**
+   * Check if headless WebGPU is supported (e.g. Node.js with Dawn)
+   */
+  isHeadlessSupported(): boolean {
+    return typeof navigator !== "undefined" && "gpu" in navigator;
+  },
+
+  /**
+   * Initialize a headless GPU context (no canvas, no swap-chain)
+   */
+  async initHeadless(
+    width: number,
+    height: number,
+    options: HeadlessGPUContextOptions = {}
+  ): Promise<GPUContext> {
+    const gpuInstance = options.gpu ?? (typeof navigator !== "undefined" ? navigator.gpu : undefined);
+    if (!gpuInstance) {
+      throw new WebGPUNotSupportedError();
+    }
+    try {
+      const adapter = await gpuInstance.requestAdapter();
+      if (!adapter) {
+        throw new DeviceCreationError("Failed to get GPU adapter in headless mode");
+      }
+      const device = await adapter.requestDevice();
+      const format: GPUTextureFormat = options.format ?? "rgba8unorm";
+      return new GPUContext(device, null, null, format, options, width, height);
+    } catch (error) {
+      if (
+        error instanceof WebGPUNotSupportedError ||
+        error instanceof DeviceCreationError
+      ) {
+        throw error;
+      }
+      throw new DeviceCreationError((error as Error).message);
+    }
   },
 
   /**

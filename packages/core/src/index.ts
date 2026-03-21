@@ -52,6 +52,8 @@ export type {
   RenderTargetUsage,
 } from "./types";
 
+export type { HeadlessGPUContextOptions } from "./types";
+
 export type { SamplerDescriptor } from "./sampler";
 
 export type { TextureOptions, RawTextureData } from "./texture";
