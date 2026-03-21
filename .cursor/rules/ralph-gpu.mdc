@@ -1649,6 +1649,8 @@ Options accepted by `gpu.initHeadless(width, height, options?)`:
 | `gpu` | `{ requestAdapter() }` | `navigator.gpu` | Custom GPU instance (e.g. from `webgpu` package) |
 | `format` | `GPUTextureFormat` | `"rgba8unorm"` | Screen backing texture format |
 | `debug` | `boolean` | `false` | Enable WebGPU debug validation layer |
+| `backendFlags` | `string[]` | `['backend=opengl']` on Linux | Dawn backend flags (Node.js only). Use `[]` on macOS/Metal, `['backend=vulkan']` for Linux x64 Vulkan |
+| `adapterOptions` | `GPURequestAdapterOptions` | `{ featureLevel: 'compatibility' }` on Linux | Adapter options passed to `requestAdapter()` |
 
 All other `GPUContextOptions` fields (`timeScale`, `clearColor`, etc.) are also accepted.
 

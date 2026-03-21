@@ -96,6 +96,17 @@ Initialize a GPU context without a canvas or swap-chain.
 | `gpu` | `{ requestAdapter() }` | `navigator.gpu` | Custom GPU instance |
 | `format` | `GPUTextureFormat` | `"rgba8unorm"` | Screen backing texture format |
 | `debug` | `boolean` | `false` | Enable debug validation |
+| `backendFlags` | `string[]` | `['backend=opengl']` on Linux | Dawn backend flags (Node.js only). Use `[]` on macOS/Metal, `['backend=vulkan']` for Linux x64 Vulkan |
+| `adapterOptions` | `GPURequestAdapterOptions` | `{ featureLevel: 'compatibility' }` on Linux | Adapter options passed to `requestAdapter()` |
+
+#### Platform Notes
+
+| Platform | Recommended flags |
+|----------|-------------------|
+| macOS (Metal) | No flags needed — Dawn auto-detects Metal |
+| Linux x64 (Vulkan) | `backendFlags: ['backend=vulkan']` |
+| Linux arm64 (OpenGL) | Defaults work — `backendFlags: ['backend=opengl']`, `adapterOptions: { featureLevel: 'compatibility' }` |
+| Windows (D3D12) | No flags needed — Dawn auto-detects D3D12 |
 
 ### `saveImage(pixels, width, height, path, options?)`
 
