@@ -1610,6 +1610,171 @@ unsubscribe();
 | `target`         | Render target set/clear                 |
 | `pipeline`       | Pipeline creation (with cache hit info) |
 
+## Node.js / Server-Side Usage
+
+ralph-gpu supports headless rendering in Node.js — no browser, no canvas required. Useful for server-side image generation, CI screenshot testing, and Next.js API routes.
+
+### Installation for Node.js
+
+```bash
+npm install ralph-gpu webgpu sharp
+# webgpu — Dawn-based WebGPU for Node.js (required for headless rendering)
+# sharp  — Image encoding, required for saveImage() and createTextureFromFile()
+```
+
+> **Platform support**: The `webgpu` package requires native binaries — currently supports `linux-x64`, `darwin-universal` (macOS), and `win32-x64`.
+
+### `gpu.isHeadlessSupported()` and `gpu.initHeadless()`
+
+Check availability and initialize without a canvas:
+
+```typescript
+import 'webgpu'; // register navigator.gpu (Dawn-based Node.js WebGPU)
+import { gpu } from 'ralph-gpu';
+
+if (!gpu.isHeadlessSupported()) {
+  console.error('WebGPU not available — install the webgpu package');
+  process.exit(1);
+}
+
+const ctx = await gpu.initHeadless(512, 512);
+```
+
+### `HeadlessGPUContextOptions`
+
+Options accepted by `gpu.initHeadless(width, height, options?)`:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `gpu` | `{ requestAdapter() }` | `navigator.gpu` | Custom GPU instance (e.g. from `webgpu` package) |
+| `format` | `GPUTextureFormat` | `"rgba8unorm"` | Screen backing texture format |
+| `debug` | `boolean` | `false` | Enable WebGPU debug validation layer |
+
+All other `GPUContextOptions` fields (`timeScale`, `clearColor`, etc.) are also accepted.
+
+### `saveImage()` — Save Raw Pixels to File
+
+```typescript
+import { saveImage } from 'ralph-gpu';
+
+// Infer format from extension
+await saveImage(pixels, 512, 512, './output.png');
+await saveImage(pixels, 512, 512, './photo.jpg', { format: 'jpeg', quality: 90 });
+await saveImage(pixels, 512, 512, './image.webp', { format: 'webp', quality: 85 });
+```
+
+**Signature**: `saveImage(pixels: Uint8Array, width: number, height: number, outputPath: string, options?: SaveImageOptions): Promise<void>`
+
+Options:
+- `format?: 'png' | 'jpeg' | 'webp'` — Inferred from file extension when omitted
+- `quality?: number` — Quality for lossy formats (1–100)
+
+Requires `sharp`. Node.js only (throws if called in browser).
+
+### `createTextureFromFile()` — Load Image as GPU Texture
+
+```typescript
+import { createTextureFromFile } from 'ralph-gpu';
+
+const texture = await createTextureFromFile(ctx.device, 'assets/diffuse.png', {
+  filter: 'linear',
+  wrap: 'repeat',
+});
+
+// Use in uniforms
+const pass = ctx.pass(shader, {
+  uniforms: { myTexture: { value: texture } },
+});
+```
+
+**Signature**: `createTextureFromFile(device: GPUDevice, filePath: string, opts?: TextureOptions): Promise<Texture>`
+
+Decodes PNG/JPEG/WebP/etc. using `sharp` and uploads to GPU. Node.js only.
+
+### Full Example — Render to PNG
+
+```typescript
+import 'webgpu'; // register navigator.gpu
+import { gpu } from 'ralph-gpu';
+import { saveImage } from 'ralph-gpu';
+
+const ctx = await gpu.initHeadless(512, 512);
+
+const pass = ctx.pass(`
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let uv = pos.xy / globals.resolution;
+    return vec4f(uv.x, uv.y, 0.5, 1.0);
+  }
+`);
+
+ctx.drawPass(pass);
+const pixels = await ctx.readPixels() as Uint8Array;
+await saveImage(pixels, 512, 512, './output.png');
+ctx.dispose();
+```
+
+### Example — Next.js Server Function
+
+```typescript
+// app/api/render/route.ts
+import 'webgpu';
+import { gpu, saveImage } from 'ralph-gpu';
+import { NextResponse } from 'next/server';
+
+export async function GET() {
+  const ctx = await gpu.initHeadless(256, 256);
+  const pass = ctx.pass(`
+    @fragment fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+      let uv = pos.xy / globals.resolution;
+      return vec4f(uv.x, uv.y, 0.5, 1.0);
+    }
+  `);
+  ctx.drawPass(pass);
+  const pixels = await ctx.readPixels() as Uint8Array;
+
+  // Convert to PNG buffer (without writing to disk)
+  const sharp = (await import('sharp')).default;
+  const pngBuffer = await sharp(Buffer.from(pixels.buffer), {
+    raw: { width: 256, height: 256, channels: 4 }
+  }).png().toBuffer();
+
+  ctx.dispose();
+  return new NextResponse(pngBuffer, {
+    headers: { 'Content-Type': 'image/png' }
+  });
+}
+```
+
+### Example — Compute Shader in Node.js
+
+```typescript
+import 'webgpu';
+import { gpu } from 'ralph-gpu';
+
+const ctx = await gpu.initHeadless(1, 1);
+const storage = ctx.storage(8 * 4); // 8 float32 values
+storage.write(new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]));
+
+const compute = ctx.compute(`
+  @group(1) @binding(0) var<storage, read_write> data: array<f32>;
+  @compute @workgroup_size(8)
+  fn main(@builtin(global_invocation_id) id: vec3u) {
+    data[id.x] = data[id.x] * 2.0;
+  }
+`);
+compute.setStorageBuffer('data', storage);
+compute.dispatch(1);
+
+const result = await storage.read() as Float32Array;
+console.log(result); // Float32Array [2, 4, 6, 8, 10, 12, 14, 16]
+ctx.dispose();
+```
+
+### What Works Headlessly
+
+All features work headlessly: `pass`, `material`, `compute`, `target`, `pingPong`, `mrt`, `storage`, `particles`, `sampler` — everything except `autoResize` (ignored in headless mode) and `createImageBitmap`-based texture loading from URLs (use `createTextureFromFile` instead).
+
 ## API Quick Reference
 
 ```tsx
