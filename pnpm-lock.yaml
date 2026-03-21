@@ -216,7 +216,27 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  apps/node-demo:
+    dependencies:
+      ralph-gpu:
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: '*'
+        version: 22.19.7
+      sharp:
+        specifier: '*'
+        version: 0.34.5
+      tsx:
+        specifier: '*'
+        version: 4.21.0
+
   packages/core:
+    dependencies:
+      sharp:
+        specifier: '>=0.33.0'
+        version: 0.34.5
     devDependencies:
       '@playwright/test':
         specifier: ^1.57.0

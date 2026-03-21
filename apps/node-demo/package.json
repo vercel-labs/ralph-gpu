@@ -1,0 +1,19 @@
+{
+  "name": "node-demo",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "render": "DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 XDG_RUNTIME_DIR=/tmp/xdg-runtime node --import tsx/esm triangle.ts",
+    "ascii": "DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 XDG_RUNTIME_DIR=/tmp/xdg-runtime node --import tsx/esm triangle-ascii.ts"
+  },
+  "dependencies": {
+    "ralph-gpu": "workspace:*",
+    "webgpu": "^0.3.10"
+  },
+  "devDependencies": {
+    "tsx": "*",
+    "sharp": "*",
+    "@types/node": "*"
+  }
+}
