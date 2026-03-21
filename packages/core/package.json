@@ -48,14 +48,19 @@
     "terser-webpack-plugin": "^5.3.16",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
+    "webgpu": "^0.3.10",
     "webpack": "^5.97.1",
     "webpack-cli": "^6.0.1"
   },
   "peerDependencies": {
-    "@webgpu/types": "^0.1.51"
+    "@webgpu/types": "^0.1.51",
+    "webgpu": "^0.1.0"
   },
   "peerDependenciesMeta": {
     "@webgpu/types": {
+      "optional": true
+    },
+    "webgpu": {
       "optional": true
     }
   }
