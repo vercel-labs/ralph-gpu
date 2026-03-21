@@ -85,6 +85,11 @@ export type {
   ProfilerOptions,
 } from "./profiler";
 
+// Node.js helpers (tree-shakeable; dynamically import 'sharp' at runtime)
+export { saveImage } from "./node/save-image";
+export type { SaveImageOptions } from "./node/save-image";
+export { createTextureFromFile } from "./node/texture-from-file";
+
 /**
  * Library version
  */

@@ -11,7 +11,9 @@
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
+    "@types/sharp": "^0.32.0",
     "@webgpu/types": "^0.1.68",
+    "sharp": "^0.34.5",
     "tsx": "^4.21.0",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2"
