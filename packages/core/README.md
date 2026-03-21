@@ -115,7 +115,7 @@ Load an image file from disk and create a GPU texture. Node.js only (use `ctx.te
 ```typescript
 import { createTextureFromFile } from 'ralph-gpu';
 
-const texture = await createTextureFromFile(ctx.device, 'assets/diffuse.png', {
+const texture = await createTextureFromFile(ctx.gpuDevice, 'assets/diffuse.png', {
   filter: 'linear',
   wrap: 'repeat',
 });

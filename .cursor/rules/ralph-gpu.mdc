@@ -1676,7 +1676,7 @@ Requires `sharp`. Node.js only (throws if called in browser).
 ```typescript
 import { createTextureFromFile } from 'ralph-gpu';
 
-const texture = await createTextureFromFile(ctx.device, 'assets/diffuse.png', {
+const texture = await createTextureFromFile(ctx.gpuDevice, 'assets/diffuse.png', {
   filter: 'linear',
   wrap: 'repeat',
 });
