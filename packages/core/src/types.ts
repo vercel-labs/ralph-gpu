@@ -222,4 +222,19 @@ export interface ParticlesOptions {
 export interface HeadlessGPUContextOptions extends GPUContextOptions {
   gpu?: { requestAdapter(options?: GPURequestAdapterOptions): Promise<GPUAdapter | null> };
   format?: GPUTextureFormat;
+  /**
+   * Backend flags passed to Dawn's `create()` call.
+   * Default: `[]` (let Dawn pick the best backend for the platform).
+   * Examples:
+   *  - macOS: `[]` (Metal is auto-selected)
+   *  - Linux x64 Vulkan: `['backend=vulkan']`
+   *  - Linux arm64 OpenGL: `['backend=opengl']`
+   */
+  backendFlags?: string[];
+  /**
+   * Options passed to `gpuInstance.requestAdapter()`.
+   * Default: `undefined` (let Dawn decide).
+   * Example: `{ featureLevel: 'compatibility' }` for OpenGL compatibility mode.
+   */
+  adapterOptions?: GPURequestAdapterOptions;
 }

@@ -54,8 +54,9 @@ describe('gpu headless compute (Node.js)', () => {
       storage.write(inputData);
 
       // Compute shader that doubles each element
+      // Use group(1) for user storage buffers (group(0) is reserved for globals)
       const compute = ctx.compute(`
-        @group(0) @binding(0) var<storage, read_write> data: array<f32>;
+        @group(1) @binding(0) var<storage, read_write> data: array<f32>;
 
         @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) gid: vec3u) {
@@ -64,6 +65,8 @@ describe('gpu headless compute (Node.js)', () => {
         }
       `);
 
+      // Bind the storage buffer before dispatching
+      compute.storage('data', storage);
       compute.dispatch(count);
 
       // Read back the buffer via a staging buffer

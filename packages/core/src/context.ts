@@ -43,6 +43,25 @@ import { EventEmitter } from "./event-emitter";
 import type { RalphGPUEvent, EventType, TargetEvent } from "./events";
 import { generateEventId } from "./events";
 
+// Create a Node.js require function for loading native modules (e.g. Dawn/webgpu).
+// The top-level import is used so that vitest (Node.js) can load it; webpack will
+// see this as an external Node.js built-in and the browser bundle marks it external.
+import { createRequire } from "module";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _nodeRequire: ((id: string) => any) | undefined;
+try {
+  _nodeRequire = createRequire(import.meta.url);
+} catch {
+  // Not in Node.js or createRequire not available (browser environment)
+  _nodeRequire = undefined;
+}
+
+// Singleton Dawn GPU instance — created once per process to avoid SIGSEGV on GC
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _dawnGpuInstance: any = null;
+// Backend flags used to create the singleton Dawn instance
+let _dawnBackendFlags: string[] = [];
+
 /**
  * GPU Context class
  */
@@ -1078,7 +1097,20 @@ export const gpu = {
    * Check if headless WebGPU is supported (e.g. Node.js with Dawn)
    */
   isHeadlessSupported(): boolean {
-    return typeof navigator !== "undefined" && "gpu" in navigator;
+    // Browser path: navigator.gpu is available
+    if (typeof navigator !== "undefined" && "gpu" in navigator) {
+      return true;
+    }
+    // Node.js path: try to load the Dawn native module via 'webgpu'
+    if (_nodeRequire) {
+      try {
+        const mod = _nodeRequire("webgpu");
+        return typeof mod?.create === "function";
+      } catch {
+        // webgpu module not available
+      }
+    }
+    return false;
   },
 
   /**
@@ -1089,12 +1121,40 @@ export const gpu = {
     height: number,
     options: HeadlessGPUContextOptions = {}
   ): Promise<GPUContext> {
-    const gpuInstance = options.gpu ?? (typeof navigator !== "undefined" ? navigator.gpu : undefined);
+    let gpuInstance = options.gpu ?? (typeof navigator !== "undefined" && "gpu" in navigator ? navigator.gpu : undefined);
+
+    // Node.js fallback: load Dawn native module via 'webgpu' (singleton to avoid SIGSEGV on GC)
+    // Default flags/adapterOptions for the Dawn path are set here (can be overridden via options):
+    //   - backendFlags: ['backend=opengl'] — works on Linux arm64 (no Vulkan). Override to [] on
+    //     macOS (Metal is auto-detected) or ['backend=vulkan'] on Linux x64 with Vulkan.
+    //   - adapterOptions: { featureLevel: 'compatibility' } — required for OpenGL backend.
+    //     Override to {} or omit featureLevel when using Vulkan/Metal.
+    let dawnAdapterOptions: GPURequestAdapterOptions | undefined;
+    if (!gpuInstance && _nodeRequire) {
+      try {
+        const flags = options.backendFlags ?? ["backend=opengl"];
+        dawnAdapterOptions = options.adapterOptions ?? { featureLevel: "compatibility" };
+        if (!_dawnGpuInstance) {
+          const { create, globals } = _nodeRequire("webgpu");
+          Object.assign(globalThis, globals);
+          _dawnGpuInstance = create(flags);
+          _dawnBackendFlags = flags;
+        } else if (JSON.stringify(flags) !== JSON.stringify(_dawnBackendFlags)) {
+          console.warn(
+            `[ralph-gpu] Dawn singleton already created with flags [${_dawnBackendFlags}], ignoring requested flags [${flags}]`
+          );
+        }
+        gpuInstance = _dawnGpuInstance;
+      } catch {
+        // Dawn native module not available or failed to initialize
+      }
+    }
+
     if (!gpuInstance) {
       throw new WebGPUNotSupportedError();
     }
     try {
-      const adapter = await gpuInstance.requestAdapter();
+      const adapter = await gpuInstance.requestAdapter((dawnAdapterOptions ?? options.adapterOptions) as any);
       if (!adapter) {
         throw new DeviceCreationError("Failed to get GPU adapter in headless mode");
       }
