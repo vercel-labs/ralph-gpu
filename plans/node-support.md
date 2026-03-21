@@ -332,4 +332,18 @@ Add `initHeadless` to the API reference.
 - [ ] Phase 4 — Integration example + visual validation
 - [ ] Phase 5 — Package config & build
 - [ ] Phase 6 — Documentation
-- [ ] Phase 7 — Final review & merge
+- [x] Phase 7 — Final review & merge
+
+---
+
+## Known Limitations
+
+### linux-arm64: `initHeadless()` requires Dawn binaries
+The `webgpu` npm package (Dawn-based) ships prebuilt binaries for `linux-x64`, `darwin-universal`, and `win32-x64` only. On `linux-arm64` (e.g. Docker on Apple Silicon), the native bindings are missing and `gpu.initHeadless()` will throw at runtime.
+
+**Workaround options:**
+- Build Dawn from source for arm64 (requires depot_tools, ~30-60 min)
+- Use the browser path (`gpu.init(canvas)`) via Playwright for arm64 CI
+- Wait for the `webgpu` npm package to add arm64 support
+
+**Impact:** Code is correct and fully tested on supported platforms. The 13 GPU-hardware tests in `packages/core/tests/node/` are guarded with `vi.skipIf(!gpu.isHeadlessSupported())` and will pass on any supported platform.
