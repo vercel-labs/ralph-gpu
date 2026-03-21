@@ -64,7 +64,9 @@ const baseConfig = {
     providedExports: true,
     innerGraph: true,
   },
-  externals: {},
+  externals: {
+    sharp: 'commonjs sharp',
+  },
   performance: {
     hints: 'warning',
     maxAssetSize: 50000,
