@@ -60,6 +60,159 @@ WebGPU types are optional but recommended for TypeScript:
 npm install -D @webgpu/types
 ```
 
+## Node.js / Server-Side Usage
+
+ralph-gpu supports headless rendering in Node.js — no browser, no canvas required. Useful for server-side image generation, CI screenshot testing, and Next.js API routes.
+
+### Installation for Node.js
+
+```bash
+npm install ralph-gpu webgpu sharp
+# webgpu — Dawn-based WebGPU for Node.js (required for headless rendering)
+# sharp  — Image encoding, required for saveImage() and createTextureFromFile()
+```
+
+> **Platform support**: The `webgpu` package requires native binaries — currently supports `linux-x64`, `darwin-universal` (macOS), and `win32-x64`.
+
+### `gpu.isHeadlessSupported()`
+
+Check if headless rendering is available before calling `initHeadless()`:
+
+```typescript
+import { gpu } from 'ralph-gpu';
+
+if (!gpu.isHeadlessSupported()) {
+  console.error('WebGPU not available — install the webgpu package');
+  process.exit(1);
+}
+```
+
+### `gpu.initHeadless(width, height, options?)`
+
+Initialize a GPU context without a canvas or swap-chain.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `gpu` | `{ requestAdapter() }` | `navigator.gpu` | Custom GPU instance |
+| `format` | `GPUTextureFormat` | `"rgba8unorm"` | Screen backing texture format |
+| `debug` | `boolean` | `false` | Enable debug validation |
+| `backendFlags` | `string[]` | `['backend=opengl']` on Linux | Dawn backend flags (Node.js only). Use `[]` on macOS/Metal, `['backend=vulkan']` for Linux x64 Vulkan |
+| `adapterOptions` | `GPURequestAdapterOptions` | `{ featureLevel: 'compatibility' }` on Linux | Adapter options passed to `requestAdapter()` |
+
+#### Platform Notes
+
+| Platform | Recommended flags |
+|----------|-------------------|
+| macOS (Metal) | No flags needed — Dawn auto-detects Metal |
+| Linux x64 (Vulkan) | `backendFlags: ['backend=vulkan']` |
+| Linux arm64 (OpenGL) | Defaults work — `backendFlags: ['backend=opengl']`, `adapterOptions: { featureLevel: 'compatibility' }` |
+| Windows (D3D12) | No flags needed — Dawn auto-detects D3D12 |
+
+### `saveImage(pixels, width, height, path, options?)`
+
+Save raw RGBA pixel data to a PNG, JPEG, or WebP file. Options: `format` (`'png' | 'jpeg' | 'webp'`) and `quality` (1–100, lossy formats only).
+
+```typescript
+import { saveImage } from 'ralph-gpu';
+
+await saveImage(pixels, 512, 512, './output.png');
+await saveImage(pixels, 512, 512, './photo.jpg', { format: 'jpeg', quality: 90 });
+```
+
+### `createTextureFromFile(device, filePath, opts?)`
+
+Load an image file from disk and create a GPU texture. Node.js only (use `ctx.texture(url)` in the browser).
+
+```typescript
+import { createTextureFromFile } from 'ralph-gpu';
+
+const texture = await createTextureFromFile(ctx.gpuDevice, 'assets/diffuse.png', {
+  filter: 'linear',
+  wrap: 'repeat',
+});
+```
+
+### Full Example — Render to PNG
+
+```typescript
+import 'webgpu'; // register navigator.gpu
+import { gpu } from 'ralph-gpu';
+import { saveImage } from 'ralph-gpu';
+
+const ctx = await gpu.initHeadless(512, 512);
+
+const pass = ctx.pass(`
+  @fragment
+  fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+    let uv = pos.xy / globals.resolution;
+    return vec4f(uv.x, uv.y, 0.5, 1.0);
+  }
+`);
+
+ctx.drawPass(pass);
+const pixels = await ctx.readPixels() as Uint8Array;
+await saveImage(pixels, 512, 512, './output.png');
+ctx.dispose();
+```
+
+### Example — Next.js Server Function
+
+```typescript
+// app/api/render/route.ts
+import 'webgpu';
+import { gpu, saveImage } from 'ralph-gpu';
+import { NextResponse } from 'next/server';
+
+export async function GET() {
+  const ctx = await gpu.initHeadless(256, 256);
+  const pass = ctx.pass(`
+    @fragment fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+      let uv = pos.xy / globals.resolution;
+      return vec4f(uv.x, uv.y, 0.5, 1.0);
+    }
+  `);
+  ctx.drawPass(pass);
+  const pixels = await ctx.readPixels() as Uint8Array;
+
+  // Convert to PNG buffer (without writing to disk)
+  // Use sharp directly for in-memory encoding:
+  const sharp = (await import('sharp')).default;
+  const pngBuffer = await sharp(Buffer.from(pixels.buffer), {
+    raw: { width: 256, height: 256, channels: 4 }
+  }).png().toBuffer();
+
+  ctx.dispose();
+  return new NextResponse(pngBuffer, {
+    headers: { 'Content-Type': 'image/png' }
+  });
+}
+```
+
+### Example — Compute Shader in Node.js
+
+```typescript
+import 'webgpu';
+import { gpu } from 'ralph-gpu';
+
+const ctx = await gpu.initHeadless(1, 1);
+const storage = ctx.storage(8 * 4); // 8 float32 values
+storage.write(new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]));
+
+const compute = ctx.compute(`
+  @group(1) @binding(0) var<storage, read_write> data: array<f32>;
+  @compute @workgroup_size(8)
+  fn main(@builtin(global_invocation_id) id: vec3u) {
+    data[id.x] = data[id.x] * 2.0;
+  }
+`);
+compute.setStorageBuffer('data', storage);
+compute.dispatch(1);
+
+const result = await storage.read() as Float32Array;
+console.log(result); // Float32Array [2, 4, 6, 8, 10, 12, 14, 16]
+ctx.dispose();
+```
+
 ## Quick Start
 
 ### 1. Initialize

@@ -10,6 +10,22 @@ module.exports = {
   devtool: 'source-map',
   resolve: {
     extensions: ['.ts', '.js'],
+    // Stub out Node.js built-ins so sharp/detect-libc don't break the browser bundle
+    fallback: {
+      fs: false,
+      path: false,
+      os: false,
+      crypto: false,
+      stream: false,
+      util: false,
+      events: false,
+      child_process: false,
+      worker_threads: false,
+    },
+  },
+  externals: {
+    // Externalize sharp and related Node-only packages
+    sharp: 'commonjs sharp',
   },
   module: {
     rules: [

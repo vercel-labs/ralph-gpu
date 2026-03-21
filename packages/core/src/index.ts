@@ -52,6 +52,8 @@ export type {
   RenderTargetUsage,
 } from "./types";
 
+export type { HeadlessGPUContextOptions } from "./types";
+
 export type { SamplerDescriptor } from "./sampler";
 
 export type { TextureOptions, RawTextureData } from "./texture";
@@ -82,6 +84,11 @@ export type {
   FrameStats,
   ProfilerOptions,
 } from "./profiler";
+
+// Node.js helpers (tree-shakeable; dynamically import 'sharp' at runtime)
+export { saveImage } from "./node/save-image";
+export type { SaveImageOptions } from "./node/save-image";
+export { createTextureFromFile } from "./node/texture-from-file";
 
 /**
  * Library version

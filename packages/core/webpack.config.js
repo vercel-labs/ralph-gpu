@@ -64,7 +64,11 @@ const baseConfig = {
     providedExports: true,
     innerGraph: true,
   },
-  externals: {},
+  externals: {
+    sharp: 'commonjs sharp',
+    // 'module' is a Node.js built-in; exclude from browser bundle (used for createRequire in Node.js only)
+    module: 'commonjs module',
+  },
   performance: {
     hints: 'warning',
     maxAssetSize: 50000,
